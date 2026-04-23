@@ -7,8 +7,8 @@ let scrollSpeed = 0.1;
 let welcomeText = null;
 let introText = null;
 // 触摸事件变量
-let touchStartY = 0;
-let touchEndY = 0;
+let touchStartDistance = 0;
+let touchEndDistance = 0;
 
 // 人物卡片数据
 const cardData = [
@@ -171,6 +171,7 @@ function init() {
     document.addEventListener('wheel', onWheel);
     // 添加触摸事件监听
     document.addEventListener('touchstart', onTouchStart, false);
+    document.addEventListener('touchmove', onTouchMove, false);
     document.addEventListener('touchend', onTouchEnd, false);
     window.addEventListener('resize', onResize);    
     // 动画循环
@@ -293,32 +294,67 @@ function onWheel(event) {
     console.log('Wheel event - targetZ:', targetZ);
 }
 
+// 计算两点之间的距离
+function getDistance(touch1, touch2) {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
 // 触摸开始事件处理
 function onTouchStart(event) {
-    touchStartY = event.touches[0].clientY;
+    if (event.touches.length === 2) {
+        // 记录双指初始距离
+        touchStartDistance = getDistance(event.touches[0], event.touches[1]);
+    }
+}
+
+// 触摸移动事件处理
+function onTouchMove(event) {
+    // 阻止默认行为，防止页面滚动
+    event.preventDefault();
+    
+    if (event.touches.length === 2) {
+        // 计算当前双指距离
+        touchEndDistance = getDistance(event.touches[0], event.touches[1]);
+    }
 }
 
 // 触摸结束事件处理
 function onTouchEnd(event) {
-    touchEndY = event.changedTouches[0].clientY;
-    handleSwipe();
+    if (touchStartDistance > 0 && touchEndDistance > 0) {
+        handlePinch();
+    }
+    // 重置距离值
+    touchStartDistance = 0;
+    touchEndDistance = 0;
 }
 
-// 处理滑动操作
-function handleSwipe() {
-    // 计算滑动距离
-    const swipeDistance = touchStartY - touchEndY;
+// 处理双指缩放操作
+function handlePinch() {
+    // 计算缩放比例
+    const scaleFactor = touchEndDistance / touchStartDistance;
     
-    // 只有当滑动距离超过一定阈值时才触发操作
-    if (Math.abs(swipeDistance) > 50) {
+    // 只有当缩放比例超过一定阈值时才触发操作
+    if (Math.abs(scaleFactor - 1) > 0.1) {
         isScrolling = true;
-        // 上滑（swipeDistance为正）相当于鼠标向下滚动，相机向后移动
-        // 下滑（swipeDistance为负）相当于鼠标向上滚动，相机向前移动
-        targetZ += swipeDistance * 0.05;
+        // 放大（scaleFactor > 1）相当于向前移动
+        // 缩小（scaleFactor < 1）相当于向后移动
+        const zoomAmount = (scaleFactor - 1) * 10;
+        targetZ -= zoomAmount;
         // 限制相机移动范围
         targetZ = Math.max(targetZ, -100);
         targetZ = Math.min(targetZ, 0);
-        console.log('Swipe event - targetZ:', targetZ);
+        console.log('Pinch event - targetZ:', targetZ);
+        
+        // 隐藏start按钮（如果还未隐藏）
+        if (typeof startExperienceTriggered !== 'undefined' && !startExperienceTriggered) {
+            startExperienceTriggered = true;
+            const startButton = document.getElementById('start-button');
+            if (startButton) {
+                startButton.style.display = 'none';
+            }
+        }
     }
 }
 
