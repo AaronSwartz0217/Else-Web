@@ -33,13 +33,28 @@ function init() {
     controls.maxPolarAngle = Math.PI / 2;
     
     // 添加环境光
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
     scene.add(ambientLight);
     
     // 添加方向光
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(5, 10, 7.5);
     scene.add(directionalLight);
+    
+    // 添加点光源
+    const pointLight1 = new THREE.PointLight(0xffffff, 0.5);
+    pointLight1.position.set(5, 5, 5);
+    scene.add(pointLight1);
+    
+    const pointLight2 = new THREE.PointLight(0xffffff, 0.3);
+    pointLight2.position.set(-5, -5, -5);
+    scene.add(pointLight2);
+    
+    // 添加聚光灯
+    const spotLight = new THREE.SpotLight(0xffffff, 0.4);
+    spotLight.position.set(0, 10, 0);
+    spotLight.target.position.set(0, 0, 0);
+    scene.add(spotLight);
     
     // 移除网格辅助线
     // const gridHelper = new THREE.GridHelper(20, 20, 0x444444, 0x222222);
