@@ -6,6 +6,9 @@ let currentZ = 0;
 let scrollSpeed = 0.1;
 let welcomeText = null;
 let introText = null;
+// 触摸事件变量
+let touchStartY = 0;
+let touchEndY = 0;
 
 // 人物卡片数据
 const cardData = [
@@ -166,6 +169,9 @@ function init() {
     
     // 事件监听
     document.addEventListener('wheel', onWheel);
+    // 添加触摸事件监听
+    document.addEventListener('touchstart', onTouchStart, false);
+    document.addEventListener('touchend', onTouchEnd, false);
     window.addEventListener('resize', onResize);    
     // 动画循环
     animate();
@@ -285,6 +291,35 @@ function onWheel(event) {
     targetZ = Math.max(targetZ, -100); // 增加额外的移动范围，确保能触发导航
     targetZ = Math.min(targetZ, 0);
     console.log('Wheel event - targetZ:', targetZ);
+}
+
+// 触摸开始事件处理
+function onTouchStart(event) {
+    touchStartY = event.touches[0].clientY;
+}
+
+// 触摸结束事件处理
+function onTouchEnd(event) {
+    touchEndY = event.changedTouches[0].clientY;
+    handleSwipe();
+}
+
+// 处理滑动操作
+function handleSwipe() {
+    // 计算滑动距离
+    const swipeDistance = touchStartY - touchEndY;
+    
+    // 只有当滑动距离超过一定阈值时才触发操作
+    if (Math.abs(swipeDistance) > 50) {
+        isScrolling = true;
+        // 上滑（swipeDistance为正）相当于鼠标向下滚动，相机向后移动
+        // 下滑（swipeDistance为负）相当于鼠标向上滚动，相机向前移动
+        targetZ += swipeDistance * 0.05;
+        // 限制相机移动范围
+        targetZ = Math.max(targetZ, -100);
+        targetZ = Math.min(targetZ, 0);
+        console.log('Swipe event - targetZ:', targetZ);
+    }
 }
 
 // 窗口大小调整
