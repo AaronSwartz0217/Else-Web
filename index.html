@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>else</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            overflow: hidden;
+            background-color: #000;
+            color: #fff;
+            cursor: none;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #start-button {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            font-weight: bold;
+            color: #fff;
+            background: transparent;
+            border: 2px solid #fff;
+            padding: 15px 30px;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+        
+        #start-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+
+        
+        #cursor {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0) 70%);
+            border-radius: 50%;
+            z-index: 9999;
+            pointer-events: none;
+            transition: transform 0.1s ease;
+        }
+        
+
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div id="cursor"></div>
+    <button id="start-button">START</button>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // 鼠标指针跟随效果
+        const cursor = document.getElementById('cursor');
+        
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX - 5 + 'px';
+            cursor.style.top = e.clientY - 5 + 'px';
+        });
+        
+        // 监听滚轮事件，向前滚动时开始体验
+        let startExperienceTriggered = false;
+        document.addEventListener('wheel', (e) => {
+            // 向上滚动（deltaY负）表示向后移动，向下滚动（deltaY正）表示向前移动
+            // 根据用户反馈，调整滚轮方向检测
+            if (e.deltaY < 0 && !startExperienceTriggered) {
+                startExperienceTriggered = true;
+                document.getElementById('start-button').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
