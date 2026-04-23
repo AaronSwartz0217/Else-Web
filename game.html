@@ -48,11 +48,46 @@
             opacity: 0.6;
             z-index: 99;
         }
+        
+        #light-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 99;
+        }
+        
+        .light-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            background: transparent;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .light-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .light-button.active {
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
     </style>
 </head>
 <body>
     <div id="canvas-container"></div>
     <div id="cursor"></div>
+    <div id="light-controls">
+        <button class="light-button" data-level="0">低</button>
+        <button class="light-button active" data-level="1">中</button>
+        <button class="light-button" data-level="2">高</button>
+    </div>
     <div id="controls">
         <p>鼠标: 旋转视角 | 滚轮: 缩放 | L键: 调节灯光</p>
     </div>

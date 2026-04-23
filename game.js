@@ -80,8 +80,23 @@ function init() {
             // 循环切换灯光强度级别
             lightLevel = (lightLevel + 1) % 3;
             updateLightIntensity();
+            updateLightButtons();
             console.log('Light level changed to:', lightLevel);
         }
+    });
+    
+    // 添加灯光按钮点击事件
+    document.addEventListener('DOMContentLoaded', function() {
+        const lightButtons = document.querySelectorAll('.light-button');
+        lightButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const level = parseInt(this.getAttribute('data-level'));
+                lightLevel = level;
+                updateLightIntensity();
+                updateLightButtons();
+                console.log('Light level changed to:', lightLevel);
+            });
+        });
     });
     
     // 动画循环
@@ -233,6 +248,19 @@ function updateLightIntensity() {
     if (spotLight) spotLight.intensity = currentIntensity.spot;
     
     console.log('Light intensity updated to level', lightLevel);
+}
+
+// 更新灯光按钮状态
+function updateLightButtons() {
+    const lightButtons = document.querySelectorAll('.light-button');
+    lightButtons.forEach(button => {
+        const level = parseInt(button.getAttribute('data-level'));
+        if (level === lightLevel) {
+            button.classList.add('active');
+        } else {
+            button.classList.remove('active');
+        }
+    });
 }
 
 // 动画循环
