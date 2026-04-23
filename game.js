@@ -284,10 +284,10 @@ function animate() {
         camera.translateX(speed);
     }
     
-    // 旋转模型
-    if (cubeModel) {
-        cubeModel.rotation.y += 0.01;
-    }
+    // 移除自动旋转，让玩家手动旋转模型
+    // if (cubeModel) {
+    //     cubeModel.rotation.y += 0.01;
+    // }
     
     renderer.render(scene, camera);
 }
