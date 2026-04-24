@@ -213,5 +213,23 @@
             <p>&copy; 2026 Else. All rights reserved.</p>
         </div>
     </footer>
+    
+    <div id="toast" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #4a6fa5; color: white; padding: 12px 24px; border-radius: 5px; opacity: 0; transition: opacity 0.3s ease; pointer-events: none;">成功了</div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const email = 'https://aaronswartz0217.github.io/Else-Web/';
+            
+            navigator.clipboard.writeText(email).then(function() {
+                const toast = document.getElementById('toast');
+                toast.style.opacity = '1';
+                setTimeout(function() {
+                    toast.style.opacity = '0';
+                }, 2500);
+            }).catch(function(err) {
+                console.error('居然被你识破了', err);
+            });
+        });
+    </script>
 </body>
 </html>
