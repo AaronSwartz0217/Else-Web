@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学习笔记 - else</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            line-height: 1.6;
+            overflow: hidden;
+            padding: 0;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+        }
+        
+        /* 左侧导航栏 */
+        .sidebar {
+            width: 300px;
+            background-color: #2d2d2d;
+            border-right: 1px solid #404040;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #404040;
+            background-color: #333;
+        }
+        
+        .sidebar-header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        
+        .sidebar-section {
+            margin-bottom: 20px;
+        }
+        
+        .sidebar-section-title {
+            padding: 10px 20px;
+            font-weight: bold;
+            color: #888;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        
+        .sidebar-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+        
+        .sidebar-item:hover {
+            background-color: #3a3a3a;
+        }
+        
+        .sidebar-item.active {
+            background-color: #3a3a3a;
+            border-left: 3px solid #4a6fa5;
+        }
+        
+        .sidebar-item h3 {
+            font-size: 1rem;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+        
+        .sidebar-item p {
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+        
+        /* 右侧内容区域 */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .content-header {
+            padding: 20px;
+            border-bottom: 1px solid #404040;
+            background-color: #222;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .content-header h2 {
+            font-size: 1.5rem;
+            color: #fff;
+        }
+        
+        .content-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+            background-color: #1a1a1a;
+        }
+        
+        .note-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .note-meta {
+            margin-bottom: 20px;
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .note-content h3 {
+            font-size: 1.2rem;
+            margin: 30px 0 15px;
+            color: #4a6fa5;
+        }
+        
+        .note-content p {
+            font-size: 1rem;
+            margin-bottom: 20px;
+            color: #e0e0e0;
+        }
+        
+        .code-block {
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            overflow-x: auto;
+        }
+        
+        .back-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 40px;
+        }
+        
+        .back-button {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #4a6fa5;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .back-button:hover {
+            background: #3a5a85;
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+    </style>
+</head>
+<body>
+    <!-- 左侧导航栏 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>学习笔记</h1>
+        </div>
+        
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">游戏开发</div>
+            <div class="sidebar-item active" data-section="unity">
+                <h3>Unity 3D 开发</h3>
+                <p>Unity引擎使用与Shader编程</p>
+            </div>
+            <div class="sidebar-item" data-section="ue5">
+                <h3>Unreal Engine 5</h3>
+                <p>蓝图系统与材质编辑器</p>
+            </div>
+            <div class="sidebar-item" data-section="game-design">
+                <h3>游戏设计原理</h3>
+                <p>游戏机制与关卡设计</p>
+            </div>
+        </div>
+        
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">交互设计</div>
+            <div class="sidebar-item" data-section="web-design">
+                <h3>网页交互设计</h3>
+                <p>Three.js与响应式设计</p>
+            </div>
+            <div class="sidebar-item" data-section="ux-design">
+                <h3>用户体验设计</h3>
+                <p>用户研究与原型设计</p>
+            </div>
+            <div class="sidebar-item" data-section="mobile-design">
+                <h3>移动应用交互</h3>
+                <p>触摸界面与手势操作</p>
+            </div>
+        </div>
+        
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">AI拓展</div>
+            <div class="sidebar-item" data-section="ml-basics">
+                <h3>机器学习基础</h3>
+                <p>算法与模型训练</p>
+            </div>
+            <div class="sidebar-item" data-section="deep-learning">
+                <h3>深度学习</h3>
+                <p>神经网络与框架</p>
+            </div>
+            <div class="sidebar-item" data-section="game-ai">
+                <h3>AI在游戏中的应用</h3>
+                <p>NPC行为与强化学习</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 右侧内容区域 -->
+    <div class="content">
+        <div class="content-header">
+            <h2 id="content-title">Unity 3D 开发</h2>
+        </div>
+        
+        <div class="content-body">
+            <div class="note-content">
+                <div class="note-meta">2026年4月24日 15:30</div>
+                
+                <div id="section-unity" class="note-section active">
+                    <h3>Unity 3D 开发</h3>
+                    <p>学习了 Unity 引擎的基本使用，包括场景构建、脚本编写、物理系统等。通过实践项目掌握了游戏开发的核心流程，从概念设计到最终发布。</p>
+                    
+                    <h3>Shader 编程</h3>
+                    <p>重点学习了 Shader 编程，能够创建各种视觉效果，如水面、火焰、卡通渲染等。</p>
+                    
+                    <div class="code-block">
+// 简单的水面Shader示例
+Shader "Custom/WaterShader"
+{
+    Properties
+    {
+        _MainTex ("Texture", 2D) = "white" {}
+        _WaveSpeed ("Wave Speed", Range(0.1, 10)) = 1.0
+        _WaveHeight ("Wave Height", Range(0.01, 0.5)) = 0.1
+    }
+    
+    SubShader
+    {
+        Tags { "RenderType"="Opaque" }
+        LOD 100
+        
+        Pass
+        {
+            CGPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #include "UnityCG.cginc"
+            
+            struct appdata
+            {
+                float4 vertex : POSITION;
+                float2 uv : TEXCOORD0;
+            };
+            
+            struct v2f
+            {
+                float2 uv : TEXCOORD0;
+                float4 vertex : SV_POSITION;
+            };
+            
+            sampler2D _MainTex;
+            float4 _MainTex_ST;
+            float _WaveSpeed;
+            float _WaveHeight;
+            
+            v2f vert (appdata v)
+            {
+                v2f o;
+                // 添加波浪效果
+                v.vertex.y += sin(_Time.y * _WaveSpeed + v.vertex.x) * _WaveHeight;
+                o.vertex = UnityObjectToClipPos(v.vertex);
+                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                return o;
+            }
+            
+            fixed4 frag (v2f i) : SV_Target
+            {
+                fixed4 col = tex2D(_MainTex, i.uv);
+                return col;
+            }
+            ENDCG
+        }
+    }
+}
+                    </div>
+                </div>
+                
+                <div id="section-ue5" class="note-section" style="display: none;">
+                    <h3>Unreal Engine 5</h3>
+                    <p>探索了 UE5 的蓝图系统和材质编辑器，学习了如何创建高质量的视觉效果。掌握了蓝图逻辑编程，能够实现复杂的游戏机制。</p>
+                    
+                    <h3>UE5 新特性</h3>
+                    <p>研究了 UE5 的新特性，如 Lumen 全局光照和 Nanite 虚拟几何体，了解了如何利用这些技术提升游戏的视觉质量。</p>
+                    
+                    <div class="code-block">
+// 实现物体自转
+// 创建类，使用Actor类新建蓝图把旋转物体作为根组件，然后加入旋转的类组件
+
+// 头文件
+// SelfRotator.h
+
+// 防止头文件被多次包含
+#pragma once
+
+// 包含虚幻核心类型（如FString, Array, FVector等）
+#include "CoreMinimal.h"
+// 包含 ActorComponent 基类的头文件，因为我们要继承它
+#include "Components/ActorComponent.h"
+// 由 UnrealHeaderTool 自动生成的反射代码，必须放在最后
+#include "SelfRotator.generated.h"
+
+/**
+ * 这是一个可以加到任何 Actor 上的组件，使 Actor 自动绕自身 Z 轴旋转。
+ * 旋转速度可以在编辑器中调整，也可以被蓝图读写。
+ * 该类可以被 C++ 或蓝图继承，以扩展功能。
+ */
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
+class UE_CPP_API USelfRotator : public UActorComponent
+{
+    GENERATED_BODY()
+
+public:
+    // 构造函数
+    USelfRotator();
+
+protected:
+    // 组件启动时调用一次（在游戏开始或 Actor 生成后）
+    virtual void BeginPlay() override;
+
+public:
+    // 组件每帧更新时调用
+    virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+    // 旋转速度（度/秒）
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rotation")
+    float RotationSpeed = 45.0f;
+};
+                    </div>
+                </div>
+                
+                <div id="section-game-design" class="note-section" style="display: none;">
+                    <h3>游戏设计原理</h3>
+                    <p>学习了游戏设计的基本原理，包括游戏机制、关卡设计、用户体验等。通过分析经典游戏，理解了优秀游戏的设计思路。</p>
+                    
+                    <h3>游戏心理学</h3>
+                    <p>研究了游戏心理学，了解玩家的行为模式和心理需求，能够设计更具吸引力的游戏体验。</p>
+                </div>
+                
+                <div id="section-web-design" class="note-section" style="display: none;">
+                    <h3>网页交互设计</h3>
+                    <p>学习了现代网页交互设计的 principles，包括响应式设计、用户界面设计、交互模式等。掌握了 HTML、CSS 和 JavaScript 的高级应用。</p>
+                    
+                    <h3>Three.js</h3>
+                    <p>研究了 Three.js 库，能够创建交互式 3D 网页，为用户提供沉浸式的浏览体验。</p>
+                </div>
+                
+                <div id="section-ux-design" class="note-section" style="display: none;">
+                    <h3>用户体验设计</h3>
+                    <p>学习了用户体验设计的方法和流程，包括用户研究、需求分析、原型设计、用户测试等。能够从用户的角度思考问题，设计符合用户需求的产品。</p>
+                    
+                    <h3>原型设计工具</h3>
+                    <p>掌握了原型设计工具，如 Figma、Sketch 等，能够快速创建交互原型，验证设计方案。</p>
+                </div>
+                
+                <div id="section-mobile-design" class="note-section" style="display: none;">
+                    <h3>移动应用交互</h3>
+                    <p>学习了移动应用的交互设计原则，包括触摸界面设计、手势操作、响应式布局等。了解了不同平台（iOS、Android）的设计规范和最佳实践。</p>
+                    
+                    <h3>性能优化</h3>
+                    <p>研究了移动应用的性能优化，能够设计流畅的交互体验，即使在资源有限的设备上也能保持良好的性能。</p>
+                </div>
+                
+                <div id="section-ml-basics" class="note-section" style="display: none;">
+                    <h3>机器学习基础</h3>
+                    <p>学习了机器学习的基本概念和算法，包括监督学习、无监督学习、强化学习等。掌握了常见的机器学习模型，如线性回归、决策树、神经网络等。</p>
+                    
+                    <h3>数据处理</h3>
+                    <p>实践了数据预处理、特征工程、模型训练和评估等完整的机器学习流程，能够解决实际问题。</p>
+                </div>
+                
+                <div id="section-deep-learning" class="note-section" style="display: none;">
+                    <h3>深度学习</h3>
+                    <p>研究了深度学习的核心概念和技术，包括卷积神经网络、循环神经网络、生成对抗网络等。掌握了 TensorFlow、PyTorch 等深度学习框架的使用。</p>
+                    
+                    <h3>应用领域</h3>
+                    <p>探索了深度学习在计算机视觉、自然语言处理等领域的应用，了解了最新的研究进展。</p>
+                </div>
+                
+                <div id="section-game-ai" class="note-section" style="display: none;">
+                    <h3>AI在游戏中的应用</h3>
+                    <p>学习了 AI 在游戏开发中的应用，包括 NPC 行为设计、路径规划、决策系统等。研究了如何使用机器学习技术创建更智能、更具挑战性的游戏 AI。</p>
+                    
+                    <h3>强化学习</h3>
+                    <p>实践了使用强化学习训练游戏 AI，能够让 AI 通过自我学习不断提高游戏水平。</p>
+                </div>
+                
+                <div class="back-buttons">
+                    <a href="game.html" class="back-button">返回3D展示</a>
+                    <a href="introduction.html" class="back-button">返回介绍页面</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 侧边栏点击事件
+        document.querySelectorAll('.sidebar-item').forEach(item => {
+            item.addEventListener('click', function() {
+                // 移除所有侧边栏项的活动状态
+                document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+                // 添加当前项的活动状态
+                this.classList.add('active');
+                
+                // 获取目标 section
+                const sectionId = this.getAttribute('data-section');
+                // 隐藏所有内容 section
+                document.querySelectorAll('.note-section').forEach(section => {
+                    section.style.display = 'none';
+                });
+                // 显示目标 section
+                document.getElementById('section-' + sectionId).style.display = 'block';
+                
+                // 更新标题
+                document.getElementById('content-title').textContent = this.querySelector('h3').textContent;
+            });
+        });
+    </script>
+</body>
+</html>
