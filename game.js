@@ -7,6 +7,10 @@ let moveBackward = false;
 let moveLeft = false;
 let moveRight = false;
 let speed = 0.1;
+// 灯光变量
+let ambientLight, directionalLight, pointLight1, pointLight2, spotLight;
+// 灯光强度级别 (0: 低, 1: 中, 2: 高)
+let lightLevel = 1;
 
 // 初始化函数
 function init() {
@@ -33,13 +37,31 @@ function init() {
     controls.maxPolarAngle = Math.PI / 2;
     
     // 添加环境光
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+    ambientLight = new THREE.AmbientLight(0x404040, 0.6);
     scene.add(ambientLight);
     
     // 添加方向光
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(5, 10, 7.5);
     scene.add(directionalLight);
+    
+    // 添加点光源
+    pointLight1 = new THREE.PointLight(0xffffff, 0.5);
+    pointLight1.position.set(5, 5, 5);
+    scene.add(pointLight1);
+    
+    pointLight2 = new THREE.PointLight(0xffffff, 0.3);
+    pointLight2.position.set(-5, -5, -5);
+    scene.add(pointLight2);
+    
+    // 添加聚光灯
+    spotLight = new THREE.SpotLight(0xffffff, 0.4);
+    spotLight.position.set(0, 10, 0);
+    spotLight.target.position.set(0, 0, 0);
+    scene.add(spotLight);
+    
+    // 设置初始灯光强度
+    updateLightIntensity();
     
     // 移除网格辅助线
     // const gridHelper = new THREE.GridHelper(20, 20, 0x444444, 0x222222);
@@ -52,6 +74,30 @@ function init() {
     window.addEventListener('resize', onResize);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    // 添加灯光强度调节事件监听
+    window.addEventListener('keydown', function(event) {
+        if (event.code === 'KeyL') {
+            // 循环切换灯光强度级别
+            lightLevel = (lightLevel + 1) % 3;
+            updateLightIntensity();
+            updateLightButtons();
+            console.log('Light level changed to:', lightLevel);
+        }
+    });
+    
+    // 添加灯光按钮点击事件
+    document.addEventListener('DOMContentLoaded', function() {
+        const lightButtons = document.querySelectorAll('.light-button');
+        lightButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const level = parseInt(this.getAttribute('data-level'));
+                lightLevel = level;
+                updateLightIntensity();
+                updateLightButtons();
+                console.log('Light level changed to:', lightLevel);
+            });
+        });
+    });
     
     // 动画循环
     animate();
@@ -161,6 +207,62 @@ function onResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+// 更新灯光强度
+function updateLightIntensity() {
+    // 定义不同级别的灯光强度
+    const lightIntensities = [
+        // 低强度
+        {
+            ambient: 0.3,
+            directional: 0.4,
+            point1: 0.25,
+            point2: 0.15,
+            spot: 0.2
+        },
+        // 中强度（默认）
+        {
+            ambient: 0.6,
+            directional: 0.8,
+            point1: 0.5,
+            point2: 0.3,
+            spot: 0.4
+        },
+        // 高强度
+        {
+            ambient: 1.0,
+            directional: 1.2,
+            point1: 0.8,
+            point2: 0.5,
+            spot: 0.7
+        }
+    ];
+    
+    // 获取当前级别的强度值
+    const currentIntensity = lightIntensities[lightLevel];
+    
+    // 更新所有灯光的强度
+    if (ambientLight) ambientLight.intensity = currentIntensity.ambient;
+    if (directionalLight) directionalLight.intensity = currentIntensity.directional;
+    if (pointLight1) pointLight1.intensity = currentIntensity.point1;
+    if (pointLight2) pointLight2.intensity = currentIntensity.point2;
+    if (spotLight) spotLight.intensity = currentIntensity.spot;
+    
+    console.log('Light intensity updated to level', lightLevel);
+}
+
+// 更新灯光按钮状态
+function updateLightButtons() {
+    const lightButtons = document.querySelectorAll('.light-button');
+    lightButtons.forEach(button => {
+        const level = parseInt(button.getAttribute('data-level'));
+        if (level === lightLevel) {
+            button.classList.add('active');
+        } else {
+            button.classList.remove('active');
+        }
+    });
+}
+
 // 动画循环
 function animate() {
     requestAnimationFrame(animate);
@@ -182,10 +284,10 @@ function animate() {
         camera.translateX(speed);
     }
     
-    // 旋转模型
-    if (cubeModel) {
-        cubeModel.rotation.y += 0.01;
-    }
+    // 移除自动旋转，让玩家手动旋转模型
+    // if (cubeModel) {
+    //     cubeModel.rotation.y += 0.01;
+    // }
     
     renderer.render(scene, camera);
 }
