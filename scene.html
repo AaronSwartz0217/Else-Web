@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Else - 3D Gallery</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        #start-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            background: rgba(74, 106, 165, 0.8);
+            border: 2px solid #4a6fa5;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+        
+        #start-button:hover {
+            background: rgba(74, 106, 165, 1);
+            transform: translate(-50%, -50%) scale(1.05);
+            box-shadow: 0 0 30px rgba(74, 106, 165, 0.5);
+        }
+        
+        .loading-text {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #888;
+            font-size: 0.9rem;
+            z-index: 100;
+        }
+        
+        .hint-text {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #666;
+            font-size: 0.8rem;
+            z-index: 100;
+        }
+        
+        .nav-buttons {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+        }
+        
+        .nav-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #4a6fa5;
+            border-radius: 5px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+        }
+        
+        .nav-button:hover {
+            background: rgba(74, 106, 165, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-buttons">
+        <a href="introduction.html" class="nav-button">返回主页</a>
+    </div>
+    
+    <div class="loading-text" id="loading-text">加载中...</div>
+    <div class="hint-text">滚动滚轮或点击屏幕中间前进</div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // 全局变量
+        let scene, camera, renderer, cards = [];
+        let isScrolling = false;
+        let targetZ = 0;
+        let currentZ = 0;
+        let scrollSpeed = 0.1;
+        let startExperienceTriggered = false;
+        
+        // 触摸事件变量
+        let touchX = 0;
+        let touchY = 0;
+        
+        // 人物卡片数据
+        const cardData = [
+            { name: "物魄奇谭", desc: "大型国风RPG" },
+            { name: "VR博物馆", desc: "国家级获奖作品" },
+            { name: "芬奇房间", desc: "TapTap热门游戏" },
+            { name: "数字孪生", desc: "三端全栈开发" },
+            { name: "AI助手", desc: "语音交互系统" },
+            { name: "超我架构", desc: "Agent智能框架" },
+            { name: "机器人速递", desc: "休闲游戏" },
+            { name: "海报展览", desc: "虚拟展厅" }
+        ];
+        
+        // 初始化场景
+        function init() {
+            // 创建场景
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x000000, 10, 80);
+            
+            // 创建相机
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+            
+            // 创建渲染器
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x0a0a0a);
+            document.body.appendChild(renderer.domElement);
+            
+            // 添加星空背景
+            createStars();
+            
+            // 创建卡片
+            createCards();
+            
+            // 添加事件监听
+            window.addEventListener('wheel', onWheel);
+            window.addEventListener('touchstart', onTouchStart);
+            window.addEventListener('touchend', onTouchEnd);
+            window.addEventListener('resize', onResize);
+            
+            // 隐藏加载文字
+            setTimeout(() => {
+                document.getElementById('loading-text').style.display = 'none';
+            }, 1000);
+            
+            // 开始动画循环
+            animate();
+        }
+        
+        // 创建星空背景
+        function createStars() {
+            const starsGeometry = new THREE.BufferGeometry();
+            const starsMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.5,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const starsVertices = [];
+            for (let i = 0; i < 1000; i++) {
+                const x = (Math.random() - 0.5) * 200;
+                const y = (Math.random() - 0.5) * 200;
+                const z = (Math.random() - 0.5) * 200;
+                starsVertices.push(x, y, z);
+            }
+            
+            starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+            const stars = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(stars);
+        }
+        
+        // 创建卡片
+        function createCards() {
+            const cardGeometry = new THREE.PlaneGeometry(2.5, 3.5);
+            
+            cardData.forEach((data, index) => {
+                // 创建canvas纹理
+                const canvas = document.createElement('canvas');
+                canvas.width = 512;
+                canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+                
+                // 绘制渐变背景
+                const gradient = ctx.createLinearGradient(0, 0, 512, 512);
+                gradient.addColorStop(0, '#2a3a5a');
+                gradient.addColorStop(1, '#1a2a4a');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 512, 512);
+                
+                // 绘制边框
+                ctx.strokeStyle = '#4a6fa5';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(10, 10, 492, 492);
+                
+                // 绘制标题
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 36px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(data.name, 256, 230);
+                
+                // 绘制描述
+                ctx.fillStyle = '#8ab4f8';
+                ctx.font = '20px Arial';
+                ctx.fillText(data.desc, 256, 280);
+                
+                // 创建纹理
+                const texture = new THREE.CanvasTexture(canvas);
+                
+                // 创建卡片材质
+                const cardMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xffffff,
+                    map: texture,
+                    transparent: true,
+                    opacity: 1,
+                    side: THREE.DoubleSide,
+                    roughness: 0.3,
+                    metalness: 0.2,
+                    emissive: 0x223355,
+                    emissiveIntensity: 0.3
+                });
+                
+                const card = new THREE.Mesh(cardGeometry, cardMaterial);
+                const side = index % 2 === 0 ? -3.5 : 3.5;
+                card.position.x = side;
+                card.position.z = -Math.floor(index / 2) * 8;
+                card.position.y = Math.sin(index * 0.2) * 0.3;
+                cards.push(card);
+                scene.add(card);
+            });
+            
+            // 添加中间引导线
+            createGuideLine();
+            
+            // 添加环境光
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+            
+            // 添加方向光
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            scene.add(directionalLight);
+            
+            // 添加点光源
+            const pointLight = new THREE.PointLight(0x4a6fa5, 0.5, 30);
+            pointLight.position.set(0, 2, 0);
+            scene.add(pointLight);
+        }
+        
+        // 创建引导线
+        function createGuideLine() {
+            const lineGeometry = new THREE.BufferGeometry();
+            const linePoints = [];
+            
+            for (let i = 0; i < 50; i++) {
+                linePoints.push(new THREE.Vector3(0, 0, -i * 5));
+            }
+            
+            lineGeometry.setFromPoints(linePoints);
+            
+            const lineMaterial = new THREE.LineBasicMaterial({
+                color: 0x4a6fa5,
+                opacity: 0.6,
+                transparent: true
+            });
+            
+            const guideLine = new THREE.Line(lineGeometry, lineMaterial);
+            scene.add(guideLine);
+        }
+        
+        // 滚轮事件处理
+        function onWheel(event) {
+            event.preventDefault();
+            isScrolling = true;
+            targetZ += event.deltaY * 0.01;
+            targetZ = Math.max(targetZ, -120);
+            targetZ = Math.min(targetZ, 0);
+            
+            // 检查是否到达尽头
+            checkEndReached();
+        }
+        
+        // 触摸开始事件处理
+        function onTouchStart(event) {
+            touchX = event.touches[0].clientX;
+            touchY = event.touches[0].clientY;
+        }
+        
+        // 触摸结束事件处理
+        function onTouchEnd(event) {
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+            const centerX = screenWidth / 2;
+            const centerY = screenHeight / 2;
+            
+            const distanceX = Math.abs(touchX - centerX);
+            const distanceY = Math.abs(touchY - centerY);
+            
+            const thresholdX = screenWidth * 0.3;
+            const thresholdY = screenHeight * 0.3;
+            
+            isScrolling = true;
+            if (distanceX < thresholdX && distanceY < thresholdY) {
+                targetZ -= 15;
+            } else {
+                targetZ += 15;
+            }
+            
+            targetZ = Math.max(targetZ, -120);
+            targetZ = Math.min(targetZ, 0);
+            
+            // 隐藏开始按钮
+            if (!startExperienceTriggered) {
+                startExperienceTriggered = true;
+            }
+            
+            // 检查是否到达尽头
+            checkEndReached();
+        }
+        
+        // 检查是否到达场景尽头
+        function checkEndReached() {
+            if (targetZ <= -115) {
+                setTimeout(() => {
+                    window.location.href = 'game.html';
+                }, 500);
+            }
+        }
+        
+        // 窗口大小调整
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // 动画循环
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // 平滑相机移动
+            if (isScrolling) {
+                currentZ += (targetZ - currentZ) * 0.08;
+                camera.position.z = 5 + currentZ;
+                
+                if (Math.abs(targetZ - currentZ) < 0.01) {
+                    currentZ = targetZ;
+                    isScrolling = false;
+                }
+            }
+            
+            // 更新卡片效果
+            cards.forEach((card, index) => {
+                const distance = Math.abs(card.position.z - camera.position.z + 5);
+                
+                // 透明度
+                card.material.opacity = Math.max(0, 1 - distance * 0.08);
+                
+                // 缩放
+                const scale = Math.max(0.1, 1 - distance * 0.04);
+                card.scale.set(scale, scale, 1);
+                
+                // 旋转
+                const rotationFactor = distance * 0.008;
+                card.rotation.y = Math.sin(rotationFactor + Date.now() * 0.0005) * 0.15;
+                card.rotation.x = Math.cos(rotationFactor + Date.now() * 0.0005) * 0.08;
+                
+                // 亮度
+                const brightness = Math.max(0.1, 1 - distance * 0.08);
+                card.material.color.setScalar(brightness);
+            });
+            
+            renderer.render(scene, camera);
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
