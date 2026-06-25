@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unity 3D 开发 - 学习笔记</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .header {
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #404040;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        
+        .header .meta {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .content {
+            background-color: #2d2d2d;
+            padding: 30px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+        }
+        
+        .content h2 {
+            font-size: 1.5rem;
+            margin: 30px 0 20px;
+            color: #4a6fa5;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #4a6fa5;
+        }
+        
+        .content h3 {
+            font-size: 1.2rem;
+            margin: 25px 0 15px;
+            color: #fff;
+        }
+        
+        .content p {
+            margin-bottom: 15px;
+            color: #e0e0e0;
+        }
+        
+        .code-block {
+            background-color: #1a1a1a;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            overflow-x: auto;
+            border: 1px solid #404040;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 10px 20px;
+            background-color: #4a6fa5;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background-color: #3a5a85;
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Unity 3D 开发</h1>
+            <div class="meta">2026年4月24日 15:30</div>
+        </div>
+        
+        <div class="content">
+            <h2>Unity 3D 开发基础</h2>
+            <p>学习了 Unity 引擎的基本使用，包括场景构建、脚本编写、物理系统等。通过实践项目掌握了游戏开发的核心流程，从概念设计到最终发布。</p>
+            
+            <h3>核心概念</h3>
+            <p>Unity的核心概念包括游戏对象（GameObject）、组件（Component）、脚本（Script）、预制件（Prefab）等。理解这些概念对于高效使用Unity引擎至关重要。</p>
+            
+            <h2>Shader 编程</h2>
+            <p>重点学习了 Shader 编程，能够创建各种视觉效果，如水面、火焰、卡通渲染等。Shader是控制图形渲染的核心，通过编写自定义Shader可以实现独特的视觉风格。</p>
+            
+            <h3>水面Shader示例</h3>
+            <div class="code-block">
+// 简单的水面Shader示例
+Shader "Custom/WaterShader"
+{
+    Properties
+    {
+        _MainTex ("Texture", 2D) = "white" {}
+        _WaveSpeed ("Wave Speed", Range(0.1, 10)) = 1.0
+        _WaveHeight ("Wave Height", Range(0.01, 0.5)) = 0.1
+    }
+    
+    SubShader
+    {
+        Tags { "RenderType"="Opaque" }
+        LOD 100
+        
+        Pass
+        {
+            CGPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #include "UnityCG.cginc"
+            
+            struct appdata
+            {
+                float4 vertex : POSITION;
+                float2 uv : TEXCOORD0;
+            };
+            
+            struct v2f
+            {
+                float2 uv : TEXCOORD0;
+                float4 vertex : SV_POSITION;
+            };
+            
+            sampler2D _MainTex;
+            float4 _MainTex_ST;
+            float _WaveSpeed;
+            float _WaveHeight;
+            
+            v2f vert (appdata v)
+            {
+                v2f o;
+                // 添加波浪效果
+                v.vertex.y += sin(_Time.y * _WaveSpeed + v.vertex.x) * _WaveHeight;
+                o.vertex = UnityObjectToClipPos(v.vertex);
+                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                return o;
+            }
+            
+            fixed4 frag (v2f i) : SV_Target
+            {
+                fixed4 col = tex2D(_MainTex, i.uv);
+                return col;
+            }
+            ENDCG
+        }
+    }
+}
+            </div>
+            
+            <h3>Shader编程要点</h3>
+            <p>Shader编程需要理解图形渲染管线，包括顶点着色器、片段着色器等。Unity支持多种Shader语言，包括CG/HLSL、GLSL等。通过合理的Shader编程，可以大大提升游戏的视觉效果和性能。</p>
+            
+            <a href="index.html" class="back-link">返回笔记首页</a>
+        </div>
+    </div>
+</body>
+</html>

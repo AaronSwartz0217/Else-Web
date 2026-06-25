@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学习笔记 - 首页</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        
+        .header p {
+            color: #888;
+            font-size: 1.1rem;
+        }
+        
+        .categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .category {
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            padding: 25px;
+            border: 1px solid #404040;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .category:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .category h2 {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: #4a6fa5;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #4a6fa5;
+        }
+        
+        .note-list {
+            list-style: none;
+        }
+        
+        .note-item {
+            margin-bottom: 15px;
+        }
+        
+        .note-link {
+            display: block;
+            padding: 12px 15px;
+            background-color: #3a3a3a;
+            border-radius: 5px;
+            text-decoration: none;
+            color: #e0e0e0;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+        
+        .note-link:hover {
+            background-color: #4a4a4a;
+            border-left: 3px solid #4a6fa5;
+            color: #fff;
+        }
+        
+        .note-link h3 {
+            font-size: 1rem;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+        
+        .note-link p {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 40px;
+            padding: 10px 20px;
+            background-color: #4a6fa5;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background-color: #3a5a85;
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>学习笔记</h1>
+            <p>记录学习过程中的重要知识点和经验总结</p>
+        </div>
+        
+        <div class="categories">
+            <div class="category">
+                <h2>游戏开发</h2>
+                <ul class="note-list">
+                    <li class="note-item">
+                        <a href="unity-3d.html" class="note-link">
+                            <h3>Unity 3D 开发</h3>
+                            <p>Unity引擎使用与Shader编程</p>
+                        </a>
+                    </li>
+                    <li class="note-item">
+                        <a href="unreal-engine-gameplay-framework.html" class="note-link">
+                            <h3>Unreal Engine Gameplay框架</h3>
+                            <p>UE5核心游戏框架类详解</p>
+                        </a>
+                    </li>
+                    <li class="note-item">
+                        <a href="game-design.html" class="note-link">
+                            <h3>游戏设计原理</h3>
+                            <p>游戏机制与关卡设计</p>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="category">
+                <h2>交互设计</h2>
+                <ul class="note-list">
+                    <li class="note-item">
+                        <a href="web-design.html" class="note-link">
+                            <h3>网页交互设计</h3>
+                            <p>Three.js与响应式设计</p>
+                        </a>
+                    </li>
+                    <li class="note-item">
+                        <a href="ux-design.html" class="note-link">
+                            <h3>用户体验设计</h3>
+                            <p>用户研究与原型设计</p>
+                        </a>
+                    </li>
+                    <li class="note-item">
+                        <a href="mobile-design.html" class="note-link">
+                            <h3>移动应用交互</h3>
+                            <p>触摸界面与手势操作</p>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="category">
+                <h2>AI拓展</h2>
+                <ul class="note-list">
+                    <li class="note-item">
+                        <a href="ml-basics.html" class="note-link">
+                            <h3>机器学习基础</h3>
+                            <p>算法与模型训练</p>
+                        </a>
+                    </li>
+                    <li class="note-item">
+                        <a href="deep-learning.html" class="note-link">
+                            <h3>深度学习</h3>
+                            <p>神经网络与框架</p>
+                        </a>
+                    </li>
+                    <li class="note-item">
+                        <a href="game-ai.html" class="note-link">
+                            <h3>AI在游戏中的应用</h3>
+                            <p>NPC行为与强化学习</p>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div style="text-align: center;">
+            <a href="../introduction.html" class="back-link">返回介绍页面</a>
+        </div>
+    </div>
+</body>
+</html>

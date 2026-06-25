@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>移动应用交互 - 学习笔记</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .header {
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #404040;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        
+        .header .meta {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .content {
+            background-color: #2d2d2d;
+            padding: 30px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+        }
+        
+        .content h2 {
+            font-size: 1.5rem;
+            margin: 30px 0 20px;
+            color: #4a6fa5;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #4a6fa5;
+        }
+        
+        .content h3 {
+            font-size: 1.2rem;
+            margin: 25px 0 15px;
+            color: #fff;
+        }
+        
+        .content p {
+            margin-bottom: 15px;
+            color: #e0e0e0;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 10px 20px;
+            background-color: #4a6fa5;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background-color: #3a5a85;
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>移动应用交互</h1>
+            <div class="meta">学习笔记</div>
+        </div>
+        
+        <div class="content">
+            <h2>移动应用交互设计</h2>
+            <p>学习了移动应用的交互设计原则，包括触摸界面设计、手势操作、响应式布局等。了解了不同平台（iOS、Android）的设计规范和最佳实践。</p>
+            
+            <h3>设计原则</h3>
+            <p>移动应用交互设计应该遵循以下原则：</p>
+            <ul>
+                <li>触摸友好的界面元素</li>
+                <li>直观的手势操作</li>
+                <li>简洁的信息架构</li>
+                <li>快速响应的交互反馈</li>
+                <li>适应不同屏幕尺寸的响应式设计</li>
+            </ul>
+            
+            <h2>平台差异</h2>
+            <p>iOS和Android平台在设计规范上有一些重要差异，需要针对不同平台进行适配。</p>
+            
+            <h3>iOS设计规范</h3>
+            <p>iOS设计规范强调：</p>
+            <ul>
+                <li>清晰度和深度感</li>
+                <li>流畅的动画和过渡</li>
+                <li>一致的设计语言</li>
+                <li>直观的手势操作</li>
+                <li>简洁的界面布局</li>
+            </ul>
+            
+            <h3>Android设计规范</h3>
+            <p>Android设计规范注重：</p>
+            <ul>
+                <li>Material Design设计语言</li>
+                <li>卡片式布局</li>
+                <li>丰富的阴影和层次感</li>
+                <li>灵活的组件系统</li>
+                <li>深色模式支持</li>
+            </ul>
+            
+            <h2>性能优化</h2>
+            <p>研究了移动应用的性能优化，能够设计流畅的交互体验，即使在资源有限的设备上也能保持良好的性能。</p>
+            
+            <h3>优化策略</h3>
+            <p>移动应用性能优化的策略包括：</p>
+            <ul>
+                <li>减少不必要的渲染和计算</li>
+                <li>优化图片和资源加载</li>
+                <li>使用硬件加速</li>
+                <li>合理的内存管理</li>
+                <li>异步加载和懒加载</li>
+            </ul>
+            
+            <a href="index.html" class="back-link">返回笔记首页</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网页交互设计 - 学习笔记</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .header {
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #404040;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        
+        .header .meta {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .content {
+            background-color: #2d2d2d;
+            padding: 30px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+        }
+        
+        .content h2 {
+            font-size: 1.5rem;
+            margin: 30px 0 20px;
+            color: #4a6fa5;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #4a6fa5;
+        }
+        
+        .content h3 {
+            font-size: 1.2rem;
+            margin: 25px 0 15px;
+            color: #fff;
+        }
+        
+        .content p {
+            margin-bottom: 15px;
+            color: #e0e0e0;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 10px 20px;
+            background-color: #4a6fa5;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background-color: #3a5a85;
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>网页交互设计</h1>
+            <div class="meta">学习笔记</div>
+        </div>
+        
+        <div class="content">
+            <h2>现代网页交互设计</h2>
+            <p>学习了现代网页交互设计的原理，包括响应式设计、用户界面设计、交互模式等。掌握了 HTML、CSS 和 JavaScript 的高级应用。</p>
+            
+            <h3>设计原则</h3>
+            <p>现代网页交互设计应该遵循以下原则：</p>
+            <ul>
+                <li>以用户为中心的设计理念</li>
+                <li>简洁直观的界面布局</li>
+                <li>快速响应的交互反馈</li>
+                <li>一致的设计语言</li>
+                <li>无障碍访问性</li>
+            </ul>
+            
+            <h2>Three.js</h2>
+            <p>研究了 Three.js 库，能够创建交互式 3D 网页，为用户提供沉浸式的浏览体验。</p>
+            
+            <h3>核心概念</h3>
+            <p>Three.js 的核心概念包括场景（Scene）、相机（Camera）、渲染器（Renderer）、几何体（Geometry）、材质（Material）等。通过组合这些元素，可以创建出丰富的3D场景。</p>
+            
+            <h3>应用场景</h3>
+            <p>Three.js 在网页交互设计中的应用场景包括：</p>
+            <ul>
+                <li>产品展示和可视化</li>
+                <li>数据可视化</li>
+                <li>游戏和娱乐体验</li>
+                <li>虚拟现实和增强现实</li>
+                <li>创意艺术表达</li>
+            </ul>
+            
+            <h2>响应式设计</h2>
+            <p>响应式设计是现代网页设计的重要技术，它使网页能够适应不同的设备和屏幕尺寸。</p>
+            
+            <h3>技术实现</h3>
+            <p>响应式设计的技术实现包括：</p>
+            <ul>
+                <li>流式布局和弹性网格</li>
+                <li>媒体查询</li>
+                <li>弹性图片和媒体</li>
+                <li>移动优先的设计策略</li>
+            </ul>
+            
+            <a href="index.html" class="back-link">返回笔记首页</a>
+        </div>
+    </div>
+</body>
+</html>

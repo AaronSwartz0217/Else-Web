@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unreal Engine Gameplay框架 - 学习笔记</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .header {
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #404040;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        
+        .header .meta {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .content {
+            background-color: #2d2d2d;
+            padding: 30px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+        }
+        
+        .content h2 {
+            font-size: 1.5rem;
+            margin: 30px 0 20px;
+            color: #4a6fa5;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #4a6fa5;
+        }
+        
+        .content h3 {
+            font-size: 1.2rem;
+            margin: 25px 0 15px;
+            color: #fff;
+        }
+        
+        .content p {
+            margin-bottom: 15px;
+            color: #e0e0e0;
+        }
+        
+        .content ul {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+        
+        .content li {
+            margin-bottom: 8px;
+            color: #e0e0e0;
+        }
+        
+        .class-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: #3a3a3a;
+        }
+        
+        .class-table th,
+        .class-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border: 1px solid #505050;
+        }
+        
+        .class-table th {
+            background-color: #4a6fa5;
+            color: #fff;
+            font-weight: bold;
+        }
+        
+        .class-table tr:hover {
+            background-color: #454545;
+        }
+        
+        .code-block {
+            background-color: #1a1a1a;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            overflow-x: auto;
+            border: 1px solid #404040;
+        }
+        
+        .highlight {
+            background-color: #3a5a85;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #fff;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 10px 20px;
+            background-color: #4a6fa5;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background-color: #3a5a85;
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Unreal Engine Gameplay框架</h1>
+            <div class="meta">2026年6月25日 | 来源：Epic Games 官方文档</div>
+        </div>
+        
+        <div class="content">
+            <h2>概述</h2>
+            <p>虚幻引擎的Gameplay框架是一组类，你可以基于它们提供的模块化功能构建自己的游戏体验。你可以从中选取适合自己游戏的元素，因为这些类是相互配合、相辅相成的。</p>
+            
+            <p>Gameplay框架为游戏开发提供了核心架构，包括游戏模式、玩家状态、控制器、Pawn、摄像机等关键组件。这些类共同构成了游戏逻辑的基础，让开发者能够高效地构建复杂的游戏系统。</p>
+            
+            <h2>核心框架类</h2>
+            
+            <h3>1. 游戏实例 (Game Instance)</h3>
+            <p><span class="highlight">UGameInstance</span> 会在引擎启动时实例化，并保持活跃直至引擎关闭。这是一种管理器类，在游戏中不存在实体，但会追踪数据和运行代码。</p>
+            
+            <ul>
+                <li><strong>生命周期：</strong>从引擎启动到关闭，跨越所有关卡</li>
+                <li><strong>网络特性：</strong>在联网多人游戏中不会被复制，独立存在于服务器和所有客户端上</li>
+                <li><strong>主要用途：</strong>管理关卡加载间需要保持的数据，如游戏保存系统</li>
+                <li><strong>子系统管理：</strong>可以创建和管理游戏实例子系统，如在线子系统（好友、游戏会话、排行榜等）</li>
+            </ul>
+            
+            <h3>2. 游戏模式 (Game Mode)</h3>
+            <p><span class="highlight">AGameModeBase</span> 会在引擎加载关卡并创建世界后立即实例化。游戏模式是一种基于服务器的管理器类，继承自Actor类。</p>
+            
+            <ul>
+                <li><strong>生命周期：</strong>关卡加载时创建，按地图一一设置</li>
+                <li><strong>核心地位：</strong>在Gameplay框架中处于核心地位</li>
+                <li><strong>主要职责：</strong>管理Gameplay会话的所有规则和结构</li>
+                <li><strong>创建顺序：</strong>是关卡加载时第一个被实例化的Actor，创建时实例化剩余的框架Actor</li>
+            </ul>
+            
+            <h3>3. 游戏状态 (Game State)</h3>
+            <p><span class="highlight">AGameStateBase</span> 是非实体Actor，用于追踪游戏的整体状态。</p>
+            
+            <ul>
+                <li><strong>数据内容：</strong>包含与游戏内所有玩家相关的数据和逻辑</li>
+                <li><strong>具体示例：</strong>队伍得分、游戏目标、所有玩家及其相关玩家状态的列表</li>
+                <li><strong>网络特性：</strong>在联网多人游戏中，会在权威服务器和所有互联的客户端间复制其状态信息</li>
+                <li><strong>创建方式：</strong>由游戏模式创建</li>
+            </ul>
+            
+            <h3>4. 玩家状态 (Player State)</h3>
+            <p><span class="highlight">APlayerState</span> 处理其关联玩家的相关数据和逻辑。</p>
+            
+            <ul>
+                <li><strong>数据内容：</strong>玩家特定的数据，如生命值、子弹数量、物品栏</li>
+                <li><strong>创建时机：</strong>在每个玩家加入游戏或进入关卡时分别创建</li>
+                <li><strong>网络特性：</strong>在联网多人游戏中，会在权威服务器和所有互联的客户端间复制其状态信息</li>
+            </ul>
+            
+            <h3>5. 控制器 (Controller)</h3>
+            <p>控制器类处理玩家在游戏世界内的操作逻辑。UE中有两种用途广泛的控制器类：</p>
+            
+            <ul>
+                <li><strong>玩家控制器 (APlayerController)：</strong>管理器类，处理来自人类的输入，显示抬头信息并处理游戏内的物理表现</li>
+                <li><strong>AI控制器 (AAIController)：</strong>管理器类，处理游戏内的物理表现，在UE的人工智能帮助下显示其操作，包括行为树、状态树、寻路等</li>
+            </ul>
+            
+            <p>控制器类及其派生的类在游戏世界内没有实体，作为非实体Actor类存在。</p>
+            
+            <h3>6. Pawn</h3>
+            <p><span class="highlight">APawn</span> 类由玩家在游戏世界内的物理实体组成，对玩家的重要性不亚于控制器类。</p>
+            
+            <ul>
+                <li><strong>物理实体：</strong>构成玩家在游戏世界中的物理表现形式</li>
+                <li><strong>控制关系：</strong>控制器处理Pawn并指使其在游戏执行操作</li>
+                <li><strong>组件构成：</strong>由数种Actor组件构成，包括碰撞组件、静态网格体组件和移动组件</li>
+                <li><strong>基类关系：</strong>派生自Actor类</li>
+            </ul>
+            
+            <h3>7. 角色 (Character)</h3>
+            <p><span class="highlight">ACharacter</span> 是派生自Pawn的子类，专门用于实现具有移动能力的角色。</p>
+            
+            <ul>
+                <li><strong>默认Pawn：</strong>由默认Pawn类以及多种功能丰富的组件构成</li>
+                <li><strong>核心组件：</strong>角色移动组件、骨架网格体组件和胶囊体组件</li>
+                <li><strong>适用场景：</strong>玩家角色或NPC等需要复杂移动和动画的对象</li>
+            </ul>
+            
+            <h2>Gameplay框架类总表</h2>
+            <table class="class-table">
+                <thead>
+                    <tr>
+                        <th>类</th>
+                        <th>说明</th>
+                        <th>主要派生类</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="highlight">Actor</span></td>
+                        <td>可以放置在关卡中的任意对象，支持变换、生成和摧毁，是Actor组件的容器</td>
+                        <td>Pawn、Controller、GameMode、GameState、PlayerState、HUD、Camera</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">ActorComponent</span></td>
+                        <td>Actor的构成元素，控制Actor的不同方面（移动、渲染、位置等）</td>
+                        <td>SceneComponent、PrimitiveComponent</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">GameInstance</span></td>
+                        <td>引擎启动时创建，关闭时销毁，管理跨关卡的数据和系统</td>
+                        <td>自定义游戏实例类</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">GameModeBase</span></td>
+                        <td>定义游戏规则和逻辑，管理玩家生成和游戏状态</td>
+                        <td>AGameMode</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">GameStateBase</span></td>
+                        <td>存储和管理全局游戏状态，同步到所有客户端</td>
+                        <td>AGameState</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">PlayerState</span></td>
+                        <td>存储和管理单个玩家的状态信息</td>
+                        <td>自定义玩家状态类</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">Controller</span></td>
+                        <td>处理玩家或AI在游戏世界内的操作逻辑</td>
+                        <td>APlayerController、AAIController</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">PlayerController</span></td>
+                        <td>处理人类玩家输入，控制角色，管理UI</td>
+                        <td>自定义玩家控制器类</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">AIController</span></td>
+                        <td>使用AI控制Pawn，包括行为树、状态树、寻路等</td>
+                        <td>自定义AI控制器类</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">Pawn</span></td>
+                        <td>玩家在游戏世界内的物理实体，由控制器控制</td>
+                        <td>ACharacter、AVehicle</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">Character</span></td>
+                        <td>具有移动能力的角色，支持动画和物理交互</td>
+                        <td>自定义角色类</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">HUD</span></td>
+                        <td>渲染游戏中的UI元素（血条、分数、小地图等）</td>
+                        <td>自定义HUD类</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">Camera</span></td>
+                        <td>为玩家显示游戏画面的摄像机</td>
+                        <td>ACameraActor、USpringArmComponent</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h2>3C概念</h2>
+            <p>虚幻引擎中的3C概念构成了角色控制和视觉表达的核心要素：</p>
+            
+            <ul>
+                <li><strong>Controller（控制器）：</strong>用于接收来自输入设备的输入信号，Controller并不直接控制角色的物理运动，而是通过与对应的Pawn进行交互，发送命令和更新状态。主要用于控制Pawn，通过输入信号又可以控制玩家角色，然后配合相机，从游戏获取信息，控制Character的反馈。</li>
+                <li><strong>Camera（摄像机）：</strong>实时为玩家显示游戏中画面。设置Camera与Controller配合，可以实现第一人称视角（FPV）、第三人称视角（TPV）和其他多种视角模式，同时也可以调整相机的视野、远近裁剪面、缩放等因素，以增强玩家的游戏体验。</li>
+                <li><strong>Character（角色）：</strong>游戏中代表的玩家或者非玩家实体对象(AI控制)。Character类通常是从Pawn类派生而来，Character通常带有骨骼动画系统支持，能够进行复杂的动作表现，并且与物理系统相结合，进行运动和碰撞检测。</li>
+            </ul>
+            
+            <p>综上所述，"3C"构成了虚幻引擎中角色控制和视觉表达的核心要素，它们相互协同工作，共同实现了游戏中角色的交互行为及玩家的视觉感知。</p>
+            
+            <h2>代码示例</h2>
+            
+            <h3>游戏模式示例</h3>
+            <div class="code-block">
+// 自定义游戏模式头文件
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/GameModeBase.h"
+#include "MyGameMode.generated.h"
+
+UCLASS()
+class MYGAME_API AMyGameMode : public AGameModeBase
+{
+    GENERATED_BODY()
+
+public:
+    AMyGameMode();
+
+    // 游戏开始时调用
+    virtual void BeginPlay() override;
+
+    // 玩家登录时调用
+    virtual void PostLogin(APlayerController* NewPlayer) override;
+
+    // 游戏结束逻辑
+    virtual void HandleMatchHasEnded() override;
+};
+            </div>
+            
+            <h3>角色初始化示例</h3>
+            <div class="code-block">
+// 自定义角色构造函数
+AMyCharacter::AMyCharacter()
+{
+    // 设置胶囊体大小
+    GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
+
+    // 让相机不做旋转
+    bUseControllerRotationPitch = false;
+    bUseControllerRotationYaw = false;
+    bUseControllerRotationRoll = false;
+
+    // 角色在输入方向时进行旋转
+    GetCharacterMovement()->bOrientRotationToMovement = true;
+
+    // 控制角色转向时的速率
+    GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
+
+    // 跳跃高度
+    GetCharacterMovement()->JumpZVelocity = 700.f;
+
+    // 跳跃向前浮动移动速率
+    GetCharacterMovement()->AirControl = 0.35f;
+
+    // 最大移动速度
+    GetCharacterMovement()->MaxWalkSpeed = 500.f;
+
+    // 创建相机臂组件
+    CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
+    CameraBoom->SetupAttachment(RootComponent);
+
+    // 创建跟随相机
+    FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
+    FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
+}
+            </div>
+            
+            <h2>学习资源</h2>
+            <ul>
+                <li>Epic开发者社区教程：<a href="https://dev.epicgames.com/community/learning/tutorials/l21z/unreal-engine-begin-play-gameplay" style="color: #4a6fa5;">新手指南</a> - 以视频的方式对虚幻引擎中的Gameplay框架进行了全面的概述</li>
+                <li>官方文档：<a href="https://dev.epicgames.com/documentation/unreal-engine/gameplay-framework-in-unreal-engine" style="color: #4a6fa5;">Gameplay框架完整文档</a></li>
+            </ul>
+            
+            <a href="index.html" class="back-link">返回笔记首页</a>
+        </div>
+    </div>
+</body>
+</html>
