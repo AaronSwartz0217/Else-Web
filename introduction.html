@@ -293,6 +293,52 @@
             color: #4a6fa5;
         }
         
+        /* Lightbox 图片查看样式 */
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .lightbox.active {
+            display: flex;
+        }
+        
+        .lightbox-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+        }
+        
+        .lightbox-content img {
+            max-width: 100%;
+            max-height: 90vh;
+            border-radius: 8px;
+        }
+        
+        .lightbox-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            font-size: 2.5rem;
+            color: #fff;
+            cursor: pointer;
+            background: none;
+            border: none;
+            line-height: 1;
+        }
+        
+        .lightbox-close:hover {
+            color: #4a6fa5;
+        }
+        
         .game-grid {
             display: flex;
             flex-wrap: wrap;
@@ -466,6 +512,14 @@
                 </div>
                 
                 <div class="portfolio-item">
+                    <h3>环球厅</h3>
+                    <span class="tech-tag">UE5</span>
+                    <span class="tech-tag">个人全栈</span>
+                    <p>开发中</p>
+                    <a href="#" onclick="showImage('杂项/屏幕截图 2025-11-09 192525.png', '环球厅截图'); return false;">查看截图</a>
+                </div>
+                
+                <div class="portfolio-item">
                     <h3>海报展览馆网站</h3>
                     <span class="tech-tag">Unity</span>
                     <span class="tech-tag">美术制作</span>
@@ -574,6 +628,14 @@
     
     <div id="toast" style="position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #4a6fa5; color: white; padding: 14px 28px; border-radius: 30px; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; font-size: 1rem;">邮箱已复制到剪贴板</div>
     
+    <!-- Lightbox 图片查看 -->
+    <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
+        <div class="lightbox-content">
+            <button class="lightbox-close" onclick="closeLightbox(event)">&times;</button>
+            <img id="lightbox-img" src="" alt="">
+        </div>
+    </div>
+    
     <canvas id="stars"></canvas>
     
     <script>
@@ -645,6 +707,35 @@
     </script>
     
     <script>
+        // Lightbox 图片查看功能
+        function showImage(src, alt) {
+            const lightbox = document.getElementById('lightbox');
+            const img = document.getElementById('lightbox-img');
+            img.src = src;
+            img.alt = alt || '';
+            lightbox.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeLightbox(event) {
+            if (event.target.id === 'lightbox' || event.target.classList.contains('lightbox-close')) {
+                const lightbox = document.getElementById('lightbox');
+                lightbox.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+        
+        // ESC键关闭lightbox
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const lightbox = document.getElementById('lightbox');
+                if (lightbox.classList.contains('active')) {
+                    lightbox.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            }
+        });
+        
         let copied = false;
         
         function copyEmail() {
