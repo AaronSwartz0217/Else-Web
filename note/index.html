@@ -13,16 +13,28 @@
         
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: #1a1a1a;
+            background-color: #000000;
             color: #e0e0e0;
             line-height: 1.6;
             min-height: 100vh;
+        }
+        
+        #stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
         }
         
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 40px 20px;
+            position: relative;
+            z-index: 1;
         }
         
         .header {
@@ -224,5 +236,74 @@
             <a href="../introduction.html" class="back-link">返回介绍页面</a>
         </div>
     </div>
+    
+    <canvas id="stars"></canvas>
+    
+    <script>
+        const canvas = document.getElementById('stars');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        const stars = [];
+        const starCount = 50;
+        
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        
+        class Star {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = Math.random() * 0.8 + 0.2;
+                this.baseAlpha = Math.random() * 0.5 + 0.2;
+                this.alpha = this.baseAlpha;
+                this.direction = Math.random() > 0.5 ? 1 : -1;
+                this.twinkleSpeed = Math.random() * 0.01 + 0.002;
+                this.color = Math.random() > 0.7 ? '#ffffff' : 
+                            (Math.random() > 0.85 ? '#aaddff' : '#ffffff');
+            }
+            
+            update() {
+                this.alpha += this.twinkleSpeed * this.direction;
+                if (this.alpha >= 1 || this.alpha <= this.baseAlpha * 0.3) {
+                    this.direction *= -1;
+                }
+            }
+            
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.alpha;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+        
+        function init() {
+            resize();
+            for (let i = 0; i < starCount; i++) {
+                stars.push(new Star());
+            }
+            animate();
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            stars.forEach(star => {
+                star.update();
+                star.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+        
+        window.addEventListener('resize', resize);
+        init();
+    </script>
 </body>
 </html>

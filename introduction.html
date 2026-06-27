@@ -13,7 +13,7 @@
         
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: #0a0a0a;
+            background-color: #000000;
             color: #e0e0e0;
             line-height: 1.7;
             overflow-y: auto;
@@ -21,10 +21,22 @@
             margin: 0;
         }
         
+        #stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 40px 20px;
+            position: relative;
+            z-index: 1;
         }
         
         header {
@@ -398,6 +410,7 @@
                     <span class="tech-tag">Unity</span>
                     <span class="tech-tag">参赛项目</span>
                     <p>基于VR的线上博物馆，荣获2024年中国大学生计算机设计大赛数媒交互组国家级二等奖。</p>
+                    <a href="https://xlxy.ntu.edu.cn/2024/1107/c7166a253646/page.htm" target="_blank">获奖证明</a>
                 </div>
                 
                 <div class="portfolio-item">
@@ -507,6 +520,7 @@
                     <h3>国家级二等奖</h3>
                     <p>2024年中国大学生计算机设计大赛数媒交互组</p>
                     <p style="font-size: 0.9rem; color: #888;">作品：《VR博物馆——古数灵境》</p>
+                    <a href="https://xlxy.ntu.edu.cn/2024/1107/c7166a253646/page.htm" target="_blank" style="font-size: 0.9rem;">查看获奖公示</a>
                 </div>
             </div>
         </section>
@@ -557,6 +571,76 @@
     </footer>
     
     <div id="toast" style="position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #4a6fa5; color: white; padding: 14px 28px; border-radius: 30px; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; font-size: 1rem;">邮箱已复制到剪贴板</div>
+    
+    <canvas id="stars"></canvas>
+    
+    <script>
+        const canvas = document.getElementById('stars');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        const stars = [];
+        const starCount = 60;
+        
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        
+        class Star {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = Math.random() * 0.8 + 0.2;
+                this.baseAlpha = Math.random() * 0.5 + 0.2;
+                this.alpha = this.baseAlpha;
+                this.direction = Math.random() > 0.5 ? 1 : -1;
+                this.speed = Math.random() * 0.02 + 0.005;
+                this.twinkleSpeed = Math.random() * 0.01 + 0.002;
+                this.color = Math.random() > 0.7 ? '#ffffff' : 
+                            (Math.random() > 0.85 ? '#aaddff' : '#ffffff');
+            }
+            
+            update() {
+                this.alpha += this.twinkleSpeed * this.direction;
+                if (this.alpha >= 1 || this.alpha <= this.baseAlpha * 0.3) {
+                    this.direction *= -1;
+                }
+            }
+            
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.alpha;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+        
+        function init() {
+            resize();
+            for (let i = 0; i < starCount; i++) {
+                stars.push(new Star());
+            }
+            animate();
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            stars.forEach(star => {
+                star.update();
+                star.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+        
+        window.addEventListener('resize', resize);
+        init();
+    </script>
     
     <script>
         let copied = false;
