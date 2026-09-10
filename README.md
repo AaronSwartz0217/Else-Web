@@ -15,6 +15,7 @@
 
 ### 🌐 页面结构
 - **主页（introduction.html）**：个人介绍、专业技能、项目经历、竞赛获奖、活动经历
+- **公开项目清单（PROJECT_INVENTORY.md）**：GitHub 公开仓库与网站展示位置的对应关系
 - **3D展示页（game.html）**：沉浸式3D模型展示，支持灯光调节
 - **学习笔记（note.html）**：OneNote风格的技术笔记整理
 - **作品详情（item.html）**：项目详细信息展示页

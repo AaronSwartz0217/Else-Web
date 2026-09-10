@@ -210,6 +210,58 @@
             color: #6b8cce;
             text-decoration: underline;
         }
+
+        .project-note {
+            color: #888;
+            font-size: 0.9rem;
+            margin: 8px 0 0;
+        }
+
+        .misc-projects {
+            margin-top: 28px;
+            padding: 22px 25px;
+            border: 1px solid rgba(138, 180, 248, 0.18);
+            border-radius: 12px;
+            background: rgba(74, 106, 165, 0.08);
+        }
+
+        .misc-projects summary {
+            cursor: pointer;
+            color: #f0f0f0;
+            font-size: 1.15rem;
+            font-weight: 600;
+        }
+
+        .misc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 14px;
+            margin-top: 18px;
+        }
+
+        .misc-item {
+            padding: 15px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.035);
+        }
+
+        .misc-item h3 {
+            margin: 0 0 6px;
+            font-size: 1rem;
+        }
+
+        .misc-item p {
+            margin: 0;
+            color: #999;
+            font-size: 0.88rem;
+        }
+
+        .misc-item a {
+            display: inline-block;
+            margin-top: 9px;
+            color: #8ab4f8;
+            text-decoration: none;
+        }
         
         .award-item {
             display: flex;
@@ -443,11 +495,14 @@
                 <div class="portfolio-item">
                     <h3>物魄奇谭系列</h3>
                     <span class="tech-tag">UE5</span>
+                    <span class="tech-tag">GAS</span>
                     <span class="tech-tag">全栈</span>
-                    <p>大型国风RPG，独立完成程序、场景、角色、特效、UI及性能优化。工程约40GB，使用FHttpModule异步拉取外部JSON数据。</p>
-                    <a href="https://github.com/AaronSwartz0217/Spirit-Tales" target="_blank">查看 GitHub</a>
+                    <p>基于 Unreal Engine 5 与 Gameplay Ability System 构建的盛唐题材动作冒险游戏，覆盖能力、属性、效果、标签、角色交互及内容展示。</p>
+                    <a href="https://github.com/AaronSwartz0217/UE5-SpiritTales-GAS" target="_blank" rel="noopener noreferrer">查看游戏工程</a>
                     <br>
-                    <a href="https://aaronswartz0217.github.io/Spirit-Tales/" target="_blank">宣传网站</a>
+                    <a href="https://github.com/AaronSwartz0217/Spirit-Tales" target="_blank" rel="noopener noreferrer">查看宣传站源码</a>
+                    <br>
+                    <a href="https://aaronswartz0217.github.io/Spirit-Tales/" target="_blank" rel="noopener noreferrer">访问宣传网站</a>
                 </div>
                 
                 <div class="portfolio-item">
@@ -468,19 +523,19 @@
                 </div>
                 
                 <div class="portfolio-item">
-                    <h3>NTU_DigitalTwin_Frontend</h3>
+                    <h3>NTU Digital Twin</h3>
                     <span class="tech-tag">前端</span>
                     <span class="tech-tag">Android + Three.js</span>
                     <p>Android端采用原生+WebView混合架构，通过JSBridge承载Three.js 3D校园模型，实现移动端3D可视化展示。</p>
-                    <a href="https://github.com/AaronSwartz0217/NTU_DigitalTwin_Frontend" target="_blank">查看 GitHub</a>
+                    <a href="https://github.com/AaronSwartz0217/NTU_DigitalTwin" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
                 </div>
                 
                 <div class="portfolio-item">
-                    <h3>NTU_DigitalTwin_Backend</h3>
+                    <h3>.NET Chat</h3>
                     <span class="tech-tag">后端</span>
                     <span class="tech-tag">.NET + Avalonia</span>
                     <p>.NET后端基于Furion提供JWT认证、论坛CRUD及WebSocket实时聊天，集成讯飞星火大模型实现AI校园助手。Avalonia桌面端实现跨平台桌面应用，支持MVVM架构与动态主题切换。</p>
-                    <a href="https://github.com/AaronSwartz0217/NTU_DigitalTwin_Backend" target="_blank">查看 GitHub</a>
+                    <a href="https://github.com/AaronSwartz0217/.NET_Chat" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
                 </div>
                 
                 <div class="portfolio-item">
@@ -534,7 +589,114 @@
                     <span class="tech-tag">美术制作</span>
                     <p>负责展览馆场景模型搭建与美术制作，打造沉浸式虚拟展览体验。</p>
                 </div>
+
+                <div class="portfolio-item">
+                    <h3>GLSDD · Unity 磨砂玻璃 UI</h3>
+                    <span class="tech-tag">Unity</span>
+                    <span class="tech-tag">URP</span>
+                    <span class="tech-tag">ShaderLab</span>
+                    <p>面向 Unity 2022.3 / URP 14 的可编辑磨砂玻璃 UI 工具集，包含运行时折射 Shader、编辑器烘焙窗口、预设管理与真 Alpha PNG 导出。</p>
+                    <a href="https://github.com/AaronSwartz0217/GLSDD" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                </div>
+
+                <div class="portfolio-item">
+                    <h3>Unity Fight Character Flow Plugins</h3>
+                    <span class="tech-tag">Unity</span>
+                    <span class="tech-tag">C#</span>
+                    <span class="tech-tag">编辑器工具</span>
+                    <p>角色动画重定向与武器、装备挂点工具集合，覆盖 Split Rig → Mixamo/Humanoid 动画烘焙、Socket 创建、装备预览和偏移 Profile。</p>
+                    <a href="https://github.com/AaronSwartz0217/UNITY_FIGHTCHRACTER_FLOW_PLUGIN" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                </div>
+
+                <div class="portfolio-item">
+                    <h3>Unity 游戏 UI 生产工作流</h3>
+                    <span class="tech-tag">Python</span>
+                    <span class="tech-tag">Unity UI</span>
+                    <span class="tech-tag">自动化</span>
+                    <p>用于批量生产游戏 UI 图片资源的标准化工作流，覆盖白模、风格基准、父子面板拆分、按钮四态、真 Alpha、边缘检查与原位回拼。</p>
+                    <a href="https://github.com/AaronSwartz0217/UI_WORK_FLOW_UNITY_GAME_SOURCE" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                </div>
+
+                <div class="portfolio-item">
+                    <h3>3D HTML GLTF Catch</h3>
+                    <span class="tech-tag">JavaScript</span>
+                    <span class="tech-tag">Python</span>
+                    <span class="tech-tag">Three.js</span>
+                    <p>从获准访问的 3D 网页中识别并导出模型资源，支持网络响应捕获、Three.js 场景降级导出、命令行工具与浏览器扩展。</p>
+                    <a href="https://github.com/AaronSwartz0217/3D_HTML_GLTF_CATCH" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                </div>
+
+                <div class="portfolio-item">
+                    <h3>杭州求职避雷网</h3>
+                    <span class="tech-tag">JavaScript</span>
+                    <span class="tech-tag">纯前端</span>
+                    <span class="tech-tag">信息检索</span>
+                    <p>公司风险信息查询与地区筛选站点，提供模糊匹配、风险标签、关联企业提醒、明暗主题与独立阅读模式。</p>
+                    <a href="https://github.com/AaronSwartz0217/-" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                    <p class="project-note">信息仅作个人求职参考，不构成法律或投资建议。</p>
+                </div>
             </div>
+
+            <details class="misc-projects" open>
+                <summary>杂项项目 · 小型工具、实验、课程项目与 Fork（11）</summary>
+                <div class="misc-grid">
+                    <div class="misc-item">
+                        <h3>Else-Web</h3>
+                        <p>Three.js 交互式个人作品集网站，也就是当前站点源码。</p>
+                        <a href="https://github.com/AaronSwartz0217/Else-Web" target="_blank" rel="noopener noreferrer">GitHub</a>
+                    </div>
+                    <div class="misc-item">
+                        <h3>NTU Building</h3>
+                        <p>南通大学建筑 GLTF 网页查看器。</p>
+                        <a href="https://github.com/AaronSwartz0217/NTU_Building" target="_blank" rel="noopener noreferrer">GitHub</a>
+                    </div>
+                    <div class="misc-item">
+                        <h3>UE5.5 Houdini WFC</h3>
+                        <p>基于 Houdini 与波函数坍缩的生成实验。</p>
+                        <a href="https://github.com/AaronSwartz0217/UE5.5_Houdini_WFC" target="_blank" rel="noopener noreferrer">GitHub</a>
+                    </div>
+                    <div class="misc-item">
+                        <h3>WaveFunctionCollapse</h3>
+                        <p>波函数坍缩位图与 Tilemap 生成项目的 Fork。</p>
+                        <a href="https://github.com/AaronSwartz0217/WaveFunctionCollapse" target="_blank" rel="noopener noreferrer">GitHub · Fork</a>
+                    </div>
+                    <div class="misc-item">
+                        <h3>LevelGenerator</h3>
+                        <p>UE 5.3 PCG 与动态随机关卡生成项目的 Fork。</p>
+                        <a href="https://github.com/AaronSwartz0217/LevelGenerator" target="_blank" rel="noopener noreferrer">GitHub · Fork</a>
+                    </div>
+                    <div class="misc-item">
+                        <h3>XiaoYan</h3>
+                        <p>小型 HTML 页面项目。</p>
+                        <a href="https://github.com/AaronSwartz0217/XiaoYan" target="_blank" rel="noopener noreferrer">GitHub</a>
+                    </div>
+                    <div class="misc-item">
+                        <h3>MyWeb</h3>
+                        <p>EJS、JavaScript 与 CSS 网页实验。</p>
+                        <a href="https://github.com/AaronSwartz0217/MyWeb" target="_blank" rel="noopener noreferrer">GitHub</a>
+                    </div>
+                    <div class="misc-item">
+                        <h3>LX</h3>
+                        <p>轻量 HTML 页面实验。</p>
+                        <a href="https://github.com/AaronSwartz0217/LX" target="_blank" rel="noopener noreferrer">GitHub</a>
+                    </div>
+                    <div class="misc-item">
+                        <h3>Sponza</h3>
+                        <p>投影与场景测试占位仓库。</p>
+                        <a href="https://github.com/AaronSwartz0217/Sponza" target="_blank" rel="noopener noreferrer">GitHub</a>
+                    </div>
+                    <div class="misc-item">
+                        <h3>NSHXG</h3>
+                        <p>“尼斯湖雪怪”介绍占位仓库。</p>
+                        <a href="https://github.com/AaronSwartz0217/NSHXG" target="_blank" rel="noopener noreferrer">GitHub</a>
+                    </div>
+                    <div class="misc-item">
+                        <h3>111</h3>
+                        <p>当前为空的实验占位仓库。</p>
+                        <a href="https://github.com/AaronSwartz0217/111" target="_blank" rel="noopener noreferrer">GitHub</a>
+                    </div>
+                </div>
+            </details>
         </section>
         
         <section class="section">
