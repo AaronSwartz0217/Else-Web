@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Introduction - Else</title>
     <style>
+        /* 参考项目的玻璃材质参数：与 LifeTrail 的 :root 保持一致 */
+        :root {
+            --glass: rgba(60, 60, 66, 0.42);
+            --glass-deep: rgba(78, 78, 86, 0.52);
+            --line: rgba(255, 255, 255, 0.09);
+            --blur: blur(22px) saturate(1.3);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -98,7 +106,12 @@
         
         .section:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(74, 106, 165, 0.1);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.14),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+                inset 1px 0 0 rgba(255, 255, 255, 0.05),
+                inset -1px 0 0 rgba(255, 255, 255, 0.05),
+                0 14px 38px rgba(0, 0, 0, 0.38);
         }
         
         .contact-info {
@@ -133,16 +146,13 @@
         }
         
         .skill-card {
-            background: rgba(74, 106, 165, 0.1);
             padding: 25px;
-            border-radius: 10px;
-            border-left: 4px solid #4a6fa5;
-            transition: transform 0.3s ease, background 0.3s ease;
+            transition: transform 0.3s ease;
         }
         
         .skill-card:hover {
             transform: translateX(5px);
-            background: rgba(74, 106, 165, 0.15);
+            background-color: var(--glass-deep);
         }
         
         .skill-card h3 {
@@ -172,13 +182,13 @@
             background: rgba(255, 255, 255, 0.03);
             padding: 25px;
             border-radius: 10px;
-            transition: transform 0.3s ease, background 0.3s ease;
+            transition: transform 0.3s ease;
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
         
         .portfolio-item:hover {
             transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.06);
+            background-color: var(--glass-deep);
         }
         
         .portfolio-item h3 {
@@ -222,10 +232,51 @@
             align-items: flex-start;
             gap: 15px;
             padding: 20px;
-            background: rgba(255, 215, 0, 0.05);
             border-radius: 10px;
-            border-left: 4px solid #ffd700;
+            border: 1px solid rgba(255, 255, 255, 0.08);
             margin-bottom: 15px;
+        }
+
+        /* 半透玻璃底材：与参考项目 .card 的材质和阴影完全一致 */
+        .section,
+        .portfolio-item,
+        .skill-card,
+        .award-item {
+            background: var(--glass);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.14),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+                inset 1px 0 0 rgba(255, 255, 255, 0.05),
+                inset -1px 0 0 rgba(255, 255, 255, 0.05),
+                0 10px 34px rgba(0, 0, 0, 0.32);
+        }
+
+        .no-lg .section,
+        .no-lg .portfolio-item,
+        .no-lg .skill-card,
+        .no-lg .award-item,
+        .no-lg .speed-knob {
+            backdrop-filter: var(--blur);
+        }
+
+        /* 分区容器完全透明；卡片只保留透明玻璃边缘，不填底色 */
+        .section {
+            background: transparent !important;
+            border-color: transparent;
+            box-shadow: none;
+            backdrop-filter: none !important;
+        }
+
+        .section:hover {
+            box-shadow: none;
+        }
+
+        .portfolio-item,
+        .skill-card,
+        .award-item {
+            background: transparent !important;
         }
         
         .award-item .icon {
@@ -368,9 +419,226 @@
             transform: translateY(-2px);
             border-color: rgba(74, 106, 165, 0.3);
         }
+
+        /* ==================== 天光主题 · 云海背景 ==================== */
+        .sky-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.9s ease;
+        }
+
+        html[data-theme="sky"] .sky-canvas {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* 第三档冰原画布：与天光共用同一套玻璃 UI，只换背后的着色器 */
+        .ice-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.9s ease;
+        }
+
+        html[data-theme="ice"] .ice-canvas {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* 冰原比云海亮得多，垫一层暗色衬底，让半透玻璃读起来和天光档一致 */
+        .ice-shade {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.9s ease;
+            background: linear-gradient(180deg,
+                rgba(8, 16, 28, 0.55) 0%,
+                rgba(8, 18, 32, 0.42) 50%,
+                rgba(6, 14, 24, 0.52) 100%);
+        }
+
+        html[data-theme="ice"] .ice-shade {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        html[data-theme="sky"],
+        html[data-theme="ice"] {
+            --glass: rgba(44, 48, 56, 0.46);
+            --glass-deep: rgba(60, 64, 74, 0.56);
+            --blur: blur(32px) saturate(1.7);
+            background: #0b1420;
+        }
+
+        html[data-theme="sky"] body,
+        html[data-theme="ice"] body {
+            background-color: transparent;
+        }
+
+        #stars {
+            transition: opacity 0.9s ease;
+        }
+
+        html[data-theme="sky"] #stars,
+        html[data-theme="ice"] #stars {
+            opacity: 0;
+        }
+
+        /* 背景呼吸层：第三档交给冰原、第四档交给云海，前两档只调速度 */
+        .bg-shift {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background: radial-gradient(120% 80% at 50% 0%, rgba(90, 130, 210, 0.55), transparent 62%);
+            opacity: 0;
+            will-change: opacity;
+            animation: bgShift 120s ease-in-out infinite;
+        }
+
+        @keyframes bgShift {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 0.18; }
+        }
+
+        html[data-theme="sky"] .bg-shift,
+        html[data-theme="ice"] .bg-shift {
+            opacity: 0;
+            animation: none;
+        }
+
+        html[data-theme="sky"] header,
+        html[data-theme="ice"] header {
+            background: linear-gradient(135deg, rgba(12, 24, 42, 0.5) 0%, rgba(14, 36, 60, 0.42) 50%, rgba(8, 44, 78, 0.5) 100%);
+            backdrop-filter: blur(12px) saturate(1.2);
+        }
+
+        /* 天光/冰原下的磨砂边：与参考项目 html[data-theme="sky"] 的规则逐值一致 */
+        html[data-theme="sky"] .section,
+        html[data-theme="sky"] .portfolio-item,
+        html[data-theme="sky"] .skill-card,
+        html[data-theme="sky"] .award-item,
+        html[data-theme="sky"] .speed-knob,
+        html[data-theme="ice"] .section,
+        html[data-theme="ice"] .portfolio-item,
+        html[data-theme="ice"] .skill-card,
+        html[data-theme="ice"] .award-item,
+        html[data-theme="ice"] .speed-knob {
+            background-image:
+                linear-gradient(180deg, rgba(255, 208, 150, 0.28) 0, rgba(255, 208, 150, 0) 3px),
+                radial-gradient(135% 135% at 50% 50%,
+                    rgba(255, 255, 255, 0) 58%,
+                    rgba(255, 255, 255, 0.06) 80%,
+                    rgba(255, 255, 255, 0.14) 100%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 22%);
+        }
+
+        html[data-theme="sky"] footer,
+        html[data-theme="ice"] footer {
+            background: linear-gradient(135deg, rgba(8, 18, 32, 0.55) 0%, rgba(10, 28, 46, 0.55) 100%);
+            backdrop-filter: blur(12px);
+        }
+
+        html[data-theme="sky"] .portfolio-item a,
+        html[data-theme="sky"] .contact-item a,
+        html[data-theme="ice"] .portfolio-item a,
+        html[data-theme="ice"] .contact-item a {
+            color: #9cc4ff;
+        }
+
+        /* 右上角旋钮：三条横线表示 1x / 2x / 4x，第 4 档加虚线环表示天光 */
+        .knob-shell {
+            position: fixed;
+            right: 18px;
+            top: 18px;
+            width: 44px;
+            height: 44px;
+            z-index: 9;
+        }
+
+        .knob-shell .tick {
+            position: absolute;
+            left: 50%;
+            top: -9px;
+            width: 2px;
+            height: 9px;
+            margin-left: -1px;
+            border-radius: 1px;
+            background: rgba(255, 255, 255, 0.28);
+            transform-origin: 50% 31px;
+        }
+
+        .knob-shell .tick:nth-of-type(1) { transform: rotate(0deg); }
+        .knob-shell .tick:nth-of-type(2) { transform: rotate(120deg); }
+        .knob-shell .tick:nth-of-type(3) { transform: rotate(240deg); }
+
+        .speed-knob {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            border-radius: 50%;
+            appearance: none;
+            border: 1px solid var(--line);
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+            transition: background 0.18s, transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .speed-knob:hover {
+            background: var(--glass-deep);
+        }
+
+        .speed-knob span {
+            display: block;
+            height: 2px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.18);
+            transition: background 0.2s;
+        }
+
+        .speed-knob span:nth-child(1) { width: 12px; }
+        .speed-knob span:nth-child(2) { width: 18px; }
+        .speed-knob span:nth-child(3) { width: 24px; }
+        .speed-knob span.on { background: rgba(255, 255, 255, 0.85); }
+
+        .speed-knob.theme::after {
+            content: '';
+            position: absolute;
+            inset: 6px;
+            border-radius: 50%;
+            border: 1px dashed rgba(255, 255, 255, 0.45);
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
+    <svg width="0" height="0" style="position:absolute"><defs id="lg-defs"></defs></svg>
+    <canvas class="sky-canvas" id="skyCanvas" aria-hidden="true"></canvas>
+    <canvas class="ice-canvas" id="iceCanvas" aria-hidden="true"></canvas>
+    <div class="ice-shade" aria-hidden="true"></div>
+    <div class="bg-shift" aria-hidden="true"></div>
+
     <header>
         <div class="container">
             <h1>Else</h1>
@@ -397,10 +665,10 @@
             <p>具备极强创新整合能力，善于将不同技术栈的课程项目与个人作品有机融合，形成可落地、可展示的完整系统。热爱创造沉浸式数字体验，追求技术与艺术的完美结合。</p>
         </section>
         
-        <section class="section">
+        <section class="section section-plain">
             <h2>专业技能</h2>
             <div class="skills-grid">
-                <div class="skill-card">
+                <div class="skill-card" data-glass>
                     <h3>三维与美术</h3>
                     <ul>
                         <li>Blender（建模贴图）</li>
@@ -410,7 +678,7 @@
                         <li>Houdini（HDA程序化资产）</li>
                     </ul>
                 </div>
-                <div class="skill-card">
+                <div class="skill-card" data-glass>
                     <h3>引擎与开发</h3>
                     <ul>
                         <li>Unity（Game Jam TA/美术）</li>
@@ -420,7 +688,7 @@
                         <li>Avalonia UI（.NET跨平台桌面、MVVM）</li>
                     </ul>
                 </div>
-                <div class="skill-card">
+                <div class="skill-card" data-glass>
                     <h3>编程与通信</h3>
                     <ul>
                         <li>Git（Git Flow、SSH）</li>
@@ -430,7 +698,7 @@
                         <li>CDN依赖注入（快速原型）</li>
                     </ul>
                 </div>
-                <div class="skill-card">
+                <div class="skill-card" data-glass>
                     <h3>计算机基础</h3>
                     <ul>
                         <li>计算机图形学</li>
@@ -446,7 +714,7 @@
         <section class="section">
             <h2>项目经历</h2>
             <div class="portfolio">
-                <div class="portfolio-item">
+                <div class="portfolio-item" data-glass>
                     <h3>物魄奇谭系列</h3>
                     <span class="tech-tag">UE5</span>
                     <span class="tech-tag">GAS</span>
@@ -459,7 +727,7 @@
                     <a href="https://aaronswartz0217.github.io/Spirit-Tales/" target="_blank" rel="noopener noreferrer">访问宣传网站</a>
                 </div>
                 
-                <div class="portfolio-item">
+                <div class="portfolio-item" data-glass>
                     <h3>VR博物馆——古数灵境</h3>
                     <span class="tech-tag">VR</span>
                     <span class="tech-tag">Unity</span>
@@ -468,7 +736,7 @@
                     <a href="https://xlxy.ntu.edu.cn/2024/1107/c7166a253646/page.htm" target="_blank">获奖证明</a>
                 </div>
                 
-                <div class="portfolio-item">
+                <div class="portfolio-item" data-glass>
                     <h3>芬奇房间</h3>
                     <span class="tech-tag">Unity</span>
                     <span class="tech-tag">参与开发</span>
@@ -476,7 +744,7 @@
                     <a href="https://www.taptap.cn/app/716586?os=android" target="_blank">TapTap下载</a>
                 </div>
                 
-                <div class="portfolio-item">
+                <div class="portfolio-item" data-glass>
                     <h3>NTU Digital Twin</h3>
                     <span class="tech-tag">前端</span>
                     <span class="tech-tag">Android + Three.js</span>
@@ -484,7 +752,7 @@
                     <a href="https://github.com/AaronSwartz0217/NTU_DigitalTwin" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
                 </div>
                 
-                <div class="portfolio-item">
+                <div class="portfolio-item" data-glass>
                     <h3>.NET Chat</h3>
                     <span class="tech-tag">后端</span>
                     <span class="tech-tag">.NET + Avalonia</span>
@@ -492,7 +760,7 @@
                     <a href="https://github.com/AaronSwartz0217/.NET_Chat" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
                 </div>
                 
-                <div class="portfolio-item">
+                <div class="portfolio-item" data-glass>
                     <h3>AI-Voice-Assistant</h3>
                     <span class="tech-tag">AI</span>
                     <span class="tech-tag">Python</span>
@@ -502,7 +770,7 @@
                     <a href="https://github.com/AaronSwartz0217/AI-Voice-Assistant" target="_blank">查看 GitHub</a>
                 </div>
                 
-                <div class="portfolio-item">
+                <div class="portfolio-item" data-glass>
                     <h3>Else-SuperEgo-Skills</h3>
                     <span class="tech-tag">Agent</span>
                     <span class="tech-tag">技能架构</span>
@@ -510,8 +778,8 @@
                     <p>超我镜像技能架构，基于Agent技术的智能系统框架，支持技能注册、动态调度和自主学习。</p>
                     <a href="https://github.com/AaronSwartz0217/Else-SuperEgo-Skills" target="_blank">查看 GitHub</a>
                 </div>
-                
-                <div class="portfolio-item">
+
+                <div class="portfolio-item" data-glass>
                     <h3>机器人速递</h3>
                     <span class="tech-tag">UE5</span>
                     <span class="tech-tag">个人全栈</span>
@@ -520,67 +788,26 @@
                     <span style="font-size: 0.85rem; color: #888; margin-left: 10px;">提取码: fgdd</span>
                 </div>
                 
-                <div class="portfolio-item">
-                    <h3>BLENDER-PYTHON</h3>
-                    <span class="tech-tag">Blender</span>
-                    <span class="tech-tag">Python</span>
-                    <span class="tech-tag">自动化</span>
-                    <p>基于 Blender 和 Python 的自动化 3D 模型处理工作流，支持多种格式导入导出、变换操作、材质添加、网格优化等功能。</p>
-                    <a href="https://github.com/AaronSwartz0217/BLENDER-PYTHON" target="_blank">查看 GitHub</a>
-                </div>
-                
-                <div class="portfolio-item">
-                    <h3>环球厅</h3>
-                    <span class="tech-tag">UE5</span>
-                    <span class="tech-tag">个人全栈</span>
-                    <p>开发中</p>
+                <div class="portfolio-item" data-glass>
+                    <h3>Universal-Hall · 环球厅</h3>
+                    <span class="tech-tag">C++</span>
+                    <span class="tech-tag">D3D12</span>
+                    <span class="tech-tag">HLSL</span>
+                    <span class="tech-tag">DLSS 5</span>
+                    <p>本科毕业设计：基于 D3D12 的延迟渲染管线与参数化写实风格切换系统。将光源、材质、后处理抽象为可热加载的 JSON 预设，接入 Streamline + DLSS 5 超分/帧生成链路，支持 AB 分屏对比验证。</p>
+                    <a href="https://github.com/AaronSwartz0217/Universal-Hall" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                    <br>
                     <a href="#" onclick="showImage('杂项/屏幕截图 2025-11-09 192525.png', '环球厅截图'); return false;">查看截图</a>
                 </div>
                 
-                <div class="portfolio-item">
+                <div class="portfolio-item" data-glass>
                     <h3>海报展览馆网站</h3>
                     <span class="tech-tag">Unity</span>
                     <span class="tech-tag">美术制作</span>
                     <p>负责展览馆场景模型搭建与美术制作，打造沉浸式虚拟展览体验。</p>
                 </div>
 
-                <div class="portfolio-item">
-                    <h3>GLSDD · Unity 磨砂玻璃 UI</h3>
-                    <span class="tech-tag">Unity</span>
-                    <span class="tech-tag">URP</span>
-                    <span class="tech-tag">ShaderLab</span>
-                    <p>面向 Unity 2022.3 / URP 14 的可编辑磨砂玻璃 UI 工具集，包含运行时折射 Shader、编辑器烘焙窗口、预设管理与真 Alpha PNG 导出。</p>
-                    <a href="https://github.com/AaronSwartz0217/GLSDD" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
-                </div>
-
-                <div class="portfolio-item">
-                    <h3>Unity Fight Character Flow Plugins</h3>
-                    <span class="tech-tag">Unity</span>
-                    <span class="tech-tag">C#</span>
-                    <span class="tech-tag">编辑器工具</span>
-                    <p>角色动画重定向与武器、装备挂点工具集合，覆盖 Split Rig → Mixamo/Humanoid 动画烘焙、Socket 创建、装备预览和偏移 Profile。</p>
-                    <a href="https://github.com/AaronSwartz0217/UNITY_FIGHTCHRACTER_FLOW_PLUGIN" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
-                </div>
-
-                <div class="portfolio-item">
-                    <h3>Unity 游戏 UI 生产工作流</h3>
-                    <span class="tech-tag">Python</span>
-                    <span class="tech-tag">Unity UI</span>
-                    <span class="tech-tag">自动化</span>
-                    <p>用于批量生产游戏 UI 图片资源的标准化工作流，覆盖白模、风格基准、父子面板拆分、按钮四态、真 Alpha、边缘检查与原位回拼。</p>
-                    <a href="https://github.com/AaronSwartz0217/UI_WORK_FLOW_UNITY_GAME_SOURCE" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
-                </div>
-
-                <div class="portfolio-item">
-                    <h3>3D HTML GLTF Catch</h3>
-                    <span class="tech-tag">JavaScript</span>
-                    <span class="tech-tag">Python</span>
-                    <span class="tech-tag">Three.js</span>
-                    <p>从获准访问的 3D 网页中识别并导出模型资源，支持网络响应捕获、Three.js 场景降级导出、命令行工具与浏览器扩展。</p>
-                    <a href="https://github.com/AaronSwartz0217/3D_HTML_GLTF_CATCH" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
-                </div>
-
-                <div class="portfolio-item">
+                <div class="portfolio-item" data-glass>
                     <h3>杭州求职避雷网</h3>
                     <span class="tech-tag">JavaScript</span>
                     <span class="tech-tag">纯前端</span>
@@ -592,16 +819,93 @@
             </div>
 
         </section>
+
+        <section class="section">
+            <h2>Unity 插件与技术美术开发</h2>
+            <div class="portfolio">
+                <div class="portfolio-item" data-glass>
+                    <h3>GLSDD · Unity 磨砂玻璃 UI</h3>
+                    <span class="tech-tag">Unity</span>
+                    <span class="tech-tag">URP</span>
+                    <span class="tech-tag">ShaderLab</span>
+                    <p>面向 Unity 2022.3 / URP 14 的可编辑磨砂玻璃 UI 工具集，包含运行时折射 Shader、编辑器烘焙窗口、预设管理与真 Alpha PNG 导出。</p>
+                    <a href="https://github.com/AaronSwartz0217/GLSDD" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                </div>
+
+                <div class="portfolio-item" data-glass>
+                    <h3>Mixamo Attachment Toolkit</h3>
+                    <span class="tech-tag">Unity</span>
+                    <span class="tech-tag">C#</span>
+                    <span class="tech-tag">挂点系统</span>
+                    <p>面向 Unity 2022.3 的 Mixamo/Humanoid 装备挂载工具：一键创建武器、盾牌、背包、披风等 16 类 Socket，支持装备预览、多状态偏移 Profile、运行时装备切换与带挂点角色 FBX 导出。</p>
+                    <a href="https://github.com/AaronSwartz0217/Mixamo-Attachment-Toolkit" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                </div>
+
+                <div class="portfolio-item" data-glass>
+                    <h3>Split Rig to Mixamo Retargeter</h3>
+                    <span class="tech-tag">Unity</span>
+                    <span class="tech-tag">动画重定向</span>
+                    <span class="tech-tag">编辑器工具</span>
+                    <p>将分离式骨架的动画在世界空间采样并烘焙到连续 Mixamo/Humanoid 骨架的 Unity 编辑器工具，支持骨骼映射校验、60/120Hz 采样与 Humanoid 动画输出。</p>
+                    <a href="https://github.com/AaronSwartz0217/unity-retargeter" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                </div>
+
+                <div class="portfolio-item" data-glass>
+                    <h3>Unity Auto Model Processor (AMP)</h3>
+                    <span class="tech-tag">Unity</span>
+                    <span class="tech-tag">C#</span>
+                    <span class="tech-tag">批处理</span>
+                    <p>面向 Unity 2022.3 的 Editor 插件，将植物、障碍物等 FBX 批量转换为规范 Prefab：拆分并列对象、校正原点、复制材质、生成碰撞体并设置 Layer/Tag/Static，支持配置 JSON 导入导出。</p>
+                    <a href="https://github.com/AaronSwartz0217/UNITY-Auto-Model-Processor-AMP-" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                </div>
+
+                <div class="portfolio-item" data-glass>
+                    <h3>3D HTML GLTF Catch</h3>
+                    <span class="tech-tag">JavaScript</span>
+                    <span class="tech-tag">Python</span>
+                    <span class="tech-tag">Three.js</span>
+                    <p>从获准访问的 3D 网页中识别并导出模型资源，支持网络响应捕获、Three.js 场景降级导出、命令行工具与浏览器扩展。</p>
+                    <a href="https://github.com/AaronSwartz0217/3D_HTML_GLTF_CATCH" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                </div>
+
+                <div class="portfolio-item" data-glass>
+                    <h3>Unity 游戏 UI 生产工作流</h3>
+                    <span class="tech-tag">Python</span>
+                    <span class="tech-tag">Unity UI</span>
+                    <span class="tech-tag">自动化</span>
+                    <p>用于批量生产游戏 UI 图片资源的标准化工作流，覆盖白模、风格基准、父子面板拆分、按钮四态、真 Alpha、边缘检查与原位回拼。</p>
+                    <a href="https://github.com/AaronSwartz0217/UI_WORK_FLOW_UNITY_GAME_SOURCE" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                </div>
+
+                <div class="portfolio-item" data-glass>
+                    <h3>AI_PET_WORKFLOW · 四动作桌宠生成流水线</h3>
+                    <span class="tech-tag">Python</span>
+                    <span class="tech-tag">图像处理</span>
+                    <span class="tech-tag">TA 流水线</span>
+                    <p>桌宠四动作（待机、打招呼、奔跑、浮空）生成工作区：绿幕视频抠像、循环、统一对齐、透明 WebP 编码与验收脚本，提供统一画布、锚点和体型规范。</p>
+                    <a href="https://github.com/AaronSwartz0217/AI_PET_WORKFLOW" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                </div>
+
+                <div class="portfolio-item" data-glass>
+                    <h3>BLENDER-PYTHON</h3>
+                    <span class="tech-tag">Blender</span>
+                    <span class="tech-tag">Python</span>
+                    <span class="tech-tag">自动化</span>
+                    <p>基于 Blender 和 Python 的自动化 3D 模型处理工作流，支持多种格式导入导出、变换操作、材质添加、网格优化等功能。</p>
+                    <a href="https://github.com/AaronSwartz0217/BLENDER-PYTHON" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                </div>
+            </div>
+        </section>
         
         <section class="section">
             <h2>Game Jam经历</h2>
             <div class="portfolio">
-                <div class="portfolio-item">
+                <div class="portfolio-item" data-glass>
                     <h3>Global Game Jam</h3>
                     <span class="tech-tag">2次参与</span>
                     <p>2025年和2026年GGJ，使用Unity引擎，担任地编、特效、技术美术、建模美术等多个角色。</p>
                 </div>
-                <div class="portfolio-item">
+                <div class="portfolio-item" data-glass>
                     <h3>CIGA Game Jam</h3>
                     <span class="tech-tag">1次参与</span>
                     <p>2025年China Game Jam，在48小时内完成创意游戏开发，锻炼快速开发和团队协作能力。</p>
@@ -635,7 +939,7 @@
         
         <section class="section">
             <h2>竞赛获奖</h2>
-            <div class="award-item">
+            <div class="award-item" data-glass>
                 <div class="icon">Award</div>
                 <div class="award-content">
                     <h3>国家级二等奖</h3>
@@ -648,7 +952,7 @@
         
         <section class="section">
             <h2>活动经历</h2>
-            <div class="portfolio-item" style="background: rgba(74, 106, 165, 0.05);">
+            <div class="portfolio-item" data-glass>
                 <h3>Trae Friends 南通站</h3>
                 <p>参与线下技术交流活动，分享Vibe Coding理念与实践经验，与行业开发者深入交流。</p>
             </div>
@@ -680,6 +984,13 @@
             <a href="portfolio/" class="back-to-game" style="margin-left: 20px;">作品详情</a>
         </section>
     </div>
+
+    <div class="knob-shell">
+        <i class="tick"></i><i class="tick"></i><i class="tick"></i>
+        <button class="speed-knob" id="speedKnob" data-glass data-radius="22" data-band="12" data-scale="14" aria-label="背景切换 2x / 4x / 1x 冰原 / 天光主题">
+            <span class="on"></span><span></span><span></span>
+        </button>
+    </div>
     
     <footer>
         <div class="container">
@@ -703,6 +1014,10 @@
     
     <canvas id="stars"></canvas>
     
+    <script src="glass.js"></script>
+    <script src="sky.js"></script>
+    <script src="wasteland.js"></script>
+
     <script>
         const canvas = document.getElementById('stars');
         const ctx = canvas.getContext('2d');
@@ -824,6 +1139,37 @@
             document.body.addEventListener('click', copyEmail);
             document.body.addEventListener('touchstart', copyEmail);
         });
+    </script>
+
+    <script>
+        /* 背景旋钮：2x → 4x → 1x 冰原 → 天光，四档循环 */
+        const KNOB_STEPS = [
+            { speed: 2, bars: 2, theme: null  },
+            { speed: 4, bars: 3, theme: null  },
+            { speed: 1, bars: 1, theme: 'ice' },
+            { speed: 1, bars: 3, theme: 'sky' }
+        ];
+        let knobStep = 0, knobTurns = 0;
+        const speedKnob = document.getElementById('speedKnob');
+        speedKnob.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const step = KNOB_STEPS[knobStep];
+            knobStep = (knobStep + 1) % KNOB_STEPS.length;
+            document.getAnimations().forEach(function (a) {
+                if (a.animationName === 'bgShift') a.playbackRate = step.speed;
+            });
+            Array.from(speedKnob.children).forEach(function (bar, i) {
+                bar.classList.toggle('on', i < step.bars);
+            });
+            speedKnob.classList.toggle('theme', !!step.theme);
+            if (step.theme) document.documentElement.setAttribute('data-theme', step.theme);
+            else document.documentElement.removeAttribute('data-theme');
+            window.ElseSky?.setActive(step.theme === 'sky');
+            window.ElseWasteland?.setActive(step.theme === 'ice');
+            knobTurns++;
+            speedKnob.style.transform = 'rotate(' + (knobTurns * 120) + 'deg)';
+        });
+        speedKnob.addEventListener('touchstart', function (e) { e.stopPropagation(); }, { passive: true });
     </script>
 </body>
 </html>
