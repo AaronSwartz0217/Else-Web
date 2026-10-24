@@ -53,7 +53,32 @@
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             margin: -40px -20px 40px;
             position: relative;
-            overflow: hidden;
+            overflow: visible;
+        }
+
+        /* 圆形头像：居中压在头图下边缘，object-fit 自动裁切成圆 */
+        .header-avatar {
+            position: absolute;
+            left: 50%;
+            bottom: -56px;
+            width: 112px;
+            height: 112px;
+            display: block;
+            border-radius: 50%;
+            object-fit: cover;
+            object-position: center 45%;
+            transform: translateX(-50%);
+            border: 2px solid rgba(255, 255, 255, 0.24);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+            z-index: 2;
+        }
+
+        @media (max-width: 600px) {
+            .header-avatar {
+                width: 92px;
+                height: 92px;
+                bottom: -46px;
+            }
         }
         
         header::after {
@@ -225,6 +250,181 @@
             color: #888;
             font-size: 0.9rem;
             margin: 8px 0 0;
+        }
+
+        .exp-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 8px;
+        }
+
+        .exp-list li {
+            position: relative;
+            padding: 6px 0 6px 16px;
+            color: #b0b0b0;
+            font-size: 1rem;
+        }
+
+        .exp-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 15px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #4a6fa5;
+        }
+
+        /* 插件卡片：概要常显，点击展开详情 */
+        .portfolio-item.plugin-card {
+            padding: 0;
+        }
+
+        .plugin-summary {
+            display: block;
+            padding: 25px;
+            list-style: none;
+            cursor: pointer;
+        }
+
+        .plugin-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .plugin-title {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #f0f0f0;
+        }
+
+        .plugin-desc {
+            display: block;
+            margin-bottom: 0;
+            color: #b0b0b0;
+            font-size: 1.05rem;
+            line-height: 1.7;
+        }
+
+        .plugin-toggle {
+            display: inline-block;
+            margin-top: 12px;
+            color: #4a6fa5;
+            font-size: 0.95rem;
+        }
+
+        .plugin-toggle::after {
+            content: ' +';
+        }
+
+        .plugin-card[open] .plugin-toggle::after {
+            content: ' −';
+        }
+
+        .plugin-detail {
+            padding: 0 25px 25px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            animation: pluginFade 0.25s ease;
+        }
+
+        .plugin-detail .exp-list {
+            margin-top: 12px;
+        }
+
+        .plugin-detail a {
+            display: inline-block;
+            margin-top: 15px;
+            color: #4a6fa5;
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+
+        .plugin-detail a:hover {
+            color: #6b8cce;
+            text-decoration: underline;
+        }
+
+        @keyframes pluginFade {
+            from { opacity: 0; transform: translateY(-4px); }
+        }
+
+        /* 博主资料卡 */
+        .creator-card {
+            display: flex;
+            gap: 26px;
+            align-items: flex-start;
+        }
+
+        .creator-avatar {
+            width: 124px;
+            height: 124px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+        }
+
+        .creator-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .creator-bio {
+            color: #b0b0b0;
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+
+        .creator-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            margin: 12px 0 14px;
+            color: #a0a0a0;
+            font-size: 0.95rem;
+        }
+
+        .creator-stats strong {
+            color: #f0f0f0;
+            font-size: 1.15rem;
+            margin-right: 4px;
+        }
+
+        .creator-link {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 9px 20px;
+            border: 1px solid rgba(74, 106, 165, 0.55);
+            border-radius: 999px;
+            color: #8ab4f8 !important;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .creator-link:hover {
+            background: rgba(74, 106, 165, 0.16);
+            border-color: #6b8cce;
+            text-decoration: none;
+        }
+
+        @media (max-width: 700px) {
+            .creator-card {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+
+            .creator-stats {
+                justify-content: center;
+            }
+
+            .creator-body .exp-list {
+                text-align: left;
+            }
         }
 
         .award-item {
@@ -645,6 +845,7 @@
             <p style="color: #a0a0a0; font-size: 1.2rem;">计算机科学与技术 | 游戏开发 | 技术美术</p>
             <p style="color: #6b8cce; font-size: 1.1rem; font-style: italic; margin-top: 10px;">"我站在这里就是一切的开始。"</p>
         </div>
+        <img class="header-avatar" src="avatar.jpg" alt="Else 头像">
     </header>
     
     <div class="container">
@@ -707,6 +908,57 @@
                         <li>操作系统</li>
                         <li>计算机网络</li>
                     </ul>
+                </div>
+            </div>
+        </section>
+        
+        <section class="section">
+            <h2>实习经历</h2>
+            <div class="portfolio">
+                <div class="portfolio-item" data-glass>
+                    <h3>杭州第贰宇宙科技 · 技术美术（TA）</h3>
+                    <span class="tech-tag">2026.07 – 2026.10</span>
+                    <span class="tech-tag">MMO</span>
+                    <span class="tech-tag">Unity</span>
+                    <span class="tech-tag">技术美术</span>
+                    <ul class="exp-list">
+                        <li>负责 MMO 项目 UI 资产生产管线：制定切图、命名、九宫格、图集与分辨率适配规范，搭建从设计稿到 Unity 可用的自动化产出流程。</li>
+                        <li>开发 Unity 编辑器插件，将 UI 切图、图集打包、Prefab 生成与九宫格配置等重复环节批量化，减少美术与程序之间的手工对接。</li>
+                        <li>作为美术与程序的对接窗口，梳理资源规格、实现约束与需求优先级，推进场景 3D 资产以及 UI 问题闭环。</li>
+                        <li>制作游戏内与场景特效，使用粒子、材质与 Shader 完成技能表现和氛围效果。</li>
+                        <li>独立负责 AI 生成角色模型的换装系统全流程：完成模型部件拆分、骨骼/挂点适配、材质与贴图切换、换装配置及运行时换装，并完成项目内实装。</li>
+                        <li>实习期间产出多个 Unity 编辑器插件与技术美术工具：环境大师、GLSDD、Mixamo 挂点/重定向、AMP、Unity UI 生产工作流等，详见下方「Unity 插件与技术美术开发」。</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+        
+        <section class="section">
+            <h2>内容创作</h2>
+            <div class="portfolio">
+                <div class="portfolio-item creator-card" data-glass>
+                    <img class="creator-avatar" src="stella-avatar.png" alt="Stella">
+                    <div class="creator-body">
+                        <h3>Stella · 心理学效应科普短视频</h3>
+                        <p class="creator-bio">技术美术 / 内容创作者 · 抖音号 57692551253</p>
+                        <span class="tech-tag">科普短视频</span>
+                        <span class="tech-tag">WebGL / Three.js</span>
+                        <span class="tech-tag">逐帧渲染</span>
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">ffmpeg</span>
+                        <div class="creator-stats">
+                            <span><strong>27</strong>个主题</span>
+                            <span><strong>28</strong>支成片</span>
+                            <span><strong>23</strong>张封面</span>
+                        </div>
+                        <ul class="exp-list">
+                            <li>独立负责选题、脚本、分镜、视觉设计、动效与剪辑，围绕心理学与社会心理效应建立 27 个主题的内容矩阵。</li>
+                            <li>搭建 WebGL / Canvas 逐帧渲染管线：3D 场景、材质光照、后处理、镜头运动与转场动效。</li>
+                            <li>用 Python 生成音频，Node.js + ffmpeg 完成逐帧渲染、视频编码、封面生成与发布物料。</li>
+                            <li>建立技术规范与自动检测闸门：关键帧检测、场景漫游自检、ffprobe 校验，保证出片一致性。</li>
+                        </ul>
+                        <a class="creator-link" href="https://www.douyin.com/user/57692551253" target="_blank" rel="noopener noreferrer">抖音主页 · Stella</a>
+                    </div>
                 </div>
             </div>
         </section>
@@ -812,8 +1064,10 @@
                     <span class="tech-tag">JavaScript</span>
                     <span class="tech-tag">纯前端</span>
                     <span class="tech-tag">信息检索</span>
-                    <p>公司风险信息查询与地区筛选站点，提供模糊匹配、风险标签、关联企业提醒、明暗主题与独立阅读模式。</p>
-                    <a href="https://github.com/AaronSwartz0217/-" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                    <p>公司风险信息查询与地区筛选站点，提供模糊匹配、风险标签、关联企业提醒、明暗主题与独立阅读模式；站内内置「杭州十年百万」求职卡牌模拟经营小游戏。</p>
+                    <a href="https://aaronswartz0217.github.io/-/" target="_blank" rel="noopener noreferrer">访问网站</a>
+                    <br>
+                    <a href="https://aaronswartz0217.github.io/-/draw-game/index.html" target="_blank" rel="noopener noreferrer">试玩内置小游戏</a>
                     <p class="project-note">信息仅作个人求职参考，不构成法律或投资建议。</p>
                 </div>
             </div>
@@ -823,77 +1077,189 @@
         <section class="section">
             <h2>Unity 插件与技术美术开发</h2>
             <div class="portfolio">
-                <div class="portfolio-item" data-glass>
-                    <h3>GLSDD · Unity 磨砂玻璃 UI</h3>
-                    <span class="tech-tag">Unity</span>
-                    <span class="tech-tag">URP</span>
-                    <span class="tech-tag">ShaderLab</span>
-                    <p>面向 Unity 2022.3 / URP 14 的可编辑磨砂玻璃 UI 工具集，包含运行时折射 Shader、编辑器烘焙窗口、预设管理与真 Alpha PNG 导出。</p>
-                    <a href="https://github.com/AaronSwartz0217/GLSDD" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
-                </div>
+                <details class="portfolio-item plugin-card" data-glass>
+                    <summary class="plugin-summary">
+                        <span class="plugin-title">UNITY Environment Master · 环境大师 2.0</span>
+                        <span class="tech-tag">Unity</span>
+                        <span class="tech-tag">C#</span>
+                        <span class="tech-tag">UI Toolkit</span>
+                        <span class="tech-tag">性能优化</span>
+                        <span class="plugin-desc">面向 Unity 2022.3 LTS 的场景光照烘焙与优化工具：UI Toolkit 编辑器面板覆盖光照烘焙、纹理流送、视野/遮挡剔除、LOD/渲染统计与持续监测，支持导入器备份恢复及 JSONL/CSV 数据导出。</span>
+                        <span class="plugin-toggle">查看详情</span>
+                    </summary>
+                    <div class="plugin-detail">
+                        <ul class="exp-list">
+                            <li>光照烘焙：Lighting Settings 配置、缺失 UV2 生成、Realtime → Mixed/Baked、静态标记、准备/烘焙与进度取消。</li>
+                            <li>纹理流送：扫描场景依赖，批量启用 Mipmap/Streaming，按质量档预算，支持导入器备份与恢复。</li>
+                            <li>视野/遮挡剔除：相机按 Layer 距离剔除、球形距离、OcclusionArea、静态标记与遮挡烘焙。</li>
+                            <li>LOD/渲染：Renderer、材质、阴影、三角形统计，LODGroup 创建、Instancing 标记与 Frame Debugger 入口。</li>
+                            <li>持续监测：定时采样、基准比较、600 条内存历史、JSONL 日志与 CSV 导出。</li>
+                        </ul>
+                        <a href="https://github.com/AaronSwartz0217/UNITY_environment_master" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                    </div>
+                </details>
 
-                <div class="portfolio-item" data-glass>
-                    <h3>Mixamo Attachment Toolkit</h3>
-                    <span class="tech-tag">Unity</span>
-                    <span class="tech-tag">C#</span>
-                    <span class="tech-tag">挂点系统</span>
-                    <p>面向 Unity 2022.3 的 Mixamo/Humanoid 装备挂载工具：一键创建武器、盾牌、背包、披风等 16 类 Socket，支持装备预览、多状态偏移 Profile、运行时装备切换与带挂点角色 FBX 导出。</p>
-                    <a href="https://github.com/AaronSwartz0217/Mixamo-Attachment-Toolkit" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
-                </div>
+                <details class="portfolio-item plugin-card" data-glass>
+                    <summary class="plugin-summary">
+                        <span class="plugin-title">GLSDD · Unity 磨砂玻璃 UI</span>
+                        <span class="tech-tag">Unity</span>
+                        <span class="tech-tag">URP</span>
+                        <span class="tech-tag">ShaderLab</span>
+                        <span class="plugin-desc">面向 Unity 2022.3 / URP 14 的可编辑磨砂玻璃 UI 工具集，包含运行时折射 Shader、编辑器烘焙窗口、预设管理与真 Alpha PNG 导出。</span>
+                        <span class="plugin-toggle">查看详情</span>
+                    </summary>
+                    <div class="plugin-detail">
+                        <ul class="exp-list">
+                            <li>运行时折射 Shader：在 URP 下实现可编辑的磨砂玻璃 UI 效果。</li>
+                            <li>编辑器烘焙窗口：参数化生成玻璃底图，减少手工调参。</li>
+                            <li>预设管理：保存、切换不同玻璃风格。</li>
+                            <li>真 Alpha PNG 导出，适配 UI 叠加与后续合成。</li>
+                        </ul>
+                        <a href="https://github.com/AaronSwartz0217/GLSDD" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                    </div>
+                </details>
 
-                <div class="portfolio-item" data-glass>
-                    <h3>Split Rig to Mixamo Retargeter</h3>
-                    <span class="tech-tag">Unity</span>
-                    <span class="tech-tag">动画重定向</span>
-                    <span class="tech-tag">编辑器工具</span>
-                    <p>将分离式骨架的动画在世界空间采样并烘焙到连续 Mixamo/Humanoid 骨架的 Unity 编辑器工具，支持骨骼映射校验、60/120Hz 采样与 Humanoid 动画输出。</p>
-                    <a href="https://github.com/AaronSwartz0217/unity-retargeter" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
-                </div>
+                <details class="portfolio-item plugin-card" data-glass>
+                    <summary class="plugin-summary">
+                        <span class="plugin-title">Mixamo Attachment Toolkit</span>
+                        <span class="tech-tag">Unity</span>
+                        <span class="tech-tag">C#</span>
+                        <span class="tech-tag">挂点系统</span>
+                        <span class="plugin-desc">面向 Unity 2022.3 的 Mixamo/Humanoid 装备挂载工具：一键创建武器、盾牌、背包、披风等 16 类 Socket，支持装备预览、多状态偏移 Profile、运行时装备切换与带挂点角色 FBX 导出。</span>
+                        <span class="plugin-toggle">查看详情</span>
+                    </summary>
+                    <div class="plugin-detail">
+                        <ul class="exp-list">
+                            <li>16 类标准挂点：右手/左手/双手武器、盾牌、背包、披风、项链、腰带与腰部附件。</li>
+                            <li>Humanoid Avatar 优先定位骨骼，无 Avatar 时回退 Mixamo 骨骼名匹配。</li>
+                            <li>装备预览、局部姿态保存、WeaponAttachmentProfile 多状态偏移（Idle/Run/Attack 等）。</li>
+                            <li>运行时 Equip/Attach/Unequip/SetState，位置、旋转与缩放平滑过渡。</li>
+                            <li>带挂点角色 FBX 导出，编辑器操作支持 Undo。</li>
+                        </ul>
+                        <a href="https://github.com/AaronSwartz0217/Mixamo-Attachment-Toolkit" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                    </div>
+                </details>
 
-                <div class="portfolio-item" data-glass>
-                    <h3>Unity Auto Model Processor (AMP)</h3>
-                    <span class="tech-tag">Unity</span>
-                    <span class="tech-tag">C#</span>
-                    <span class="tech-tag">批处理</span>
-                    <p>面向 Unity 2022.3 的 Editor 插件，将植物、障碍物等 FBX 批量转换为规范 Prefab：拆分并列对象、校正原点、复制材质、生成碰撞体并设置 Layer/Tag/Static，支持配置 JSON 导入导出。</p>
-                    <a href="https://github.com/AaronSwartz0217/UNITY-Auto-Model-Processor-AMP-" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
-                </div>
+                <details class="portfolio-item plugin-card" data-glass>
+                    <summary class="plugin-summary">
+                        <span class="plugin-title">Split Rig to Mixamo Retargeter</span>
+                        <span class="tech-tag">Unity</span>
+                        <span class="tech-tag">动画重定向</span>
+                        <span class="tech-tag">编辑器工具</span>
+                        <span class="plugin-desc">将分离式骨架的动画在世界空间采样并烘焙到连续 Mixamo/Humanoid 骨架的 Unity 编辑器工具，支持骨骼映射校验、60/120Hz 采样与 Humanoid 动画输出。</span>
+                        <span class="plugin-toggle">查看详情</span>
+                    </summary>
+                    <div class="plugin-detail">
+                        <ul class="exp-list">
+                            <li>世界空间采样分离骨架动画，烘焙为连续 Mixamo/Humanoid 骨架的 AnimationClip。</li>
+                            <li>骨骼映射校验，优先匹配实际被动画驱动的 Transform，避免同名骨骼误配。</li>
+                            <li>支持 60/120Hz 采样，保留 GLB 原始动画细节。</li>
+                            <li>不修改源模型层级，配合 Unity FBX Exporter 输出 Humanoid 动画。</li>
+                        </ul>
+                        <a href="https://github.com/AaronSwartz0217/unity-retargeter" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                    </div>
+                </details>
 
-                <div class="portfolio-item" data-glass>
-                    <h3>3D HTML GLTF Catch</h3>
-                    <span class="tech-tag">JavaScript</span>
-                    <span class="tech-tag">Python</span>
-                    <span class="tech-tag">Three.js</span>
-                    <p>从获准访问的 3D 网页中识别并导出模型资源，支持网络响应捕获、Three.js 场景降级导出、命令行工具与浏览器扩展。</p>
-                    <a href="https://github.com/AaronSwartz0217/3D_HTML_GLTF_CATCH" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
-                </div>
+                <details class="portfolio-item plugin-card" data-glass>
+                    <summary class="plugin-summary">
+                        <span class="plugin-title">Unity Auto Model Processor (AMP)</span>
+                        <span class="tech-tag">Unity</span>
+                        <span class="tech-tag">C#</span>
+                        <span class="tech-tag">批处理</span>
+                        <span class="plugin-desc">面向 Unity 2022.3 的 Editor 插件，将植物、障碍物等 FBX 批量转换为规范 Prefab：拆分并列对象、校正原点、复制材质、生成碰撞体并设置 Layer/Tag/Static，支持配置 JSON 导入导出。</span>
+                        <span class="plugin-toggle">查看详情</span>
+                    </summary>
+                    <div class="plugin-detail">
+                        <ul class="exp-list">
+                            <li>批量扫描 FBX，支持 WholeFbx 与 RootObjects 两种 Prefab 生成方式。</li>
+                            <li>按 Bounds 校正原点，拆分对象可单独居中，不修改 Mesh 顶点。</li>
+                            <li>材质复制/标准化，支持共享可编辑副本或每个 Prefab 独立材质。</li>
+                            <li>自动生成 MeshCollider，复杂凸体超过面数阈值时降级为 Box/Sphere/Capsule。</li>
+                            <li>按植物/障碍物设置 Layer、Tag、Static，配置可 JSON 导入导出。</li>
+                        </ul>
+                        <a href="https://github.com/AaronSwartz0217/UNITY-Auto-Model-Processor-AMP-" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                    </div>
+                </details>
 
-                <div class="portfolio-item" data-glass>
-                    <h3>Unity 游戏 UI 生产工作流</h3>
-                    <span class="tech-tag">Python</span>
-                    <span class="tech-tag">Unity UI</span>
-                    <span class="tech-tag">自动化</span>
-                    <p>用于批量生产游戏 UI 图片资源的标准化工作流，覆盖白模、风格基准、父子面板拆分、按钮四态、真 Alpha、边缘检查与原位回拼。</p>
-                    <a href="https://github.com/AaronSwartz0217/UI_WORK_FLOW_UNITY_GAME_SOURCE" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
-                </div>
+                <details class="portfolio-item plugin-card" data-glass>
+                    <summary class="plugin-summary">
+                        <span class="plugin-title">3D HTML GLTF Catch</span>
+                        <span class="tech-tag">JavaScript</span>
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">Three.js</span>
+                        <span class="plugin-desc">从获准访问的 3D 网页中识别并导出模型资源，支持网络响应捕获、Three.js 场景降级导出、命令行工具与浏览器扩展。</span>
+                        <span class="plugin-toggle">查看详情</span>
+                    </summary>
+                    <div class="plugin-detail">
+                        <ul class="exp-list">
+                            <li>捕获网络响应中的 glTF/GLB 资源，定位页面实际加载的模型文件。</li>
+                            <li>Three.js 场景降级导出，处理无法直接下载的资源。</li>
+                            <li>提供命令行工具与浏览器扩展两种入口。</li>
+                            <li>仅用于获准访问的 3D 网页资产提取。</li>
+                        </ul>
+                        <a href="https://github.com/AaronSwartz0217/3D_HTML_GLTF_CATCH" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                    </div>
+                </details>
 
-                <div class="portfolio-item" data-glass>
-                    <h3>AI_PET_WORKFLOW · 四动作桌宠生成流水线</h3>
-                    <span class="tech-tag">Python</span>
-                    <span class="tech-tag">图像处理</span>
-                    <span class="tech-tag">TA 流水线</span>
-                    <p>桌宠四动作（待机、打招呼、奔跑、浮空）生成工作区：绿幕视频抠像、循环、统一对齐、透明 WebP 编码与验收脚本，提供统一画布、锚点和体型规范。</p>
-                    <a href="https://github.com/AaronSwartz0217/AI_PET_WORKFLOW" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
-                </div>
+                <details class="portfolio-item plugin-card" data-glass>
+                    <summary class="plugin-summary">
+                        <span class="plugin-title">Unity 游戏 UI 生产工作流</span>
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">Unity UI</span>
+                        <span class="tech-tag">自动化</span>
+                        <span class="plugin-desc">用于批量生产游戏 UI 图片资源的标准化工作流，覆盖白模、风格基准、父子面板拆分、按钮四态、真 Alpha、边缘检查与原位回拼。</span>
+                        <span class="plugin-toggle">查看详情</span>
+                    </summary>
+                    <div class="plugin-detail">
+                        <ul class="exp-list">
+                            <li>白模与风格基准：先确定结构比例与统一视觉基准。</li>
+                            <li>父子面板拆分：按 UI 层级拆分可独立复用的面板资源。</li>
+                            <li>按钮四态与真 Alpha 输出，覆盖常态/悬停/按下/禁用。</li>
+                            <li>边缘检查与原位回拼，保证切图在 Unity 中无接缝、位置正确。</li>
+                        </ul>
+                        <a href="https://github.com/AaronSwartz0217/UI_WORK_FLOW_UNITY_GAME_SOURCE" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                    </div>
+                </details>
 
-                <div class="portfolio-item" data-glass>
-                    <h3>BLENDER-PYTHON</h3>
-                    <span class="tech-tag">Blender</span>
-                    <span class="tech-tag">Python</span>
-                    <span class="tech-tag">自动化</span>
-                    <p>基于 Blender 和 Python 的自动化 3D 模型处理工作流，支持多种格式导入导出、变换操作、材质添加、网格优化等功能。</p>
-                    <a href="https://github.com/AaronSwartz0217/BLENDER-PYTHON" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
-                </div>
+                <details class="portfolio-item plugin-card" data-glass>
+                    <summary class="plugin-summary">
+                        <span class="plugin-title">AI_PET_WORKFLOW · 四动作桌宠生成流水线</span>
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">图像处理</span>
+                        <span class="tech-tag">TA 流水线</span>
+                        <span class="plugin-desc">桌宠四动作（待机、打招呼、奔跑、浮空）生成工作区：绿幕视频抠像、循环、统一对齐、透明 WebP 编码与验收脚本，提供统一画布、锚点和体型规范。</span>
+                        <span class="plugin-toggle">查看详情</span>
+                    </summary>
+                    <div class="plugin-detail">
+                        <ul class="exp-list">
+                            <li>四动作基线：待机、打招呼、奔跑、浮空，统一画布、锚点与体型。</li>
+                            <li>绿幕视频抠像、循环处理与序列对齐。</li>
+                            <li>透明 WebP 正式输出，GIF 仅作兼容预览。</li>
+                            <li>批量脚本与验收检查，支持多角色项目复用。</li>
+                        </ul>
+                        <a href="https://github.com/AaronSwartz0217/AI_PET_WORKFLOW" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                    </div>
+                </details>
+
+                <details class="portfolio-item plugin-card" data-glass>
+                    <summary class="plugin-summary">
+                        <span class="plugin-title">BLENDER-PYTHON</span>
+                        <span class="tech-tag">Blender</span>
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">自动化</span>
+                        <span class="plugin-desc">基于 Blender 和 Python 的自动化 3D 模型处理工作流，支持多种格式导入导出、变换操作、材质添加、网格优化等功能。</span>
+                        <span class="plugin-toggle">查看详情</span>
+                    </summary>
+                    <div class="plugin-detail">
+                        <ul class="exp-list">
+                            <li>支持 OBJ/FBX/glTF/GLB/PLY/STL/DAE/BLEND 多格式导入导出。</li>
+                            <li>配置驱动变换、材质、平滑着色、法线修正、细分与合并。</li>
+                            <li>Blender 后台模式批处理，JSON 配置复用。</li>
+                            <li>适配 Windows + Blender 3.6 及以上版本。</li>
+                        </ul>
+                        <a href="https://github.com/AaronSwartz0217/BLENDER-PYTHON" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                    </div>
+                </details>
             </div>
         </section>
         
