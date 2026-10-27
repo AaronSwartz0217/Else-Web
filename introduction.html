@@ -927,7 +927,7 @@
                         <li>作为美术与程序的对接窗口，梳理资源规格、实现约束与需求优先级，推进场景 3D 资产以及 UI 问题闭环。</li>
                         <li>制作游戏内与场景特效，使用粒子、材质与 Shader 完成技能表现和氛围效果。</li>
                         <li>独立负责 AI 生成角色模型的换装系统全流程：完成模型部件拆分、骨骼/挂点适配、材质与贴图切换、换装配置及运行时换装，并完成项目内实装。</li>
-                        <li>实习期间产出多个 Unity 编辑器插件与技术美术工具：环境大师、GLSDD、Mixamo 挂点/重定向、AMP、Unity UI 生产工作流等，详见下方「Unity 插件与技术美术开发」。</li>
+                        <li>实习期间产出多个 Unity 编辑器插件与技术美术工具：环境大师、GLSDD、Mixamo 挂点/重定向、AMP、Unity UI 生产工作流、动态刀光等，详见下方「插件工作流开发」。</li>
                     </ul>
                 </div>
             </div>
@@ -1075,8 +1075,48 @@
         </section>
 
         <section class="section">
-            <h2>Unity 插件与技术美术开发</h2>
+            <h2>插件工作流开发</h2>
             <div class="portfolio">
+                <details class="portfolio-item plugin-card" data-glass>
+                    <summary class="plugin-summary">
+                        <span class="plugin-title">Unity Dynamic Trail Slash</span>
+                        <span class="tech-tag">Unity</span>
+                        <span class="tech-tag">URP</span>
+                        <span class="tech-tag">VFX</span>
+                        <span class="plugin-desc">面向 Unity 2022.3 / URP 14 的双点武器轨迹刀光工具：按武器两端采样生成轨迹网格，将原始 NOVA 刀光的截面与 UV 映射到轨迹，支持自动/外部时钟、共享配置、边缘粒子与长枪测试场景。</span>
+                        <span class="plugin-toggle">查看详情</span>
+                    </summary>
+                    <div class="plugin-detail">
+                        <ul class="exp-list">
+                            <li>双点轨迹采样：按外沿累计弧长插值，连接相邻截面形成刀光网格，只裁出已经挥过的部分。</li>
+                            <li>保留 NOVA 原刀光材质、UV、顶点流与边缘粒子，修改渲染载体而不是替换发光着色器。</li>
+                            <li>自动 / 外部时钟两种推进方式，共享 Settings Profile 统一采样间隔、宽度、偏移、厚度、速度与起光延迟。</li>
+                            <li>附带长枪鼠标挥动测试场景、原始刀光对照、URP 设置与 batchmode 验证入口。</li>
+                        </ul>
+                        <a href="https://github.com/AaronSwartz0217/Unity-Dynamic-Trail-Slash" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                    </div>
+                </details>
+
+                <details class="portfolio-item plugin-card" data-glass>
+                    <summary class="plugin-summary">
+                        <span class="plugin-title">UE5 FBX · Smart FBX Materials</span>
+                        <span class="tech-tag">UE5</span>
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">编辑器插件</span>
+                        <span class="plugin-desc">面向 UE 5.5+ 的编辑器插件：导入 FBX 时自动扫描 PBR 贴图、创建材质并绑定网格，识别 Tripo/常见英文与部分中文贴图命名，支持 ORM/ARM 打包图、法线格式与多材质槽分配。</span>
+                        <span class="plugin-toggle">查看详情</span>
+                    </summary>
+                    <div class="plugin-detail">
+                        <ul class="exp-list">
+                            <li>自动扫描 Base Color、Normal、Roughness、Metallic、AO、Emissive 及 ORM/ARM、RMA 打包图。</li>
+                            <li>自动设置 sRGB、法线/数据贴图压缩与法线绿色通道翻转。</li>
+                            <li>保留 StaticMesh / SkeletalMesh 类型，显式保存新生成的 Skeleton；多材质槽可按名称或覆盖分配。</li>
+                            <li>基于引擎自带 Python，无需编译 C++；支持普通 FBX 导入后自动修复与手动修复选中网格。</li>
+                        </ul>
+                        <a href="https://github.com/AaronSwartz0217/UE5_FBX" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                    </div>
+                </details>
+
                 <details class="portfolio-item plugin-card" data-glass>
                     <summary class="plugin-summary">
                         <span class="plugin-title">UNITY Environment Master · 环境大师 2.0</span>
@@ -1262,7 +1302,7 @@
                 </details>
             </div>
         </section>
-        
+
         <section class="section">
             <h2>Game Jam经历</h2>
             <div class="portfolio">
