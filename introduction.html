@@ -487,6 +487,12 @@
             flex: 1;
         }
         
+        .job-target {
+            color: #b0b0b0;
+            font-size: 1rem;
+            margin: 10px 0 16px;
+        }
+
         .job-intent {
             display: flex;
             flex-wrap: wrap;
@@ -842,7 +848,7 @@
     <header>
         <div class="container">
             <h1>Else</h1>
-            <p style="color: #a0a0a0; font-size: 1.2rem;">计算机科学与技术 | 游戏开发 | 技术美术</p>
+            <p style="color: #a0a0a0; font-size: 1.2rem;">计算机科学与技术 | 技术美术 | 工具链与渲染</p>
             <p style="color: #6b8cce; font-size: 1.1rem; font-style: italic; margin-top: 10px;">"我站在这里就是一切的开始。"</p>
         </div>
         <img class="header-avatar" src="avatar.jpg" alt="Else 头像">
@@ -851,21 +857,22 @@
     <div class="container">
         <section class="section">
             <h2>求职意向</h2>
+            <p class="job-target">目标岗位：技术美术（TA）· 管线 / 工具链方向；可兼顾渲染向 TA 与 Unity/UE5 工具开发。</p>
             <div class="job-intent">
-                <span class="intent-tag">游戏开发工程师</span>
-                <span class="intent-tag">技术美术</span>
-                <span class="intent-tag">全栈游戏开发者</span>
-                <span class="intent-tag">数字孪生开发</span>
-                <span class="intent-tag">前端开发</span>
+                <span class="intent-tag">技术美术（TA）</span>
+                <span class="intent-tag">工具链 / 生产管线</span>
+                <span class="intent-tag">渲染向 TA</span>
+                <span class="intent-tag">Unity / UE5 开发</span>
             </div>
         </section>
-        
+
         <section class="section">
             <h2>关于我</h2>
-            <p>具备美术资产到引擎落地的全流程能力，熟悉Unity/UE5双引擎，多次Game Jam高强度协作经验。同时掌握前端3D展示、移动端混合开发、桌面端跨平台开发与网络通信技术，项目覆盖游戏开发多个横向领域。</p>
-            <p>具备极强创新整合能力，善于将不同技术栈的课程项目与个人作品有机融合，形成可落地、可展示的完整系统。热爱创造沉浸式数字体验，追求技术与艺术的完美结合。</p>
+            <p>技术美术（TA），专注工具链与生产管线。有 MMO 项目 UI 工作流与 10+ Unity/UE5 编辑器插件落地经验，独立负责 AI 生成角色换装系统全流程；具备 D3D12 + DLSS 5 渲染管线开发能力。</p>
+            <p>擅长把美术需求拆成可复用的工具与管线：从 DCC 资产、编辑器插件到运行时系统，能独立完成问题定位、方案实现与落地验证。多次 Game Jam 高强度协作，能在美术、程序与策划之间快速对齐；更关注工具在真实生产中的稳定性、可维护性与提效，而不是单点技术展示。</p>
+            <p>我的路径是美术与程序双线并行的：做过场景、角色、特效与 UI，也写过渲染管线、编辑器插件和工具链。相比单点效果，我更在意一套流程能否被团队复用、能否在真实项目里稳定跑完。</p>
         </section>
-        
+
         <section class="section section-plain">
             <h2>专业技能</h2>
             <div class="skills-grid">
@@ -909,9 +916,19 @@
                         <li>计算机网络</li>
                     </ul>
                 </div>
+                <div class="skill-card" data-glass>
+                    <h3>工具链与 TA</h3>
+                    <ul>
+                        <li>Unity Editor / UI Toolkit</li>
+                        <li>UE5 Python 编辑器工具</li>
+                        <li>资产管线与规范</li>
+                        <li>批量处理 / 自动化</li>
+                        <li>Shader / VFX</li>
+                    </ul>
+                </div>
             </div>
         </section>
-        
+
         <section class="section">
             <h2>实习经历</h2>
             <div class="portfolio">
@@ -932,37 +949,7 @@
                 </div>
             </div>
         </section>
-        
-        <section class="section">
-            <h2>内容创作</h2>
-            <div class="portfolio">
-                <div class="portfolio-item creator-card" data-glass>
-                    <img class="creator-avatar" src="stella-avatar.png" alt="Stella">
-                    <div class="creator-body">
-                        <h3>Stella · 心理学效应科普短视频</h3>
-                        <p class="creator-bio">技术美术 / 内容创作者 · 抖音号 57692551253</p>
-                        <span class="tech-tag">科普短视频</span>
-                        <span class="tech-tag">WebGL / Three.js</span>
-                        <span class="tech-tag">逐帧渲染</span>
-                        <span class="tech-tag">Python</span>
-                        <span class="tech-tag">ffmpeg</span>
-                        <div class="creator-stats">
-                            <span><strong>27</strong>个主题</span>
-                            <span><strong>28</strong>支成片</span>
-                            <span><strong>23</strong>张封面</span>
-                        </div>
-                        <ul class="exp-list">
-                            <li>独立负责选题、脚本、分镜、视觉设计、动效与剪辑，围绕心理学与社会心理效应建立 27 个主题的内容矩阵。</li>
-                            <li>搭建 WebGL / Canvas 逐帧渲染管线：3D 场景、材质光照、后处理、镜头运动与转场动效。</li>
-                            <li>用 Python 生成音频，Node.js + ffmpeg 完成逐帧渲染、视频编码、封面生成与发布物料。</li>
-                            <li>建立技术规范与自动检测闸门：关键帧检测、场景漫游自检、ffprobe 校验，保证出片一致性。</li>
-                        </ul>
-                        <a class="creator-link" href="https://www.douyin.com/user/57692551253" target="_blank" rel="noopener noreferrer">抖音主页 · Stella</a>
-                    </div>
-                </div>
-            </div>
-        </section>
-        
+
         <section class="section">
             <h2>项目经历</h2>
             <div class="portfolio">
@@ -978,68 +965,7 @@
                     <br>
                     <a href="https://aaronswartz0217.github.io/Spirit-Tales/" target="_blank" rel="noopener noreferrer">访问宣传网站</a>
                 </div>
-                
-                <div class="portfolio-item" data-glass>
-                    <h3>VR博物馆——古数灵境</h3>
-                    <span class="tech-tag">VR</span>
-                    <span class="tech-tag">Unity</span>
-                    <span class="tech-tag">参赛项目</span>
-                    <p>基于VR的线上博物馆，荣获2024年中国大学生计算机设计大赛数媒交互组国家级二等奖。</p>
-                    <a href="https://xlxy.ntu.edu.cn/2024/1107/c7166a253646/page.htm" target="_blank">获奖证明</a>
-                </div>
-                
-                <div class="portfolio-item" data-glass>
-                    <h3>芬奇房间</h3>
-                    <span class="tech-tag">Unity</span>
-                    <span class="tech-tag">参与开发</span>
-                    <p>游戏曾进入TapTap休闲榜前二十，参与开发与美术工作，积累商业项目经验。</p>
-                    <a href="https://www.taptap.cn/app/716586?os=android" target="_blank">TapTap下载</a>
-                </div>
-                
-                <div class="portfolio-item" data-glass>
-                    <h3>NTU Digital Twin</h3>
-                    <span class="tech-tag">前端</span>
-                    <span class="tech-tag">Android + Three.js</span>
-                    <p>Android端采用原生+WebView混合架构，通过JSBridge承载Three.js 3D校园模型，实现移动端3D可视化展示。</p>
-                    <a href="https://github.com/AaronSwartz0217/NTU_DigitalTwin" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
-                </div>
-                
-                <div class="portfolio-item" data-glass>
-                    <h3>.NET Chat</h3>
-                    <span class="tech-tag">后端</span>
-                    <span class="tech-tag">.NET + Avalonia</span>
-                    <p>.NET后端基于Furion提供JWT认证、论坛CRUD及WebSocket实时聊天，集成讯飞星火大模型实现AI校园助手。Avalonia桌面端实现跨平台桌面应用，支持MVVM架构与动态主题切换。</p>
-                    <a href="https://github.com/AaronSwartz0217/.NET_Chat" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
-                </div>
-                
-                <div class="portfolio-item" data-glass>
-                    <h3>AI-Voice-Assistant</h3>
-                    <span class="tech-tag">AI</span>
-                    <span class="tech-tag">Python</span>
-                    <span class="tech-tag">大创项目</span>
-                    <span class="tech-tag">研发中</span>
-                    <p>基于Whisper和GPT技术开发的智能语音助手，支持语音识别、自然语言理解和语音合成功能。</p>
-                    <a href="https://github.com/AaronSwartz0217/AI-Voice-Assistant" target="_blank">查看 GitHub</a>
-                </div>
-                
-                <div class="portfolio-item" data-glass>
-                    <h3>Else-SuperEgo-Skills</h3>
-                    <span class="tech-tag">Agent</span>
-                    <span class="tech-tag">技能架构</span>
-                    <span class="tech-tag">心理动力学</span>
-                    <p>超我镜像技能架构，基于Agent技术的智能系统框架，支持技能注册、动态调度和自主学习。</p>
-                    <a href="https://github.com/AaronSwartz0217/Else-SuperEgo-Skills" target="_blank">查看 GitHub</a>
-                </div>
 
-                <div class="portfolio-item" data-glass>
-                    <h3>机器人速递</h3>
-                    <span class="tech-tag">UE5</span>
-                    <span class="tech-tag">个人全栈</span>
-                    <p>独立完成玩法逻辑、关卡设计、美术与交互的小体量休闲游戏，展现快速原型开发能力。</p>
-                    <a href="https://pan.baidu.com/s/15u2_A0HJg8D-MaUmgcH3LQ" target="_blank">下载试玩</a>
-                    <span style="font-size: 0.85rem; color: #888; margin-left: 10px;">提取码: fgdd</span>
-                </div>
-                
                 <div class="portfolio-item" data-glass>
                     <h3>Universal-Hall · 环球厅</h3>
                     <span class="tech-tag">C++</span>
@@ -1051,27 +977,40 @@
                     <br>
                     <a href="#" onclick="showImage('杂项/屏幕截图 2025-11-09 192525.png', '环球厅截图'); return false;">查看截图</a>
                 </div>
-                
+
+                <div class="portfolio-item" data-glass>
+                    <h3>VR博物馆——古数灵境</h3>
+                    <span class="tech-tag">VR</span>
+                    <span class="tech-tag">Unity</span>
+                    <span class="tech-tag">参赛项目</span>
+                    <p>基于VR的线上博物馆，荣获2024年中国大学生计算机设计大赛数媒交互组国家级二等奖。</p>
+                    <a href="https://xlxy.ntu.edu.cn/2024/1107/c7166a253646/page.htm" target="_blank">获奖证明</a>
+                </div>
+
+                <div class="portfolio-item" data-glass>
+                    <h3>芬奇房间</h3>
+                    <span class="tech-tag">Unity</span>
+                    <span class="tech-tag">参与开发</span>
+                    <p>游戏曾进入TapTap休闲榜前二十，参与开发与美术工作，积累商业项目经验。</p>
+                    <a href="https://www.taptap.cn/app/716586?os=android" target="_blank">TapTap下载</a>
+                </div>
+
+                <div class="portfolio-item" data-glass>
+                    <h3>机器人速递</h3>
+                    <span class="tech-tag">UE5</span>
+                    <span class="tech-tag">个人全栈</span>
+                    <p>独立完成玩法逻辑、关卡设计、美术与交互的小体量休闲游戏，展现快速原型开发能力。</p>
+                    <a href="https://pan.baidu.com/s/15u2_A0HJg8D-MaUmgcH3LQ" target="_blank">下载试玩</a>
+                    <span style="font-size: 0.85rem; color: #888; margin-left: 10px;">提取码: fgdd</span>
+                </div>
+
                 <div class="portfolio-item" data-glass>
                     <h3>海报展览馆网站</h3>
                     <span class="tech-tag">Unity</span>
                     <span class="tech-tag">美术制作</span>
                     <p>负责展览馆场景模型搭建与美术制作，打造沉浸式虚拟展览体验。</p>
                 </div>
-
-                <div class="portfolio-item" data-glass>
-                    <h3>杭州求职避雷网</h3>
-                    <span class="tech-tag">JavaScript</span>
-                    <span class="tech-tag">纯前端</span>
-                    <span class="tech-tag">信息检索</span>
-                    <p>公司风险信息查询与地区筛选站点，提供模糊匹配、风险标签、关联企业提醒、明暗主题与独立阅读模式；站内内置「杭州十年百万」求职卡牌模拟经营小游戏。</p>
-                    <a href="https://aaronswartz0217.github.io/-/" target="_blank" rel="noopener noreferrer">访问网站</a>
-                    <br>
-                    <a href="https://aaronswartz0217.github.io/-/draw-game/index.html" target="_blank" rel="noopener noreferrer">试玩内置小游戏</a>
-                    <p class="project-note">信息仅作个人求职参考，不构成法律或投资建议。</p>
-                </div>
             </div>
-
         </section>
 
         <section class="section">
@@ -1318,7 +1257,102 @@
                 </div>
             </div>
         </section>
-        
+
+        <section class="section">
+            <h2>竞赛获奖</h2>
+            <div class="award-item" data-glass>
+                <div class="icon">Award</div>
+                <div class="award-content">
+                    <h3>国家级二等奖</h3>
+                    <p>2024年中国大学生计算机设计大赛数媒交互组</p>
+                    <p style="font-size: 0.9rem; color: #888;">作品：《VR博物馆——古数灵境》</p>
+                    <a href="https://xlxy.ntu.edu.cn/2024/1107/c7166a253646/page.htm" target="_blank" style="font-size: 0.9rem;">查看获奖公示</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>内容创作</h2>
+            <div class="portfolio">
+                <div class="portfolio-item creator-card" data-glass>
+                    <img class="creator-avatar" src="stella-avatar.png" alt="Stella">
+                    <div class="creator-body">
+                        <h3>Stella · 心理学效应科普短视频</h3>
+                        <p class="creator-bio">技术美术 / 内容创作者 · 抖音号 57692551253</p>
+                        <span class="tech-tag">科普短视频</span>
+                        <span class="tech-tag">WebGL / Three.js</span>
+                        <span class="tech-tag">逐帧渲染</span>
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">ffmpeg</span>
+                        <div class="creator-stats">
+                            <span><strong>27</strong>个主题</span>
+                            <span><strong>28</strong>支成片</span>
+                            <span><strong>23</strong>张封面</span>
+                        </div>
+                        <ul class="exp-list">
+                            <li>独立负责选题、脚本、分镜、视觉设计、动效与剪辑，围绕心理学与社会心理效应建立 27 个主题的内容矩阵。</li>
+                            <li>搭建 WebGL / Canvas 逐帧渲染管线：3D 场景、材质光照、后处理、镜头运动与转场动效。</li>
+                            <li>用 Python 生成音频，Node.js + ffmpeg 完成逐帧渲染、视频编码、封面生成与发布物料。</li>
+                            <li>建立技术规范与自动检测闸门：关键帧检测、场景漫游自检、ffprobe 校验，保证出片一致性。</li>
+                        </ul>
+                        <a class="creator-link" href="https://www.douyin.com/user/57692551253" target="_blank" rel="noopener noreferrer">抖音主页 · Stella</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>其他技术项目</h2>
+            <div class="portfolio">
+                <div class="portfolio-item" data-glass>
+                    <h3>NTU Digital Twin</h3>
+                    <span class="tech-tag">前端</span>
+                    <span class="tech-tag">Android + Three.js</span>
+                    <p>Android端采用原生+WebView混合架构，通过JSBridge承载Three.js 3D校园模型，实现移动端3D可视化展示。</p>
+                    <a href="https://github.com/AaronSwartz0217/NTU_DigitalTwin" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                </div>
+
+                <div class="portfolio-item" data-glass>
+                    <h3>.NET Chat</h3>
+                    <span class="tech-tag">后端</span>
+                    <span class="tech-tag">.NET + Avalonia</span>
+                    <p>.NET后端基于Furion提供JWT认证、论坛CRUD及WebSocket实时聊天，集成讯飞星火大模型实现AI校园助手。Avalonia桌面端实现跨平台桌面应用，支持MVVM架构与动态主题切换。</p>
+                    <a href="https://github.com/AaronSwartz0217/.NET_Chat" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+                </div>
+
+                <div class="portfolio-item" data-glass>
+                    <h3>AI-Voice-Assistant</h3>
+                    <span class="tech-tag">AI</span>
+                    <span class="tech-tag">Python</span>
+                    <span class="tech-tag">大创项目</span>
+                    <span class="tech-tag">研发中</span>
+                    <p>基于Whisper和GPT技术开发的智能语音助手，支持语音识别、自然语言理解和语音合成功能。</p>
+                    <a href="https://github.com/AaronSwartz0217/AI-Voice-Assistant" target="_blank">查看 GitHub</a>
+                </div>
+
+                <div class="portfolio-item" data-glass>
+                    <h3>Else-SuperEgo-Skills</h3>
+                    <span class="tech-tag">Agent</span>
+                    <span class="tech-tag">技能架构</span>
+                    <span class="tech-tag">心理动力学</span>
+                    <p>超我镜像技能架构，基于Agent技术的智能系统框架，支持技能注册、动态调度和自主学习。</p>
+                    <a href="https://github.com/AaronSwartz0217/Else-SuperEgo-Skills" target="_blank">查看 GitHub</a>
+                </div>
+
+                <div class="portfolio-item" data-glass>
+                    <h3>杭州求职避雷网</h3>
+                    <span class="tech-tag">JavaScript</span>
+                    <span class="tech-tag">纯前端</span>
+                    <span class="tech-tag">信息检索</span>
+                    <p>公司风险信息查询与地区筛选站点，提供模糊匹配、风险标签、关联企业提醒、明暗主题与独立阅读模式；站内内置「杭州十年百万」求职卡牌模拟经营小游戏。</p>
+                    <a href="https://aaronswartz0217.github.io/-/" target="_blank" rel="noopener noreferrer">访问网站</a>
+                    <br>
+                    <a href="https://aaronswartz0217.github.io/-/draw-game/index.html" target="_blank" rel="noopener noreferrer">试玩内置小游戏</a>
+                    <p class="project-note">信息仅作个人求职参考，不构成法律或投资建议。</p>
+                </div>
+            </div>
+        </section>
+
         <section class="section">
             <h2>游戏经历</h2>
             <div class="game-grid">
@@ -1342,20 +1376,7 @@
                 <div class="game-item">Titanfall 2</div>
             </div>
         </section>
-        
-        <section class="section">
-            <h2>竞赛获奖</h2>
-            <div class="award-item" data-glass>
-                <div class="icon">Award</div>
-                <div class="award-content">
-                    <h3>国家级二等奖</h3>
-                    <p>2024年中国大学生计算机设计大赛数媒交互组</p>
-                    <p style="font-size: 0.9rem; color: #888;">作品：《VR博物馆——古数灵境》</p>
-                    <a href="https://xlxy.ntu.edu.cn/2024/1107/c7166a253646/page.htm" target="_blank" style="font-size: 0.9rem;">查看获奖公示</a>
-                </div>
-            </div>
-        </section>
-        
+
         <section class="section">
             <h2>活动经历</h2>
             <div class="portfolio-item" data-glass>
@@ -1363,7 +1384,7 @@
                 <p>参与线下技术交流活动，分享Vibe Coding理念与实践经验，与行业开发者深入交流。</p>
             </div>
         </section>
-        
+
         <section class="section">
             <h2>联系方式</h2>
             <div class="contact-info">
@@ -1373,7 +1394,7 @@
                 </div>
                 <div class="contact-item">
                     <span>电话：</span>
-                    <span>18098302488</span>
+                    <span>18557199660</span>
                 </div>
                 <div class="contact-item">
                     <span>作品集：</span>
