@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>李东盛 · 技术美术（TA）简历</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1000px;
+    background: #ffffff;
+    color: #1f2328;
+    font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { padding: 48px 56px 44px; }
+
+  /* 头部 */
+  header { border-bottom: 2px solid #1f2328; padding-bottom: 16px; }
+  .name-row { display: flex; align-items: baseline; justify-content: space-between; }
+  h1 { font-size: 30px; letter-spacing: 3px; font-weight: 700; }
+  .role { font-size: 14px; color: #3a6ea5; font-weight: 600; letter-spacing: .5px; }
+  .contact {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+    font-size: 12.5px;
+    color: #4a5058;
+  }
+  .contact b { color: #1f2328; font-weight: 600; }
+  .intent {
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: #30363d;
+    background: #f4f7fb;
+    border-left: 3px solid #3a6ea5;
+    padding: 7px 12px;
+  }
+
+  /* 章节 */
+  section { margin-top: 22px; }
+  h2 {
+    font-size: 15px;
+    letter-spacing: 1px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #d8dde3;
+    margin-bottom: 10px;
+    color: #1f2328;
+  }
+  h2 span { color: #9aa3ad; font-size: 11px; letter-spacing: 0; margin-left: 8px; font-weight: 400; }
+
+  .item { margin-bottom: 12px; }
+  .item:last-child { margin-bottom: 0; }
+  .item-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .item-title { font-size: 13.5px; font-weight: 700; }
+  .item-sub { font-size: 12px; color: #6b7280; }
+  .item-meta { font-size: 12px; color: #6b7280; white-space: nowrap; }
+  .tags { margin: 3px 0 5px; }
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    color: #3a6ea5;
+    background: #eef3f9;
+    border-radius: 3px;
+    padding: 1px 6px;
+    margin-right: 5px;
+  }
+  ul { list-style: none; }
+  li { position: relative; padding-left: 12px; margin-bottom: 2px; }
+  li::before {
+    content: "";
+    position: absolute;
+    left: 2px; top: 9px;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: #b6c2cf;
+  }
+  b.hl { color: #1f2328; }
+
+  /* 技能表 */
+  .skill-grid { display: grid; grid-template-columns: 76px 1fr; row-gap: 6px; font-size: 12.5px; }
+  .skill-key { color: #6b7280; }
+  .skill-val { color: #1f2328; }
+
+  /* 优势 */
+  .strengths { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 26px; }
+  .strengths li { margin-bottom: 0; }
+
+  /* 详情补充说明 */
+  .note {
+    margin-top: 6px;
+    font-size: 11.5px;
+    color: #6b7280;
+  }
+
+  footer {
+    margin-top: 22px;
+    padding-top: 10px;
+    border-top: 1px solid #e5e9ee;
+    font-size: 11px;
+    color: #9aa3ad;
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="name-row">
+      <h1>李东盛</h1>
+      <div class="role">技术美术（TA）｜工具链 · 生产管线 · 渲染</div>
+    </div>
+    <div class="contact">
+      <span><b>邮箱</b> 2971762643@qq.com</span>
+      <span><b>电话</b> 18557199660</span>
+      <span><b>作品集</b> aaronswartz0217.github.io/Else-Web</span>
+      <span><b>GitHub</b> github.com/AaronSwartz0217</span>
+    </div>
+    <div class="intent">
+      求职意向：技术美术（TA），管线 / 工具链方向；可兼顾渲染向 TA 与 Unity / UE5 工具开发。2027 届，可实习。
+    </div>
+  </header>
+
+  <section>
+    <h2>核心优势<span>CORE STRENGTHS</span></h2>
+    <ul class="strengths">
+      <li><b class="hl">工具链与生产管线</b>：MMO 项目 3D / 2D / UI 资产生产与引擎落地，产出 10+ Unity / UE5 编辑器插件；用软件工程解耦思路拆管线，输入输出清晰、模块可复用、流程可回退。</li>
+      <li><b class="hl">渲染</b>：D3D12 延迟渲染 + DLSS 5 风格切换管线，能按资源与管线状态组织渲染流程并做参数级调优。</li>
+      <li><b class="hl">角色管线</b>：独立完成 AI 生成角色模型换装系统全流程，部件拆分、骨骼挂点、材质切换与运行时换装，并在项目内实装。</li>
+      <li><b class="hl">特效与美术效果</b>：能在 UE 与 Unity 之间迁移特效，理解粒子、材质与 Shader 的实现原理，按引擎差异重做而不是照搬参数。</li>
+    </ul>
+    <div class="note">工作流上习惯把 AI 技术接进日常生产：AI 生成角色换装、AI 辅助开发与插件编写，用工具消化重复环节。</div>
+  </section>
+
+  <section>
+    <h2>教育背景<span>EDUCATION</span></h2>
+    <div class="item">
+      <div class="item-head">
+        <div class="item-title">南通大学杏林学院 · 计算机科学与技术 · 本科</div>
+        <div class="item-meta">2023.09 – 2027.06</div>
+      </div>
+      <div class="item-sub">主修：计算机图形学、数据结构、计算机组成原理、操作系统、计算机网络</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>实习经历<span>INTERNSHIP</span></h2>
+    <div class="item">
+      <div class="item-head">
+        <div class="item-title">杭州第贰宇宙科技 · 技术美术（TA）</div>
+        <div class="item-meta">2026.07 – 2026.10</div>
+      </div>
+      <div class="tags">
+        <span class="tag">MMO</span><span class="tag">Unity</span><span class="tag">编辑器插件</span><span class="tag">角色管线</span><span class="tag">特效</span>
+      </div>
+      <ul>
+        <li>负责 MMO 项目 <b class="hl">3D / 2D / UI 资产的生产与引擎落地</b>，搭建从设计稿到 Unity 可用的 UI 生产管线：切图、九宫格、图集与 Prefab 生成。</li>
+        <li>开发 Unity 编辑器插件，把资源导入、批处理与配置生成等重复环节工具化，降低美术与程序之间的手工对接成本。</li>
+        <li>作为美术与程序的对接窗口，梳理资源规格、实现约束与需求优先级，推进场景 3D 资产与 UI 问题闭环。</li>
+        <li>制作 <b class="hl">游戏内技能特效与场景氛围特效</b>：粒子、材质与 Shader 配合，兼顾表现力与移动端性能。</li>
+        <li><b class="hl">独立负责 AI 生成角色模型换装系统全流程</b>：部件拆分、骨骼 / 挂点适配、材质贴图切换、换装配置与运行时换装，并完成项目内实装。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>项目经历<span>PROJECTS</span></h2>
+
+    <div class="item">
+      <div class="item-head">
+        <div class="item-title">物魄奇谭系列</div>
+        <div class="item-meta">UE5 · 全栈 / 技术美术</div>
+      </div>
+      <div class="tags"><span class="tag">UE5</span><span class="tag">C++</span><span class="tag">PBR</span><span class="tag">性能优化</span></div>
+      <ul>
+        <li>国风 RPG，独立完成程序、场景、角色、特效、UI 与性能优化；工程约 <b class="hl">40GB</b>。</li>
+        <li>PBR 材质、灯光氛围与后效调色；场景优化、资源精简与 LOD，保障大型工程流畅运行。</li>
+        <li>使用 FHttpModule 异步拉取外部 JSON；制定美术资源规范，搭建 DCC → 引擎的导入管线。</li>
+      </ul>
+    </div>
+
+    <div class="item">
+      <div class="item-head">
+        <div class="item-title">D3D12 延迟渲染与 DLSS 5 风格切换管线</div>
+        <div class="item-meta">本科毕设 · 图形 / 渲染</div>
+      </div>
+      <div class="tags"><span class="tag">D3D12</span><span class="tag">HLSL</span><span class="tag">Streamline</span><span class="tag">DLSS 5</span></div>
+      <ul>
+        <li>自建 D3D12 延迟渲染管线：GBuffer、CSM 阴影、延迟光照与后处理，按资源与管线状态组织渲染流程。</li>
+        <li>接入 Streamline 与 DLSS 5（SR / FG / NR），对比不同内部缩放比下的画质与帧率表现。</li>
+        <li>JSON 驱动的风格切换：只改参数，不重建 PSO、不重载资产，可在同一场景做 AB 对比。</li>
+      </ul>
+    </div>
+
+    <div class="item">
+      <div class="item-head">
+        <div class="item-title">Unity / UE5 工具与插件</div>
+        <div class="item-meta">10+ 编辑器工具 · 部分开源</div>
+      </div>
+      <div class="tags"><span class="tag">Unity Editor</span><span class="tag">UI Toolkit</span><span class="tag">UE5 Python</span><span class="tag">Blender Python</span></div>
+      <ul>
+        <li><b class="hl">Environment Master</b>：光照烘焙、纹理流送、视野 / 遮挡剔除、LOD 与渲染统计，支持持续监测与 JSONL / CSV 导出。</li>
+        <li><b class="hl">GLSDD</b>：玻璃与毛玻璃 UI 组件，支持预设、背景参考、导出与烘焙 PNG；<b class="hl">Dynamic Trail Slash</b>：URP 双点轨迹采样刀光。</li>
+        <li><b class="hl">Mixamo Attachment Toolkit</b> / <b class="hl">Split Rig to Mixamo Retargeter</b>：装备挂点与骨骼动画烘焙重定向。</li>
+        <li><b class="hl">AMP</b>：FBX 批量转为规范 Prefab（碰撞体、材质、标签）；<b class="hl">Smart FBX Materials</b>：UE5 FBX 材质自动匹配。</li>
+        <li><b class="hl">生成器类插件</b>：Unity 游戏 UI 生产工作流（切图、九宫格、图集与 Prefab 批量生成）；<b class="hl">AI_PET_WORKFLOW</b> 四动作桌宠生成流水线（绿幕抠像、统一对齐、透明 WebP 输出）。</li>
+        <li><b class="hl">3D HTML GLTF Catch</b>（网页 3D 资源导出）、<b class="hl">BLENDER-PYTHON</b>（Blender 批量资产处理）。</li>
+      </ul>
+      <div class="note">以上插件的完整清单、参数说明与技术拆解详情见网站：aaronswartz0217.github.io/Else-Web</div>
+    </div>
+
+    <div class="item">
+      <div class="item-head">
+        <div class="item-title">VR 博物馆——古数灵境</div>
+        <div class="item-meta">Unity VR · 参赛</div>
+      </div>
+      <div class="tags"><span class="tag">Unity</span><span class="tag">VR</span><span class="tag">场景 / 材质 / 灯光</span><span class="tag">国家级二等奖</span></div>
+      <ul>
+        <li>负责 VR 场景搭建、材质制作与灯光氛围；针对 VR 平台做资源优化与交互美术适配。</li>
+        <li>获 2024 年中国大学生计算机设计大赛数媒交互组 <b class="hl">国家级二等奖</b>。</li>
+      </ul>
+    </div>
+
+    <div class="item">
+      <div class="item-head">
+        <div class="item-title">芬奇房间</div>
+        <div class="item-meta">Unity · 商业休闲游戏</div>
+      </div>
+      <div class="tags"><span class="tag">Unity</span><span class="tag">场景美术</span><span class="tag">商业项目</span></div>
+      <ul>
+        <li>参与场景美术资源制作、材质整合与引擎落地，配合版本迭代做资源优化。</li>
+        <li>游戏曾进入 <b class="hl">TapTap 休闲榜前二十</b>。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>内容创作<span>CONTENT</span></h2>
+    <div class="item">
+      <div class="item-head">
+        <div class="item-title">Stella · 心理学效应科普短视频 · 抖音 57692551253</div>
+        <div class="item-meta">33 个主题 / 33 支成片</div>
+      </div>
+      <div class="tags"><span class="tag">WebGL / Canvas</span><span class="tag">逐帧渲染</span><span class="tag">Python</span><span class="tag">ffmpeg</span></div>
+      <ul>
+        <li>独立完成选题、脚本、分镜、视觉设计、动效与剪辑，建立 33 个主题的内容矩阵。</li>
+        <li>搭建 WebGL / Canvas 逐帧渲染管线：3D 场景、材质光照、后处理、镜头运动与转场。</li>
+        <li>Python 生成音频，Node.js + ffmpeg 完成编码与封面；以关键帧检测、场景漫游自检、ffprobe 校验作为出片闸门。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Game Jam 与荣誉<span>JAM &amp; AWARDS</span></h2>
+    <ul>
+      <li><b class="hl">Global Game Jam 2025 / 2026</b>（2 次）：担任地编、特效、技术美术与建模美术，48 小时完成可玩版本。</li>
+      <li><b class="hl">CIGA Game Jam 2025</b>：完整参与从美术概念到引擎落地的全流程开发。</li>
+      <li><b class="hl">2024 中国大学生计算机设计大赛</b> 数媒交互组 国家级二等奖，另有数个小奖项。</li>
+      <li>Trae Friends 南通站：线下技术交流，分享 Vibe Coding 理念与实践。</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>专业技能<span>SKILLS</span></h2>
+    <div class="skill-grid">
+      <div class="skill-key">引擎</div>
+      <div class="skill-val">Unity（C#、Editor、UI Toolkit、URP）、UE5（C++、Blueprint、Python 编辑器脚本）</div>
+      <div class="skill-key">渲染</div>
+      <div class="skill-val">D3D12、HLSL / Shader、PBR、延迟渲染、DLSS / Streamline、后处理与性能分析</div>
+      <div class="skill-key">DCC</div>
+      <div class="skill-val">Blender（Python 自动化）、Substance Painter / Designer、Marmoset Toolbag、Photoshop、Houdini（HDA）</div>
+      <div class="skill-key">开发</div>
+      <div class="skill-val">C# / C++、Python、Git</div>
+    </div>
+  </section>
+
+  <footer>
+    <span>李东盛 · 技术美术（TA）</span>
+    <span>最后更新 2026.11 · aaronswartz0217.github.io/Else-Web</span>
+  </footer>
+</div>
+</body>
+</html>
