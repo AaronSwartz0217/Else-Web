@@ -12,82 +12,83 @@
     color: #22272e;
     font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
     font-size: 11px;
-    line-height: 1.5;
+    line-height: 1.52;
     -webkit-font-smoothing: antialiased;
   }
 
-  .page { padding: 24px 40px 20px; }
+  .page { padding: 30px 46px 24px; }
 
-  /* ============ 头部 ============ */
-  header { padding-bottom: 9px; border-bottom: 2px solid #22272e; }
-
-  .top {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
+  /* ============ 居中页头 ============ */
+  header {
+    text-align: center;
+    padding-bottom: 9px;
+    border-bottom: 2px solid #22272e;
   }
 
   h1 {
-    font-size: 25px;
+    font-size: 27px;
     font-weight: 700;
     letter-spacing: 2px;
     line-height: 1.2;
   }
 
   .role {
-    font-size: 12px;
+    margin-top: 4px;
+    font-size: 11.5px;
     font-weight: 600;
     color: #1a5b8c;
     letter-spacing: .3px;
   }
 
   .contact {
-    margin-top: 6px;
+    margin-top: 7px;
     display: flex;
+    justify-content: center;
     flex-wrap: wrap;
-    gap: 2px 14px;
+    align-items: center;
+    gap: 2px 7px;
     font-size: 10.5px;
     color: #4b5560;
   }
 
   .contact b { color: #22272e; font-weight: 600; }
+  .contact i { font-style: normal; color: #c3ccd3; }
 
-  .intent {
-    margin-top: 7px;
-    font-size: 11px;
-    color: #30363d;
-    background: #f3f6f9;
-    border-left: 3px solid #1a5b8c;
-    padding: 5px 9px;
+  .summary {
+    max-width: 680px;
+    margin: 9px auto 0;
+    text-align: center;
+    font-size: 10.8px;
+    line-height: 1.65;
+    color: #4b5560;
   }
 
-  /* ============ 章节 ============ */
-  section { margin-top: 9px; }
+  .summary b { color: #22272e; font-weight: 600; }
+
+  /* ============ 居中章节标题 ============ */
+  section { margin-top: 11px; }
 
   h2 {
-    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-size: 12.5px;
     font-weight: 700;
     letter-spacing: 0;
     color: #22272e;
-    padding-left: 9px;
-    padding-bottom: 3px;
-    border-bottom: 1px solid #ccd5dd;
-    margin-bottom: 5px;
+    margin-bottom: 6px;
   }
 
-  h2::before {
+  h2::before,
+  h2::after {
     content: "";
-    position: absolute;
-    left: 0;
-    top: 3px;
-    width: 4px;
-    height: 13px;
-    background: #1a5b8c;
+    flex: 1;
+    height: 1px;
+    background: #d3dbe1;
   }
 
   /* ============ 条目 ============ */
-  .item { margin-bottom: 6px; break-inside: avoid; }
+  .item { margin-bottom: 7px; break-inside: avoid; }
   .item:last-child { margin-bottom: 0; }
 
   .item-head {
@@ -128,15 +129,26 @@
 
   b.hl { color: #22272e; font-weight: 600; }
 
-  /* ============ 技能 ============ */
-  .skill-grid {
-    display: grid;
-    grid-template-columns: 48px 1fr;
-    gap: 1px 7px;
+  /* ============ 横排技能行 ============ */
+  .skill-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 3.5px 0;
+    border-bottom: 1px solid #edf1f4;
+    font-size: 11px;
   }
 
-  .skill-key { color: #6b7280; font-size: 11px; }
-  .skill-val { font-size: 11px; color: #30363d; }
+  .skill-row:last-child { border-bottom: 0; padding-bottom: 0; }
+
+  .skill-key {
+    flex: none;
+    width: 42px;
+    font-weight: 700;
+    color: #1a5b8c;
+  }
+
+  .skill-val { color: #30363d; }
 
   /* ============ 荣誉 ============ */
   .awards {
@@ -152,13 +164,12 @@
   }
 
   footer {
-    margin-top: 11px;
-    padding-top: 7px;
-    border-top: 1px solid #dde3e8;
+    margin-top: 10px;
+    padding-top: 6px;
+    border-top: 1px solid #e2e8ed;
+    text-align: center;
     font-size: 9.5px;
     color: #8a949e;
-    display: flex;
-    justify-content: space-between;
   }
 </style>
 </head>
@@ -166,46 +177,19 @@
 <div class="page">
 
   <header>
-    <div class="top">
-      <h1>李东盛</h1>
-      <div class="role">技术美术（TA）｜工具链 · 生产管线 · 渲染</div>
-    </div>
+    <h1>李东盛</h1>
+    <div class="role">技术美术（TA）｜工具链 · 生产管线 · 渲染</div>
     <div class="contact">
-      <span><b>电话</b> 18557199660</span>
-      <span><b>邮箱</b> 2971762643@qq.com</span>
-      <span><b>作品集</b> aaronswartz0217.github.io/Else-Web</span>
-      <span><b>GitHub</b> github.com/AaronSwartz0217</span>
+      <span>电话 18557199660</span><i>·</i>
+      <span>邮箱 2971762643@qq.com</span><i>·</i>
+      <span>作品集 aaronswartz0217.github.io/Else-Web</span><i>·</i>
+      <span>GitHub github.com/AaronSwartz0217</span>
     </div>
-    <div class="intent">
-      求职意向：技术美术（TA），管线 / 工具链方向；可兼顾渲染向 TA 与 Unity / UE5 工具开发。2027 届，可实习。<br>
-      个人总结：熟悉 Unity / UE5 双引擎与 D3D12 渲染管线，做过 MMO 项目的 3D / 2D / UI 资产落地与 10+ 编辑器插件，擅长把重复生产环节工具化。
+    <div class="summary">
+      <b>2027 届，可实习。</b>求职方向为技术美术（TA），管线 / 工具链方向，可兼顾渲染向 TA 与 Unity / UE5 工具开发。<br>
+      熟悉 Unity / UE5 双引擎与 D3D12 渲染管线，做过 MMO 项目的 3D / 2D / UI 资产落地与 10+ 编辑器插件，擅长把重复生产环节工具化。
     </div>
   </header>
-
-  <section>
-    <h2>教育背景</h2>
-    <div class="item">
-      <div class="item-head">
-        <div class="item-title">南通大学杏林学院 · 计算机科学与技术 · 本科</div>
-        <div class="item-meta">2023.09 – 2027.06</div>
-      </div>
-      <div class="tech">主修：计算机图形学、数据结构、计算机组成原理、操作系统、计算机网络</div>
-    </div>
-  </section>
-
-  <section>
-    <h2>技能专长</h2>
-    <div class="skill-grid">
-      <div class="skill-key">渲染</div>
-      <div class="skill-val">D3D12、HLSL / Shader、PBR、延迟渲染、DLSS / Streamline、后处理、Profiler / DrawCall / LOD 优化</div>
-      <div class="skill-key">引擎</div>
-      <div class="skill-val">Unity（C#、Editor、UI Toolkit、URP）、UE5（C++、Blueprint、Python 编辑器脚本）</div>
-      <div class="skill-key">DCC</div>
-      <div class="skill-val">Blender（Python 自动化）、Substance Painter / Designer、Marmoset、Photoshop、Houdini（HDA）</div>
-      <div class="skill-key">编程</div>
-      <div class="skill-val">C# / C++、Python、Git</div>
-    </div>
-  </section>
 
   <section>
     <h2>实习经历</h2>
@@ -291,17 +275,33 @@
   </section>
 
   <section>
-    <h2>内容创作</h2>
+    <h2>技能专长</h2>
+    <div class="skill-row">
+      <span class="skill-key">渲染</span>
+      <span class="skill-val">D3D12、HLSL / Shader、PBR、延迟渲染、DLSS / Streamline、后处理、Profiler / DrawCall / LOD 优化</span>
+    </div>
+    <div class="skill-row">
+      <span class="skill-key">引擎</span>
+      <span class="skill-val">Unity（C#、Editor、UI Toolkit、URP）、UE5（C++、Blueprint、Python 编辑器脚本）</span>
+    </div>
+    <div class="skill-row">
+      <span class="skill-key">DCC</span>
+      <span class="skill-val">Blender（Python 自动化）、Substance Painter / Designer、Marmoset、Photoshop、Houdini（HDA）</span>
+    </div>
+    <div class="skill-row">
+      <span class="skill-key">编程</span>
+      <span class="skill-val">C# / C++、Python、Git</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>教育背景</h2>
     <div class="item">
       <div class="item-head">
-        <div class="item-title">Stella · 心理学效应科普短视频 · 抖音 57692551253</div>
-        <div class="item-meta">33 个主题 / 33 支成片</div>
+        <div class="item-title">南通大学杏林学院 · 计算机科学与技术 · 本科</div>
+        <div class="item-meta">2023.09 – 2027.06</div>
       </div>
-      <div class="tech">WebGL / Canvas · 逐帧渲染 · Python · ffmpeg</div>
-      <ul>
-        <li>独立完成选题、脚本、分镜、视觉设计、动效与剪辑，建立 33 个主题的内容矩阵。</li>
-        <li>搭建 WebGL / Canvas 逐帧渲染管线；Python 生成音频，Node.js + ffmpeg 完成编码与封面，ffprobe 校验出片。</li>
-      </ul>
+      <div class="tech">主修：计算机图形学、数据结构、计算机组成原理、操作系统、计算机网络</div>
     </div>
   </section>
 
@@ -314,6 +314,8 @@
       <li>Trae Friends 南通站 · 分享 Vibe Coding 理念与实践</li>
     </ul>
   </section>
+
+  <footer>更多作品与技术拆解：aaronswartz0217.github.io/Else-Web</footer>
 
 </div>
 </body>
