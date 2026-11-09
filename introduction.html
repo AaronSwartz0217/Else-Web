@@ -939,6 +939,54 @@
             pointer-events: none;
         }
 
+        /* ==================== 资料下载 ==================== */
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 18px;
+            margin-top: 20px;
+        }
+
+        .download-card {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 22px 24px;
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            background: transparent;
+            color: inherit;
+            text-decoration: none;
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.14),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+                inset 1px 0 0 rgba(255, 255, 255, 0.05),
+                inset -1px 0 0 rgba(255, 255, 255, 0.05),
+                0 10px 34px rgba(0, 0, 0, 0.32);
+            transition: transform 0.25s ease;
+        }
+
+        .download-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .download-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #f0f0f0;
+        }
+
+        .download-meta {
+            font-size: 0.85rem;
+            color: #9aa3ad;
+        }
+
+        .download-action {
+            margin-top: 10px;
+            font-size: 0.88rem;
+            color: #8ab4f8;
+        }
+
         /* ==================== 移动端布局兜底 ==================== */
         @media (max-width: 700px) {
             .container {
@@ -976,6 +1024,15 @@
                 border-left-width: 18px;
                 border-top-width: 11px;
                 border-bottom-width: 11px;
+            }
+
+            .download-grid {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+
+            .download-card {
+                padding: 18px 20px;
             }
         }
     </style>
@@ -1565,6 +1622,27 @@
             <a href="note/" class="back-to-game" style="margin-left: 20px;">学习笔记</a>
             <a href="portfolio/" class="back-to-game" style="margin-left: 20px;">作品详情</a>
         </section>
+
+        <section class="section">
+            <h2>资料下载</h2>
+            <div class="download-grid">
+                <a class="download-card" data-glass href="downloads/portfolio.pdf" download="李东盛作品集.pdf">
+                    <span class="download-title">作品集</span>
+                    <span class="download-meta">30 页 · 16:9 演示稿 · 11.2 MB</span>
+                    <span class="download-action">下载 PDF ↓</span>
+                </a>
+                <a class="download-card" data-glass href="downloads/resume.pdf" download="李东盛简历.pdf">
+                    <span class="download-title">简历 · 第一版</span>
+                    <span class="download-meta">单页 · 简洁单栏 · 318 KB</span>
+                    <span class="download-action">下载 PDF ↓</span>
+                </a>
+                <a class="download-card" data-glass href="downloads/resume-v2.pdf" download="李东盛简历-第二版.pdf">
+                    <span class="download-title">简历 · 第二版</span>
+                    <span class="download-meta">单页 · 编辑式双栏 · 319 KB</span>
+                    <span class="download-action">下载 PDF ↓</span>
+                </a>
+            </div>
+        </section>
     </div>
 
     <div class="knob-shell">
@@ -1783,6 +1861,12 @@
                 video.currentTime = 0;
             });
         })();
+
+        /* 下载卡片：阻止冒泡，避免触发全局复制邮箱 */
+        document.querySelectorAll('.download-card').forEach(function (card) {
+            card.addEventListener('click', function (e) { e.stopPropagation(); });
+            card.addEventListener('touchstart', function (e) { e.stopPropagation(); }, { passive: true });
+        });
     </script>
 </body>
 </html>
