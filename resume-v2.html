@@ -12,16 +12,16 @@
     color: #22272e;
     font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
     font-size: 11px;
-    line-height: 1.52;
+    line-height: 1.48;
     -webkit-font-smoothing: antialiased;
   }
 
-  .page { padding: 30px 46px 24px; }
+  .page { padding: 24px 44px 18px; }
 
   /* ============ 居中页头 ============ */
   header {
     text-align: center;
-    padding-bottom: 9px;
+    padding-bottom: 8px;
     border-bottom: 2px solid #22272e;
   }
 
@@ -56,7 +56,7 @@
 
   .summary {
     max-width: 680px;
-    margin: 9px auto 0;
+    margin: 7px auto 0;
     text-align: center;
     font-size: 10.8px;
     line-height: 1.65;
@@ -66,7 +66,7 @@
   .summary b { color: #22272e; font-weight: 600; }
 
   /* ============ 居中章节标题 ============ */
-  section { margin-top: 11px; }
+  section { margin-top: 8px; }
 
   h2 {
     display: flex;
@@ -88,7 +88,7 @@
   }
 
   /* ============ 条目 ============ */
-  .item { margin-bottom: 7px; break-inside: avoid; }
+  .item { margin-bottom: 5px; break-inside: avoid; }
   .item:last-child { margin-bottom: 0; }
 
   .item-head {
@@ -129,12 +129,56 @@
 
   b.hl { color: #22272e; font-weight: 600; }
 
-  /* ============ 横排技能行 ============ */
+  /* ============ 横排技能行 + 六边形 ============ */
+  .skill-block {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .radar svg {
+    display: block;
+    width: 170px;
+    height: 150px;
+  }
+
+  .radar-grid polygon,
+  .radar-grid line {
+    fill: none;
+    stroke: #dde5ea;
+    stroke-width: 1;
+  }
+
+  .radar-shape {
+    fill: rgba(26, 91, 140, 0.16);
+    stroke: #1a5b8c;
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+  }
+
+  .radar-core { fill: #1a5b8c; }
+
+  .radar-label text {
+    font-size: 8.5px;
+    fill: #6b7280;
+    font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+  }
+
+  .radar-note {
+    margin-top: -2px;
+    text-align: center;
+    font-size: 8.5px;
+    color: #8a949e;
+  }
+
+  .skill-list { min-width: 0; }
+
   .skill-row {
     display: flex;
     align-items: baseline;
     gap: 10px;
-    padding: 3.5px 0;
+    padding: 3px 0;
     border-bottom: 1px solid #edf1f4;
     font-size: 11px;
   }
@@ -161,15 +205,6 @@
     margin-top: 3px;
     font-size: 10px;
     color: #6b7280;
-  }
-
-  footer {
-    margin-top: 10px;
-    padding-top: 6px;
-    border-top: 1px solid #e2e8ed;
-    text-align: center;
-    font-size: 9.5px;
-    color: #8a949e;
   }
 </style>
 </head>
@@ -276,21 +311,51 @@
 
   <section>
     <h2>技能专长</h2>
-    <div class="skill-row">
-      <span class="skill-key">渲染</span>
-      <span class="skill-val">D3D12、HLSL / Shader、PBR、延迟渲染、DLSS / Streamline、后处理、Profiler / DrawCall / LOD 优化</span>
-    </div>
-    <div class="skill-row">
-      <span class="skill-key">引擎</span>
-      <span class="skill-val">Unity（C#、Editor、UI Toolkit、URP）、UE5（C++、Blueprint、Python 编辑器脚本）</span>
-    </div>
-    <div class="skill-row">
-      <span class="skill-key">DCC</span>
-      <span class="skill-val">Blender（Python 自动化）、Substance Painter / Designer、Marmoset、Photoshop、Houdini（HDA）</span>
-    </div>
-    <div class="skill-row">
-      <span class="skill-key">编程</span>
-      <span class="skill-val">C# / C++、Python、Git</span>
+    <div class="skill-block">
+      <div class="radar">
+        <svg viewBox="0 0 170 150" role="img" aria-label="技术美术能力雷达图，1 到 5 分自评">
+          <g class="radar-grid">
+            <polygon points="85,31 123.1,53 123.1,97 85,119 46.9,97 46.9,53"/>
+            <polygon points="85,45.7 110.4,60.3 110.4,89.7 85,104.3 59.6,89.7 59.6,60.3"/>
+            <polygon points="85,60.3 97.7,67.7 97.7,82.3 85,89.7 72.3,82.3 72.3,67.7"/>
+            <line x1="85" y1="75" x2="85" y2="31"/>
+            <line x1="85" y1="75" x2="123.1" y2="53"/>
+            <line x1="85" y1="75" x2="123.1" y2="97"/>
+            <line x1="85" y1="75" x2="85" y2="119"/>
+            <line x1="85" y1="75" x2="46.9" y2="97"/>
+            <line x1="85" y1="75" x2="46.9" y2="53"/>
+          </g>
+          <polygon class="radar-shape" points="85,31 115.5,57.4 115.5,92.6 85,105.8 58.3,92.6 50.7,55.2"/>
+          <circle class="radar-core" cx="85" cy="75" r="2"/>
+          <g class="radar-label">
+            <text x="85" y="15" text-anchor="middle">工具链</text>
+            <text x="134" y="47" text-anchor="start">图形渲染</text>
+            <text x="134" y="107" text-anchor="start">引擎落地</text>
+            <text x="85" y="145" text-anchor="middle">特效</text>
+            <text x="38" y="107" text-anchor="end">角色管线</text>
+            <text x="38" y="47" text-anchor="end">AI 工作流</text>
+          </g>
+        </svg>
+        <div class="radar-note">1–5 自评 · 外圈 5</div>
+      </div>
+      <div class="skill-list">
+        <div class="skill-row">
+          <span class="skill-key">渲染</span>
+          <span class="skill-val">D3D12、HLSL / Shader、PBR、延迟渲染、DLSS / Streamline、后处理、Profiler / DrawCall / LOD 优化</span>
+        </div>
+        <div class="skill-row">
+          <span class="skill-key">引擎</span>
+          <span class="skill-val">Unity（C#、Editor、UI Toolkit、URP）、UE5（C++、Blueprint、Python 编辑器脚本）</span>
+        </div>
+        <div class="skill-row">
+          <span class="skill-key">DCC</span>
+          <span class="skill-val">Blender（Python 自动化）、Substance Painter / Designer、Marmoset、Photoshop、Houdini（HDA）</span>
+        </div>
+        <div class="skill-row">
+          <span class="skill-key">编程</span>
+          <span class="skill-val">C# / C++、Python、Git</span>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -314,8 +379,6 @@
       <li>Trae Friends 南通站 · 分享 Vibe Coding 理念与实践</li>
     </ul>
   </section>
-
-  <footer>更多作品与技术拆解：aaronswartz0217.github.io/Else-Web</footer>
 
 </div>
 </body>
