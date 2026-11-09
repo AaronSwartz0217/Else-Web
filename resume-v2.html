@@ -18,7 +18,7 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  .page { padding: 24px 44px 14px; }
+  .page { padding: 22px 44px 5px; }
 
   /* ============ 居中页头 ============ */
   header {
@@ -57,7 +57,13 @@
   .contact i { font-style: normal; color: #b8ae99; }
 
   /* ============ 居中章节标题 ============ */
-  section { margin-top: 12px; }
+  section {
+    margin: 7px -12px 0;
+    padding: 4px 12px;
+    border: 1px solid rgba(120, 100, 70, 0.16);
+    border-radius: 10px;
+    background: rgba(255, 252, 245, 0.55);
+  }
 
   h2 {
     display: flex;
@@ -68,7 +74,7 @@
     font-weight: 700;
     letter-spacing: 0;
     color: #2d2a24;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
 
   h2::before,
@@ -80,8 +86,13 @@
   }
 
   /* ============ 条目 ============ */
-  .item { margin-bottom: 9px; break-inside: avoid; }
+  .item { margin-bottom: 4px; break-inside: avoid; }
   .item:last-child { margin-bottom: 0; }
+
+  .item + .item {
+    border-top: 1px solid rgba(120, 100, 70, 0.10);
+    padding-top: 3px;
+  }
 
   .item-head {
     display: flex;
