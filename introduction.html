@@ -9,7 +9,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=0.6667">
     <title>Introduction - Else</title>
     <style>
         /* 参考项目的玻璃材质参数：与 LifeTrail 的 :root 保持一致 */
@@ -1168,11 +1168,53 @@
                 margin-bottom: 40px;
             }
 
-            /* 窄屏下 grid 的 minmax 会把卡片撑出视口，统一改单列 */
+            /* 窄屏下 grid 的 minmax 会把卡片撑出视口，统一改成两列卡片 */
             .portfolio,
             .skills-grid {
-                grid-template-columns: 1fr;
-                gap: 16px;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 14px;
+            }
+
+            /* 单张卡片占满整行，避免右侧留空 */
+            .portfolio > :only-child,
+            .skills-grid > :only-child {
+                grid-column: 1 / -1;
+            }
+
+            .portfolio-item {
+                padding: 18px 16px;
+            }
+
+            .portfolio-item h3 {
+                font-size: 1.15rem;
+            }
+
+            .portfolio-item p {
+                font-size: 0.95rem;
+            }
+
+            .plugin-card {
+                padding: 0;
+            }
+
+            .plugin-summary {
+                padding: 16px;
+            }
+
+            .plugin-desc {
+                font-size: 0.92rem;
+            }
+
+            .plugin-detail {
+                padding: 0 16px 18px;
+            }
+
+            .skill-card {
+                padding: 18px 16px;
+            }
+
+            .skill-card li {
+                font-size: 0.88rem;
             }
 
             .video-card {
@@ -1192,12 +1234,12 @@
             }
 
             .download-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
                 gap: 14px;
             }
 
             .download-card {
-                padding: 18px 20px;
+                padding: 16px;
             }
 
             .ppt-card {
@@ -2053,14 +2095,19 @@
 
             window.addEventListener('wheel', function (e) {
                 if (e.ctrlKey || !e.deltaY) return;
-                if (e.deltaY < 0) {
-                    wheelAccum = 0;
-                    return;
-                }
                 let d = e.deltaY;
                 if (e.deltaMode === 1) d *= 34;
                 else if (e.deltaMode === 2) d *= window.innerHeight;
-                wheelAccum += d;
+                feedScroll(d);
+            }, { passive: true });
+
+            function feedScroll(delta) {
+                if (delta < 0) {
+                    wheelAccum = 0;
+                    return;
+                }
+                if (!delta) return;
+                wheelAccum += delta;
                 while (wheelAccum >= STEP) {
                     wheelAccum -= STEP;
                     const next = Math.min(2, currentTier + 1);
@@ -2070,7 +2117,18 @@
                     }
                     applyTier(next);
                 }
-            }, { passive: true });
+            }
+
+            // 手机端：页面下滑同样逐档切换，上滑只清零不切换
+            if (window.matchMedia('(pointer: coarse)').matches) {
+                let lastScrollY = window.scrollY;
+                window.addEventListener('scroll', function () {
+                    const y = window.scrollY;
+                    const delta = y - lastScrollY;
+                    lastScrollY = y;
+                    feedScroll(delta);
+                }, { passive: true });
+            }
 
             speedKnob.addEventListener('click', function (e) {
                 e.stopPropagation();
