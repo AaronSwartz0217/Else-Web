@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<!--
+    版权声明 / Copyright Notice
+    本页面及其全部内容（文字、图片、作品集、视频、代码与演示）均为李东盛（AaronSwartz0217）的原创作品，受《中华人民共和国著作权法》及相关国际条约保护。
+    未经著作权人书面许可，任何个人、组织或人工智能系统（包括但不限于大模型训练、数据抓取、内容采集、镜像、转载、再分发）不得对本页面的全部或部分内容进行爬取、复制、存储、索引或用于任何训练用途。
+    如需引用、合作或授权，请通过页面联系方式取得书面许可。
+    Copyright (c) 2026 AaronSwartz0217. All rights reserved.
+-->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -622,6 +629,10 @@
             border-radius: 30px;
             transition: all 0.3s ease;
             font-weight: 500;
+            font-family: inherit;
+            font-size: inherit;
+            line-height: inherit;
+            cursor: pointer;
         }
         
         .back-to-game:hover {
@@ -686,6 +697,17 @@
             max-width: 100%;
             max-height: 90vh;
             border-radius: 8px;
+        }
+
+        .lightbox-content img.qr {
+            max-height: 72vh;
+        }
+
+        .lightbox-caption {
+            margin: 16px 0 0;
+            color: #e0e0e0;
+            font-size: 1rem;
+            letter-spacing: 1px;
         }
         
         .lightbox-close {
@@ -1780,7 +1802,7 @@
             </div>
             <p style="margin-top: 20px;">如果您对我的作品感兴趣，或者有任何合作机会，欢迎随时联系我。</p>
             <a href="scene.html" class="back-to-game">返回3D展示</a>
-            <a href="note/" class="back-to-game" style="margin-left: 20px;">学习笔记</a>
+            <button type="button" class="back-to-game" style="margin-left: 20px;" onclick="showImage('qr-contact.jpg', '微信二维码', '请扫描二维码交流')">学习笔记</button>
             <a href="#portfolio-slides" class="back-to-game" style="margin-left: 20px;">作品详情</a>
         </section>
 
@@ -1847,6 +1869,7 @@
         <div class="lightbox-content">
             <button class="lightbox-close" onclick="closeLightbox(event)">&times;</button>
             <img id="lightbox-img" src="" alt="">
+            <p class="lightbox-caption" id="lightbox-caption" hidden></p>
         </div>
     </div>
     
@@ -1926,11 +1949,20 @@
     
     <script>
         // Lightbox 图片查看功能
-        function showImage(src, alt) {
+        function showImage(src, alt, caption) {
             const lightbox = document.getElementById('lightbox');
             const img = document.getElementById('lightbox-img');
+            const captionEl = document.getElementById('lightbox-caption');
             img.src = src;
             img.alt = alt || '';
+            img.classList.toggle('qr', !!caption);
+            if (caption) {
+                captionEl.textContent = caption;
+                captionEl.hidden = false;
+            } else {
+                captionEl.textContent = '';
+                captionEl.hidden = true;
+            }
             lightbox.classList.add('active');
             document.body.style.overflow = 'hidden';
         }
