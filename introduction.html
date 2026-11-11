@@ -981,10 +981,141 @@
             color: #9aa3ad;
         }
 
-        .download-action {
-            margin-top: 10px;
-            font-size: 0.88rem;
+        .download-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(74, 106, 165, 0.55);
+            background: transparent;
             color: #8ab4f8;
+            font-size: 0.82rem;
+            font-family: inherit;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .download-btn:hover {
+            background: rgba(74, 106, 165, 0.18);
+            border-color: #6b8cce;
+        }
+
+        .download-btn.primary {
+            background: rgba(74, 106, 165, 0.22);
+        }
+
+        .download-btn.primary:hover {
+            background: rgba(74, 106, 165, 0.32);
+        }
+
+        /* ==================== 作品集 PPT 预览 ==================== */
+        .ppt-card {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            background: var(--glass);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.14),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+                0 10px 34px rgba(0, 0, 0, 0.32);
+            backdrop-filter: var(--blur);
+            -webkit-backdrop-filter: var(--blur);
+        }
+
+        .ppt-viewport {
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+            background: #000;
+            aspect-ratio: 16 / 9;
+            touch-action: pan-y;
+        }
+
+        .ppt-track {
+            display: flex;
+            height: 100%;
+            transition: transform 0.4s ease;
+            will-change: transform;
+        }
+
+        .ppt-slide {
+            min-width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ppt-slide img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            cursor: zoom-in;
+        }
+
+        .ppt-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(10, 12, 16, 0.52);
+            color: #fff;
+            font-size: 1.4rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 2;
+            transition: background 0.2s ease;
+        }
+
+        .ppt-arrow:hover {
+            background: rgba(58, 110, 165, 0.72);
+        }
+
+        .ppt-arrow.prev { left: 12px; }
+        .ppt-arrow.next { right: 12px; }
+
+        .ppt-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .ppt-page {
+            font-size: 0.85rem;
+            color: #9aa3ad;
+            letter-spacing: 0.5px;
+        }
+
+        .ppt-download {
+            font-size: 0.85rem;
+            color: #8ab4f8;
+            text-decoration: none;
+        }
+
+        .ppt-download:hover {
+            text-decoration: underline;
         }
 
         /* ==================== 移动端布局兜底 ==================== */
@@ -1033,6 +1164,24 @@
 
             .download-card {
                 padding: 18px 20px;
+            }
+
+            .ppt-card {
+                padding: 8px;
+                border-radius: 14px;
+            }
+
+            .ppt-arrow {
+                width: 32px;
+                height: 32px;
+                font-size: 1.1rem;
+            }
+
+            .ppt-arrow.prev { left: 6px; }
+            .ppt-arrow.next { right: 6px; }
+
+            .ppt-footer {
+                justify-content: center;
             }
         }
     </style>
@@ -1620,28 +1769,45 @@
             <p style="margin-top: 20px;">如果您对我的作品感兴趣，或者有任何合作机会，欢迎随时联系我。</p>
             <a href="scene.html" class="back-to-game">返回3D展示</a>
             <a href="note/" class="back-to-game" style="margin-left: 20px;">学习笔记</a>
-            <a href="portfolio/" class="back-to-game" style="margin-left: 20px;">作品详情</a>
+            <a href="#portfolio-slides" class="back-to-game" style="margin-left: 20px;">作品详情</a>
         </section>
 
         <section class="section">
             <h2>资料下载</h2>
             <div class="download-grid">
-                <a class="download-card" data-glass href="downloads/portfolio.pdf" download="李东盛作品集.pdf">
+                <div class="download-card" data-glass>
                     <span class="download-title">作品集</span>
                     <span class="download-meta">30 页 · 16:9 演示稿 · 11.2 MB</span>
-                    <span class="download-action">下载 PDF ↓</span>
-                </a>
-                <a class="download-card" data-glass href="downloads/resume.pdf" download="李东盛简历.pdf">
-                    <span class="download-title">简历 · 第一版</span>
-                    <span class="download-meta">单页 · 简洁单栏 · 318 KB</span>
-                    <span class="download-action">下载 PDF ↓</span>
-                </a>
-                <a class="download-card" data-glass href="downloads/resume-v2.pdf" download="李东盛简历-第二版.pdf">
+                    <div class="download-actions">
+                        <a class="download-btn" href="#portfolio-slides">预览</a>
+                        <a class="download-btn primary" href="downloads/portfolio.pdf" download="李东盛作品集.pdf">下载 PDF ↓</a>
+                    </div>
+                </div>
+                <div class="download-card" data-glass>
                     <span class="download-title">简历 · 第二版</span>
                     <span class="download-meta">A4 单页 · 米黄纸底 + 淡框分组 · 263 KB</span>
-                    <span class="download-action">下载 PDF ↓</span>
-                </a>
+                    <div class="download-actions">
+                        <button class="download-btn" type="button" onclick="showImage('downloads/resume-v2-preview.jpg', '李东盛简历预览')">预览</button>
+                        <a class="download-btn primary" href="downloads/resume-v2.pdf" download="李东盛简历-第二版.pdf">下载 PDF ↓</a>
+                    </div>
+                </div>
             </div>
+        </section>
+
+        <section class="section" id="portfolio-slides">
+            <h2>作品集演示</h2>
+            <div class="ppt-card" data-glass>
+                <div class="ppt-viewport" id="pptViewport">
+                    <div class="ppt-track" id="pptTrack"></div>
+                    <button class="ppt-arrow prev" id="pptPrev" type="button" aria-label="上一页">‹</button>
+                    <button class="ppt-arrow next" id="pptNext" type="button" aria-label="下一页">›</button>
+                </div>
+                <div class="ppt-footer">
+                    <span class="ppt-page" id="pptPage">1 / 30</span>
+                    <a class="ppt-download" href="downloads/portfolio.pdf" download="李东盛作品集.pdf">下载完整 PDF ↓</a>
+                </div>
+            </div>
+            <p class="project-note">30 页 · 点击幻灯片查看大图 · 左右滑动切换</p>
         </section>
     </div>
 
@@ -1867,6 +2033,76 @@
             card.addEventListener('click', function (e) { e.stopPropagation(); });
             card.addEventListener('touchstart', function (e) { e.stopPropagation(); }, { passive: true });
         });
+    </script>
+
+    <script>
+        /* 作品集 PPT 预览：左右切换、滑动与点击查看大图 */
+        (function () {
+            const track = document.getElementById('pptTrack');
+            const viewport = document.getElementById('pptViewport');
+            const prev = document.getElementById('pptPrev');
+            const next = document.getElementById('pptNext');
+            const page = document.getElementById('pptPage');
+            const card = document.querySelector('.ppt-card');
+            if (!track || !viewport) return;
+
+            const total = 30;
+            for (let i = 1; i <= total; i++) {
+                const slide = document.createElement('div');
+                slide.className = 'ppt-slide';
+                const img = document.createElement('img');
+                img.dataset.src = 'portfolio/slides/幻灯片' + i + '.JPG';
+                img.alt = '作品集第 ' + i + ' 页';
+                slide.appendChild(img);
+                track.appendChild(slide);
+            }
+
+            let index = 0;
+            function ensure(n) {
+                for (let k = n - 1; k <= n + 1; k++) {
+                    const slide = track.children[(k + total) % total];
+                    const img = slide && slide.querySelector('img');
+                    if (img && !img.src) {
+                        img.loading = 'eager';
+                        img.src = img.dataset.src;
+                    }
+                }
+            }
+            function go(n) {
+                index = (n + total) % total;
+                ensure(index);
+                track.style.transform = 'translateX(-' + (index * 100) + '%)';
+                page.textContent = (index + 1) + ' / ' + total;
+            }
+
+            prev.addEventListener('click', function (e) { e.stopPropagation(); go(index - 1); });
+            next.addEventListener('click', function (e) { e.stopPropagation(); go(index + 1); });
+
+            track.addEventListener('click', function (e) {
+                const slide = e.target.closest('.ppt-slide');
+                if (!slide) return;
+                e.stopPropagation();
+                const img = slide.querySelector('img');
+                if (img) showImage(img.getAttribute('src'), img.alt);
+            });
+
+            let startX = 0;
+            viewport.addEventListener('touchstart', function (e) {
+                startX = e.touches[0].clientX;
+                e.stopPropagation();
+            }, { passive: true });
+            viewport.addEventListener('touchend', function (e) {
+                const dx = e.changedTouches[0].clientX - startX;
+                if (Math.abs(dx) > 40) go(index + (dx < 0 ? 1 : -1));
+            }, { passive: true });
+
+            if (card) {
+                card.addEventListener('click', function (e) { e.stopPropagation(); });
+                card.addEventListener('touchstart', function (e) { e.stopPropagation(); }, { passive: true });
+            }
+
+            go(0);
+        })();
     </script>
 </body>
 </html>
