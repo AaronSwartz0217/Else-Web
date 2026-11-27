@@ -1454,8 +1454,8 @@
     }
 
     var albumCabinet = new THREE.Group();
-    albumCabinet.position.set(-3.6, 0, 2.6);
-    albumCabinet.rotation.y = 0.54;
+    albumCabinet.position.set(10.15, 0, 5.72);
+    albumCabinet.rotation.y = -Math.PI / 2;
     albumCabinet.userData.album = true;
     var albumHover = 1;
 
@@ -1970,10 +1970,13 @@
         if (window.Arcade && window.Arcade.coinSound) window.Arcade.coinSound();
         dropCoin(ev.clientX, ev.clientY);
 
-        var isResume = Math.random() < 0.1;
+        var isResume = Math.random() < 0.01;
+        var isEmber = !isResume && Math.random() < 0.01;
         var pick = isResume
             ? { id: 'resume', marquee: 'RESUME', neon: 0xffcf4a }
-            : PROJECTS[Math.floor(Math.random() * PROJECTS.length)];
+            : (isEmber
+                ? { id: 'ember', marquee: 'EMBER CHICK', neon: 0xff8a1f }
+                : PROJECTS[Math.floor(Math.random() * PROJECTS.length)]);
         if (type === 'claw') startClawDraw();
         else startGachaDraw();
 
@@ -1985,7 +1988,7 @@
                     id: pick.id,
                     marquee: pick.marquee,
                     neon: pick.neon,
-                    rarity: isResume ? 'gold' : null,
+                    rarity: (isResume || isEmber) ? 'gold' : null,
                     source: type
                 }
             }));
