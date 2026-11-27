@@ -1148,6 +1148,108 @@ body::after{
     .kicker,.press-start,.marquee::before,.marquee::after,.ticker-track{animation:none;}
     html{scroll-behavior:auto;}
 }
+/* ===== 城市地图 ===== */
+.city-overlay,.cafe-overlay{
+    position:fixed;inset:0;z-index:110;display:grid;place-items:center;padding:18px;
+    opacity:0;pointer-events:none;transition:opacity .25s ease;
+}
+.city-overlay.open,.cafe-overlay.open{opacity:1;pointer-events:auto;}
+.cafe-overlay{z-index:120;}
+.city-backdrop{
+    position:absolute;inset:0;background:rgba(2,1,8,.88);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+}
+.city-panel{
+    position:relative;width:min(980px,100%);max-height:calc(100vh - 36px);overflow-y:auto;
+    scrollbar-width:none;-ms-overflow-style:none;padding:18px;border-radius:18px;
+    border:2px solid rgba(255,255,255,.92);
+    background:linear-gradient(180deg,#120a2a,#070411);
+    box-shadow:0 0 50px rgba(34,230,255,.25),0 0 70px rgba(255,79,216,.2),0 34px 90px rgba(0,0,0,.75);
+}
+.city-panel::-webkit-scrollbar,.cafe-panel::-webkit-scrollbar{width:0;height:0;display:none;}
+.city-head{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:14px;
+    padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,.12);
+}
+.city-kicker{font-family:var(--pixel);font-size:.45rem;letter-spacing:.16em;color:#22e6ff;margin-bottom:8px;}
+.city-head h2{font-size:1.25rem;color:#fff;letter-spacing:.02em;}
+.city-close,.cafe-close{
+    width:36px;height:36px;flex:0 0 auto;border-radius:50%;
+    border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.05);
+    color:#fff;font-size:1.2rem;line-height:1;cursor:pointer;transition:all .2s ease;
+}
+.city-close:hover{border-color:#22e6ff;box-shadow:0 0 14px rgba(34,230,255,.55);}
+.city-map{
+    position:relative;aspect-ratio:16/9;min-height:280px;border-radius:14px;overflow:hidden;
+    border:1px solid rgba(34,230,255,.35);background:#060a14;
+    box-shadow:inset 0 0 40px rgba(0,0,0,.8);
+}
+.map-svg{position:absolute;inset:0;width:100%;height:100%;}
+.map-spot{
+    position:absolute;transform:translate(-50%,-50%);
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:10px 16px;border-radius:14px;border:2px solid #fff;
+    background:rgba(7,5,18,.9);color:#fff;cursor:pointer;
+    font-family:var(--pixel);transition:transform .2s ease,box-shadow .2s ease;
+}
+.map-spot .spot-dot{font-size:1.15rem;line-height:1;}
+.map-spot strong{font-size:.6rem;letter-spacing:.08em;}
+.map-spot small{font-size:.38rem;color:#b6abd8;font-family:"Courier New",monospace;letter-spacing:.04em;}
+.spot-arcade{left:30%;top:58%;box-shadow:0 0 22px rgba(34,230,255,.55);}
+.spot-cafe{left:70%;top:38%;border-color:#ffca3a;box-shadow:0 0 24px rgba(255,202,58,.5);}
+.map-spot:hover{transform:translate(-50%,-50%) scale(1.07);}
+.spot-cafe:hover{box-shadow:0 0 34px rgba(255,202,58,.85);}
+.city-tip{
+    margin-top:12px;text-align:center;font-family:var(--pixel);
+    font-size:.42rem;letter-spacing:.1em;color:#7f76a4;
+}
+@media (max-width:640px){
+    .city-map{aspect-ratio:4/5;min-height:0;}
+    .spot-arcade{left:32%;top:62%;}
+    .spot-cafe{left:68%;top:34%;}
+}
+
+/* ===== 咖啡厅 ===== */
+.cafe-panel{
+    position:relative;width:min(900px,100%);max-height:calc(100vh - 36px);overflow-y:auto;
+    scrollbar-width:none;padding:20px;border-radius:18px;
+    border:2px solid #f1dfbf;background:linear-gradient(180deg,#24150e,#120a08);
+    box-shadow:0 0 60px rgba(255,181,107,.22),0 34px 90px rgba(0,0,0,.8);
+}
+.cafe-head{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:14px;
+    padding-bottom:14px;margin-bottom:14px;border-bottom:1px dashed rgba(241,223,191,.25);
+}
+.cafe-kicker{font-family:var(--pixel);font-size:.42rem;letter-spacing:.16em;color:#ffca3a;margin-bottom:8px;}
+.cafe-head h2{font-family:Georgia,"Songti SC","Noto Serif SC",serif;font-size:1.5rem;color:#ffe6c2;}
+.cafe-head p{margin-top:6px;color:#c9ad8b;font-size:.86rem;}
+.cafe-close:hover{border-color:#ffca3a;box-shadow:0 0 14px rgba(255,202,58,.5);}
+.cafe-intro{
+    padding:12px 14px;border-radius:10px;margin-bottom:12px;
+    background:rgba(255,214,160,.06);border-left:2px solid #ffca3a;
+    color:#dcc2a0;font-size:.88rem;line-height:1.85;
+}
+.cafe-topic{
+    margin:10px 0;padding:0 14px;border-radius:12px;
+    border:1px solid rgba(241,223,191,.2);background:rgba(255,214,160,.035);
+}
+.cafe-topic summary{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:13px 0;cursor:pointer;list-style:none;
+    color:#ffe9c9;font-weight:600;font-size:.95rem;
+}
+.cafe-topic summary::-webkit-details-marker{display:none;}
+.cafe-topic summary::after{content:'+';color:#ffca3a;font-family:var(--pixel);font-size:.8rem;}
+.cafe-topic[open] summary::after{content:'−';}
+.cafe-topic p{padding-bottom:10px;color:#d4bb9b;font-size:.88rem;line-height:1.9;}
+.cafe-q{
+    display:block;margin:0 0 14px;padding-left:10px;border-left:2px solid #ffca3a;
+    color:#ffca3a;font-style:italic;font-size:.84rem;line-height:1.7;
+}
+.cafe-foot{
+    margin-top:14px;padding-top:12px;border-top:1px dashed rgba(241,223,191,.2);
+    color:#8f7a62;font-size:.76rem;line-height:1.7;text-align:center;
+}
 </style>
 </head>
 <body>
@@ -1352,6 +1454,107 @@ body::after{
             <div class="modal-links" id="modalLinks"></div>
         </div>
     </div>
+</div>
+
+<div class="city-overlay" id="cityMap" aria-hidden="true">
+    <div class="city-backdrop" data-map-close></div>
+    <section class="city-panel" role="dialog" aria-modal="true" aria-label="City map">
+        <header class="city-head">
+            <div>
+                <p class="city-kicker">ELSE DISTRICT · NIGHT</p>
+                <h2>SELECT A DESTINATION</h2>
+            </div>
+            <button class="city-close" id="cityClose" type="button" aria-label="Close map">×</button>
+        </header>
+
+        <div class="city-map">
+            <svg class="map-svg" viewBox="0 0 800 450" preserveAspectRatio="none" aria-hidden="true">
+                <rect width="800" height="450" fill="#070a16"/>
+                <g fill="#0d1526">
+                    <rect x="40" y="40" width="170" height="150" rx="10"/>
+                    <rect x="40" y="230" width="170" height="150" rx="10"/>
+                    <rect x="300" y="40" width="220" height="150" rx="10"/>
+                    <rect x="600" y="40" width="160" height="260" rx="10"/>
+                    <rect x="300" y="300" width="220" height="110" rx="10"/>
+                    <rect x="600" y="350" width="160" height="60" rx="10"/>
+                </g>
+                <g stroke="#141d33" stroke-width="30" fill="none">
+                    <path d="M0 215 H800"/>
+                    <path d="M245 0 V450"/>
+                    <path d="M570 0 V450"/>
+                    <path d="M0 400 H800"/>
+                </g>
+                <g stroke="#22e6ff" stroke-width="2" opacity=".45" fill="none">
+                    <path d="M0 215 H800"/>
+                    <path d="M245 0 V450"/>
+                    <path d="M570 0 V450"/>
+                    <path d="M0 400 H800"/>
+                </g>
+                <path d="M80 430 C 220 320, 360 300, 520 150" stroke="#ff4fd8" stroke-width="3" stroke-dasharray="7 9" fill="none" opacity=".7"/>
+                <circle cx="520" cy="150" r="5" fill="#ff4fd8"/>
+                <circle cx="80" cy="430" r="5" fill="#22e6ff"/>
+            </svg>
+            <button class="map-spot spot-arcade" type="button" data-spot="arcade">
+                <span class="spot-dot">▶</span>
+                <strong>ARCADE</strong>
+                <small>YOU ARE HERE</small>
+            </button>
+            <button class="map-spot spot-cafe" type="button" data-spot="cafe">
+                <span class="spot-dot">☕</span>
+                <strong>CAFÉ</strong>
+                <small>PSYCHOLOGY TALKS</small>
+            </button>
+        </div>
+        <p class="city-tip">CLICK A PIN TO TRAVEL · ESC TO CLOSE</p>
+    </section>
+</div>
+
+<div class="cafe-overlay" id="cafeRoom" aria-hidden="true">
+    <div class="city-backdrop" data-cafe-close></div>
+    <section class="cafe-panel" role="dialog" aria-modal="true" aria-labelledby="cafeTitle">
+        <header class="cafe-head">
+            <div>
+                <p class="cafe-kicker">CAFÉ SOLAIRE · DAYLIGHT</p>
+                <h2 id="cafeTitle">日光咖啡厅</h2>
+                <p>心理学讨论 · 不是诊断，只是把经验说清楚</p>
+            </div>
+            <button class="cafe-close" id="cafeClose" type="button" aria-label="关闭">×</button>
+        </header>
+
+        <p class="cafe-intro">点一杯，慢慢聊。这里放的是关于自我、关系和长期状态的讨论笔记，不提供诊断或治疗方案。坐下来，把问题说具体一点。</p>
+
+        <details class="cafe-topic" open>
+            <summary>防御机制不是敌人</summary>
+            <p>它先于语言出现，负责让你活下来。看清它在保护什么，通常比追问它为什么存在更有用。</p>
+            <span class="cafe-q">最近一次你意识到自己在防御，是在什么场景？</span>
+        </details>
+
+        <details class="cafe-topic">
+            <summary>把反馈从法官降级为数据</summary>
+            <p>外部评价仍然有用，但它只提供信息，不负责判决你是谁。收回判决权，不等于拒绝反馈，而是不再让单次评价定义整体。</p>
+            <span class="cafe-q">哪一条反馈，你其实可以直接丢掉？</span>
+        </details>
+
+        <details class="cafe-topic">
+            <summary>焦虑型内核与外部确认</summary>
+            <p>靠外部反馈确认自我，会让人一直等下一次判决。把确认源迁到可持续的系统和行动上，比要求自己立刻不焦虑更现实。</p>
+            <span class="cafe-q">你最近一次主动确认自己，是因为什么？</span>
+        </details>
+
+        <details class="cafe-topic">
+            <summary>长期主义是恢复能力</summary>
+            <p>不是一直向上，而是波动之后还能恢复，并重新建立秩序。恢复本身就是长期的一部分，不是中断。</p>
+            <span class="cafe-q">你现在需要恢复的是秩序、体力，还是判断力？</span>
+        </details>
+
+        <details class="cafe-topic">
+            <summary>取悦自己不是反向自恋</summary>
+            <p>价值来源内移，是允许自己成为目的之一，而不是用“只在乎自己”去报复过去的讨好。</p>
+            <span class="cafe-q">有什么小事，是你纯粹为自己做的？</span>
+        </details>
+
+        <p class="cafe-foot">讨论不等于治疗。如果困扰持续影响生活，找专业的人。</p>
+    </section>
 </div>
 
 <script>
@@ -2814,5 +3017,42 @@ body::after{
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="arcade3d.js"></script>
+<script>
+(function(){
+    'use strict';
+    var city = document.getElementById('cityMap');
+    if(!city) return;
+
+    function openCity(){
+        city.classList.add('open');
+        city.setAttribute('aria-hidden','false');
+    }
+    function closeCity(){
+        if(!city.classList.contains('open')) return;
+        city.classList.remove('open');
+        city.setAttribute('aria-hidden','true');
+        document.dispatchEvent(new CustomEvent('arcade:mapclose'));
+    }
+
+    document.addEventListener('arcade:map', openCity);
+    document.getElementById('cityClose').addEventListener('click', closeCity);
+    city.querySelector('[data-map-close]').addEventListener('click', closeCity);
+
+    city.querySelectorAll('[data-spot]').forEach(function(el){
+        el.addEventListener('click', function(){
+            if(el.getAttribute('data-spot') === 'cafe'){
+                window.location.href = 'cafe.html';
+            } else {
+                closeCity();
+            }
+        });
+    });
+
+    document.addEventListener('keydown', function(e){
+        if(e.key !== 'Escape') return;
+        if(city.classList.contains('open')) closeCity();
+    }, true);
+})();
+</script>
 </body>
 </html>

@@ -510,6 +510,65 @@
         return tex;
     }
 
+    function makeCafeSignTexture() {
+        var cv = document.createElement('canvas');
+        cv.width = 512;
+        cv.height = 192;
+        var c = cv.getContext('2d');
+        c.clearRect(0, 0, 512, 192);
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.shadowColor = '#ff8a3d';
+        c.shadowBlur = 30;
+        c.fillStyle = '#ffe2b8';
+        c.font = 'bold 96px Georgia,"Times New Roman",serif';
+        c.fillText('CAFÉ', 256, 78);
+        c.shadowBlur = 8;
+        c.fillStyle = '#8fe6ff';
+        c.font = 'bold 20px "Courier New",monospace';
+        c.fillText('PSYCHOLOGY TALKS', 256, 152);
+        var tex = new THREE.CanvasTexture(cv);
+        if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+        return tex;
+    }
+
+    function makeCafeWindowTexture() {
+        var cv = document.createElement('canvas');
+        cv.width = 512;
+        cv.height = 256;
+        var c = cv.getContext('2d');
+        var g = c.createLinearGradient(0, 0, 0, 256);
+        g.addColorStop(0, '#2a160d');
+        g.addColorStop(0.55, '#6b3a1e');
+        g.addColorStop(1, '#d08a4a');
+        c.fillStyle = g;
+        c.fillRect(0, 0, 512, 256);
+        c.fillStyle = 'rgba(255,214,160,.9)';
+        for (var i = 0; i < 3; i++) {
+            c.beginPath();
+            c.arc(110 + i * 146, 72, 16, 0, Math.PI * 2);
+            c.fill();
+            c.fillRect(108 + i * 146, 16, 4, 56);
+        }
+        c.fillStyle = 'rgba(30,15,8,.85)';
+        c.fillRect(0, 170, 512, 18);
+        c.fillRect(30, 120, 8, 60);
+        c.fillRect(120, 108, 60, 70);
+        c.fillStyle = 'rgba(255,222,180,.75)';
+        c.beginPath();
+        c.arc(250, 175, 38, 0, Math.PI * 2);
+        c.arc(380, 178, 32, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = 'rgba(20,10,6,.9)';
+        c.fillRect(242, 176, 16, 40);
+        c.fillRect(374, 178, 12, 38);
+        c.fillStyle = 'rgba(255,236,200,.28)';
+        c.fillRect(0, 0, 512, 14);
+        var tex = new THREE.CanvasTexture(cv);
+        if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+        return tex;
+    }
+
     /* ---------- 房间 ---------- */
     var floor = new THREE.Mesh(
         new THREE.PlaneGeometry(40, 40),
@@ -757,23 +816,53 @@
     addPane(1.05, 3.4, 4.55, 0.42);
     addPane(3.4, 6.6, 4.55, 0.42);
     addPane(6.6, 9.6, 4.55, 0.42);
-    addPane(-1.05, 0, 3.6, 0.42);
-    addPane(0, 1.05, 3.6, 0.42);
+    /* 可开启的双开玻璃门 */
+    var doorLeaves = [];
+    function buildDoorLeaf(hingeX, innerDir) {
+        var leaf = new THREE.Group();
+        leaf.position.set(hingeX, 0, FRONT_Z);
+
+        var pane = new THREE.Mesh(new THREE.PlaneGeometry(0.94, 3.06), glassMat);
+        pane.position.set(innerDir * 0.525, 1.99, 0);
+        leaf.add(pane);
+        var refl = new THREE.Mesh(new THREE.PlaneGeometry(0.94, 3.06), reflMat);
+        refl.position.set(innerDir * 0.525, 1.99, 0.012);
+        leaf.add(refl);
+
+        var innerStile = new THREE.Mesh(new THREE.BoxGeometry(0.08, 3.18, 0.12), frameMat);
+        innerStile.position.set(innerDir * 1.0, 2.0, 0);
+        leaf.add(innerStile);
+        var outerStile = new THREE.Mesh(new THREE.BoxGeometry(0.06, 3.18, 0.12), frameMat);
+        outerStile.position.set(innerDir * 0.03, 2.0, 0);
+        leaf.add(outerStile);
+        var topRail = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.1, 0.12), frameMat);
+        topRail.position.set(innerDir * 0.525, 3.56, 0);
+        leaf.add(topRail);
+        var bottomRail = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.14, 0.12), frameMat);
+        bottomRail.position.set(innerDir * 0.525, 0.43, 0);
+        leaf.add(bottomRail);
+
+        var pull = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.8, 12), metalMat);
+        pull.position.set(innerDir * 0.93, 1.22, -0.13);
+        leaf.add(pull);
+
+        scene.add(leaf);
+        doorLeaves.push({ group: leaf, open: innerDir * 1.28 });
+    }
+    buildDoorLeaf(-1.05, 1);
+    buildDoorLeaf(1.05, -1);
+
+    var doorHit = new THREE.Mesh(
+        new THREE.PlaneGeometry(19.2, 4.2),
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide })
+    );
+    doorHit.position.set(0, 2.35, FRONT_Z + 0.03);
+    scene.add(doorHit);
 
     var doorTop = new THREE.Mesh(new THREE.BoxGeometry(2.24, 0.16, 0.22), frameMat);
     doorTop.position.set(0, 3.64, FRONT_Z);
     scene.add(doorTop);
     addEdges(doorTop, 0xffffff, 0.5);
-    var doorMid = new THREE.Mesh(new THREE.BoxGeometry(0.1, 3.2, 0.18), frameMat);
-    doorMid.position.set(0, 2.02, FRONT_Z);
-    scene.add(doorMid);
-
-    [-0.5, 0.5].forEach(function (x) {
-        var bar = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.85, 12), metalMat);
-        bar.rotation.z = Math.PI / 2;
-        bar.position.set(x, 1.18, FRONT_Z - 0.12);
-        scene.add(bar);
-    });
 
     var frontNeonTop = new THREE.Mesh(
         new THREE.BoxGeometry(19.2, 0.045, 0.05),
@@ -899,6 +988,68 @@
     var moonLight = new THREE.DirectionalLight(0x9fc4ff, 0.35);
     moonLight.position.set(-8, 16, 30);
     scene.add(moonLight);
+
+    /* 街对面的咖啡厅 */
+    var cafe = new THREE.Group();
+    cafe.position.set(-4.5, 0, 33.25);
+    var cafeBody = new THREE.Mesh(
+        new THREE.BoxGeometry(7.4, 3.4, 0.24),
+        new THREE.MeshStandardMaterial({ color: 0x1b1010, roughness: 0.7, metalness: 0.15 })
+    );
+    cafeBody.position.y = 1.7;
+    cafe.add(cafeBody);
+    addEdges(cafeBody, 0xf4e6c8, 0.4);
+
+    var cafeWindow = new THREE.Mesh(
+        new THREE.PlaneGeometry(5.6, 1.9),
+        new THREE.MeshBasicMaterial({ map: makeCafeWindowTexture() })
+    );
+    cafeWindow.position.set(0, 1.5, 0.14);
+    cafe.add(cafeWindow);
+
+    [-2.6, -1.3, 0, 1.3, 2.6].forEach(function (x) {
+        var mullion = new THREE.Mesh(
+            new THREE.BoxGeometry(0.06, 2.02, 0.08),
+            new THREE.MeshStandardMaterial({ color: 0x2a1a12, metalness: 0.5, roughness: 0.4 })
+        );
+        mullion.position.set(x, 1.5, 0.17);
+        cafe.add(mullion);
+    });
+    var cafeSill = new THREE.Mesh(
+        new THREE.BoxGeometry(6.8, 0.14, 0.3),
+        new THREE.MeshStandardMaterial({ color: 0x2a1a12, roughness: 0.6 })
+    );
+    cafeSill.position.set(0, 0.5, 0.18);
+    cafe.add(cafeSill);
+
+    var cafeSign = new THREE.Mesh(
+        new THREE.PlaneGeometry(3.2, 1.2),
+        new THREE.MeshBasicMaterial({ map: makeCafeSignTexture(), transparent: true })
+    );
+    cafeSign.position.set(0, 3.0, 0.16);
+    cafe.add(cafeSign);
+
+    var cafeAwning = new THREE.Mesh(
+        new THREE.BoxGeometry(7.8, 0.16, 1.2),
+        new THREE.MeshStandardMaterial({ color: 0x3a1f14, roughness: 0.7 })
+    );
+    cafeAwning.position.set(0, 2.72, 0.62);
+    cafe.add(cafeAwning);
+    addEdges(cafeAwning, 0xf4e6c8, 0.5);
+
+    for (var aw = 0; aw < 8; aw++) {
+        var stripe = new THREE.Mesh(
+            new THREE.BoxGeometry(0.62, 0.02, 1.14),
+            new THREE.MeshBasicMaterial({ color: aw % 2 ? 0xf4e6c8 : 0xc4562e })
+        );
+        stripe.position.set(-3.05 + aw * 0.87, 2.81, 0.62);
+        cafe.add(stripe);
+    }
+
+    var cafeLight = new THREE.PointLight(0xffb56b, 1.6, 14);
+    cafeLight.position.set(0, 2.4, 1.6);
+    cafe.add(cafeLight);
+    scene.add(cafe);
 
     [-7.2, 7.2].forEach(function (x) {
         var sconce = new THREE.Mesh(
@@ -1379,6 +1530,44 @@
         return null;
     }
 
+    var doorOpen = false;
+    var doorBusy = false;
+    function setDoor(open) {
+        if (doorOpen === open || doorBusy) return;
+        doorOpen = open;
+        doorBusy = true;
+        var start = performance.now();
+        function step(now) {
+            var t = Math.min(1, (now - start) / 650);
+            var e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            doorLeaves.forEach(function (l) {
+                l.group.rotation.y = l.open * (open ? e : 1 - e);
+            });
+            if (t < 1) {
+                requestAnimationFrame(step);
+            } else {
+                doorBusy = false;
+            }
+        }
+        requestAnimationFrame(step);
+        if (open) {
+            setTimeout(function () {
+                document.dispatchEvent(new CustomEvent('arcade:map'));
+            }, 580);
+        }
+    }
+
+    function pickDoor(x, y) {
+        if (doorOpen || doorBusy || seated || busy) return false;
+        pointer.set((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+        raycaster.setFromCamera(pointer, camera);
+        return raycaster.intersectObject(doorHit, false).length > 0;
+    }
+
+    document.addEventListener('arcade:mapclose', function () {
+        setDoor(false);
+    });
+
     function dropCoin(x, y) {
         if (reduceMotion) return;
         var coin = document.createElement('div');
@@ -1480,7 +1669,8 @@
         }
         if (busy || seated) return;
         var id = pickGame(e.clientX, e.clientY);
-        renderer.domElement.style.cursor = id ? 'pointer' : 'grab';
+        var onDoor = !id && pickDoor(e.clientX, e.clientY);
+        renderer.domElement.style.cursor = (id || onDoor) ? 'pointer' : 'grab';
         setHover(id);
     });
 
@@ -1497,6 +1687,8 @@
         if (id) {
             setHover(null);
             enterCabinet(id, e);
+        } else if (pickDoor(e.clientX, e.clientY)) {
+            setDoor(true);
         }
     });
 
