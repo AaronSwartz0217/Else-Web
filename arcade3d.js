@@ -1421,8 +1421,8 @@
 
     /* 抓娃娃机 */
     var clawMachine = new THREE.Group();
-    clawMachine.position.set(-5.4, 0, 10.35);
-    clawMachine.rotation.y = Math.PI - 0.48;
+    clawMachine.position.set(-10.15, 0, 0.8);
+    clawMachine.rotation.y = Math.PI / 2;
     clawMachine.userData.machineType = 'claw';
 
     var clawBodyMat = new THREE.MeshStandardMaterial({
@@ -1574,8 +1574,8 @@
 
     /* 扭蛋机 */
     var gachaMachine = new THREE.Group();
-    gachaMachine.position.set(5.4, 0, 10.35);
-    gachaMachine.rotation.y = Math.PI + 0.48;
+    gachaMachine.position.set(10.15, 0, 0.8);
+    gachaMachine.rotation.y = -Math.PI / 2;
     gachaMachine.userData.machineType = 'gacha';
 
     var gachaBody = new THREE.Mesh(
@@ -1612,6 +1612,9 @@
     gachaMachine.add(gachaDome);
 
     var capsuleColors = [0xff4fd8, 0x22e6ff, 0xffca3a, 0x7dff8a, 0xff8a3d, 0xb28cff, 0xffffff];
+    var gachaCapsuleGroup = new THREE.Group();
+    gachaCapsuleGroup.position.y = 1.43;
+    gachaMachine.add(gachaCapsuleGroup);
     for (var gc = 0; gc < 14; gc++) {
         var capsule = new THREE.Mesh(
             new THREE.SphereGeometry(0.075, 10, 8),
@@ -1624,8 +1627,8 @@
         );
         var ga = Math.random() * Math.PI * 2;
         var gr = Math.random() * 0.28;
-        capsule.position.set(Math.cos(ga) * gr, 1.22 + Math.random() * 0.3, Math.sin(ga) * gr);
-        gachaMachine.add(capsule);
+        capsule.position.set(Math.cos(ga) * gr, -0.21 + Math.random() * 0.3, Math.sin(ga) * gr);
+        gachaCapsuleGroup.add(capsule);
     }
 
     var gachaCap = new THREE.Mesh(
@@ -1685,6 +1688,58 @@
     );
     gachaCapsule.visible = false;
     gachaMachine.add(gachaCapsule);
+
+    /* 机台循环展示屏 */
+    var attractScreens = [];
+    function createAttractScreen() {
+        var cv = document.createElement('canvas');
+        cv.width = 512;
+        cv.height = 192;
+        var c = cv.getContext('2d');
+        var tex = new THREE.CanvasTexture(cv);
+        if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+        var mesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.5, 0.19),
+            new THREE.MeshBasicMaterial({ map: tex })
+        );
+        var s = { ctx: c, tex: tex, mesh: mesh, index: 0, last: -9999 };
+        attractScreens.push(s);
+        return s;
+    }
+
+    function paintAttractScreen(s, index) {
+        var c = s.ctx;
+        var accent = '#' + ('000000' + (PROJECTS[index].neon & 0xffffff).toString(16)).slice(-6);
+        c.fillStyle = '#070510';
+        c.fillRect(0, 0, 512, 192);
+        c.strokeStyle = accent;
+        c.lineWidth = 6;
+        c.strokeRect(8, 8, 496, 176);
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillStyle = '#ffffff';
+        c.font = 'bold 30px "Courier New",monospace';
+        c.fillText('1 PLAY · 1 PRIZE', 256, 52);
+        c.fillStyle = accent;
+        c.font = 'bold 33px "Courier New",monospace';
+        var name = PROJECTS[index].marquee;
+        if (name.length > 17) name = name.slice(0, 17);
+        c.fillText(name, 256, 110);
+        c.fillStyle = '#9c93c7';
+        c.font = '20px "Courier New",monospace';
+        c.fillText('INSERT COIN TO DRAW', 256, 158);
+        s.tex.needsUpdate = true;
+    }
+
+    var clawScreen = createAttractScreen();
+    clawScreen.mesh.position.set(-0.3, 0.62, 0.503);
+    clawMachine.add(clawScreen.mesh);
+    paintAttractScreen(clawScreen, 0);
+
+    var gachaScreen = createAttractScreen();
+    gachaScreen.mesh.position.set(0, 0.6, 0.406);
+    gachaMachine.add(gachaScreen.mesh);
+    paintAttractScreen(gachaScreen, 1);
 
     scene.add(gachaMachine);
     machineGroups.push(gachaMachine);
@@ -2181,6 +2236,32 @@
         for (var i = 0; i < screenTextures.length; i++) {
             screenTextures[i].tex.needsUpdate = true;
         }
+
+        if (!clawAnim && !busy && !seated) {
+            var sway = Math.sin(now * 0.0011) * 0.24;
+            clawCarriage.position.x = sway;
+            clawHead.position.x = sway;
+            clawCable.position.x = sway;
+            clawHead.position.y = 1.3;
+            clawPrize.visible = false;
+            clawProngs.scale.set(1, 1, 1);
+            clawCable.scale.y = 1;
+            clawCable.position.y = 1.55;
+        }
+        if (!gachaAnim && !busy && !seated) {
+            gachaCapsuleGroup.rotation.y = now * 0.00035;
+        }
+        clawLight.intensity = 1.35 + Math.sin(now * 0.0021) * 0.25;
+        gachaLight.intensity = 1.25 + Math.cos(now * 0.0017) * 0.25;
+        for (var as = 0; as < attractScreens.length; as++) {
+            var sc = attractScreens[as];
+            if (now - sc.last > 2200) {
+                sc.last = now;
+                sc.index = (sc.index + 1) % PROJECTS.length;
+                paintAttractScreen(sc, sc.index);
+            }
+        }
+
         updateClaw(now);
         updateGacha(now);
         renderer.render(scene, camera);

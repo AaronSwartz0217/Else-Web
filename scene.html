@@ -1250,62 +1250,116 @@ body::after{
     margin-top:14px;padding-top:12px;border-top:1px dashed rgba(241,223,191,.2);
     color:#8f7a62;font-size:.76rem;line-height:1.7;text-align:center;
 }
-/* ===== 盲盒抽奖 ===== */
+/* ===== 项目卡片 ===== */
 .prize-overlay{
-    position:fixed;inset:0;z-index:130;display:grid;place-items:center;padding:18px;
+    position:fixed;inset:0;z-index:130;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;padding:24px 18px;overflow:auto;
     opacity:0;pointer-events:none;transition:opacity .28s ease;
 }
 .prize-overlay.open{opacity:1;pointer-events:auto;}
+.prize-overlay.rarity-white{--edge:2px;--glow:32px;--halo:.36;}
+.prize-overlay.rarity-purple{--edge:3px;--glow:58px;--halo:.7;}
+.prize-overlay.rarity-gold{--edge:4px;--glow:88px;--halo:1;}
+.prize-halo{
+    position:absolute;left:50%;top:42%;width:150%;aspect-ratio:1;z-index:-1;
+    transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;
+    background:radial-gradient(circle,var(--prize,#22e6ff) 0%,rgba(0,0,0,0) 64%);
+    opacity:var(--halo,.4);filter:blur(34px);
+    animation:haloPulse 3.2s ease-in-out infinite;
+}
+@keyframes haloPulse{
+    0%,100%{transform:translate(-50%,-50%) scale(.94);}
+    50%{transform:translate(-50%,-50%) scale(1.06);}
+}
 .prize-backdrop{
     position:absolute;inset:0;
     background:radial-gradient(circle at 50% 42%,rgba(60,30,90,.7),rgba(2,1,8,.95) 68%);
     -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
 }
-.prize-card{
-    position:relative;width:min(460px,100%);padding:30px 24px 24px;text-align:center;
-    border-radius:22px;border:2px solid rgba(255,255,255,.94);
-    background:linear-gradient(180deg,#181033,#070411);
-    box-shadow:0 0 46px var(--prize,#22e6ff),0 30px 80px rgba(0,0,0,.85);
-}
 .prize-kicker{
-    font-family:var(--pixel);font-size:.46rem;letter-spacing:.16em;
-    color:var(--prize,#22e6ff);margin-bottom:6px;
+    position:relative;font-family:var(--pixel);font-size:.46rem;letter-spacing:.16em;
+    color:var(--prize,#22e6ff);text-align:center;
 }
-.prize-capsule{
-    width:96px;height:96px;margin:20px auto;border-radius:50%;
-    background:linear-gradient(180deg,var(--prize,#22e6ff) 0 50%,#ffffff 50% 100%);
-    border:3px solid #fff;box-shadow:0 0 34px var(--prize,#22e6ff);
-    position:relative;animation:prizeFloat 3s ease-in-out infinite;
+.prize-stage{
+    position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:14px;
+    perspective:1200px;
 }
-.prize-capsule::after{
-    content:'';position:absolute;left:22px;top:16px;width:22px;height:16px;
-    border-radius:50%;background:rgba(255,255,255,.85);transform:rotate(-24deg);filter:blur(1px);
+.prize-tilt{
+    position:relative;transform-style:preserve-3d;
+    transition:transform .16s ease;will-change:transform;
 }
-@keyframes prizeFloat{0%,100%{transform:translateY(0) rotate(-3deg);}50%{transform:translateY(-10px) rotate(3deg);}}
-.prize-card h2{
-    font-family:var(--pixel);font-size:1.5rem;line-height:1.35;color:#fff;
-    text-shadow:0 0 22px var(--prize,#22e6ff);word-break:break-word;margin:4px 0 8px;
+.prize-card{
+    position:relative;display:block;width:min(300px,70vw);aspect-ratio:2 / 3;z-index:1;
+    border-radius:16px;border:var(--edge,2px) solid var(--prize,#22e6ff);
+    background:#05030c;text-decoration:none;transform-style:preserve-3d;
+    box-shadow:0 0 var(--glow,40px) var(--prize,#22e6ff),
+        0 0 calc(var(--glow,40px) * 1.7) var(--prize,#22e6ff),
+        0 30px 70px rgba(0,0,0,.85);
+    transition:box-shadow .3s ease;
 }
-.prize-sub{
-    font-family:var(--pixel);font-size:.44rem;letter-spacing:.12em;
-    color:#a99ed0;margin-bottom:22px;
+.prize-overlay.open .prize-card{
+    animation:cardIn 1.5s cubic-bezier(.2,.75,.25,1) both,cardFloat 5s ease-in-out 1.6s infinite;
 }
-.prize-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.prize-card:hover{
+    box-shadow:0 0 calc(var(--glow,40px) * 1.25) var(--prize,#22e6ff),
+        0 0 calc(var(--glow,40px) * 2) var(--prize,#22e6ff),
+        0 36px 80px rgba(0,0,0,.9);
+}
+@keyframes cardIn{
+    0%{opacity:0;transform:rotateY(-560deg) scale(.55);filter:brightness(2.2) blur(3px);}
+    55%{opacity:1;transform:rotateY(-200deg) scale(1.04);}
+    100%{opacity:1;transform:rotateY(0) scale(1);filter:none;}
+}
+@keyframes cardFloat{
+    0%,100%{transform:translateY(0) rotate(-1.2deg);}
+    50%{transform:translateY(-9px) rotate(1.2deg);}
+}
+.prize-face{
+    position:absolute;inset:0;border-radius:14px;overflow:hidden;display:block;
+    background:#0a0714;
+}
+.prize-face img{
+    width:100%;height:100%;object-fit:cover;display:block;
+    opacity:0;filter:blur(14px) brightness(.5) saturate(.6);transform:scale(1.08);
+}
+.prize-overlay.open .prize-face img{animation:cardReveal 1.5s ease .55s both;}
+@keyframes cardReveal{to{opacity:1;filter:none;transform:scale(1);}}
+.prize-fallback{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:12px;padding:22px;text-align:center;
+    background:
+        radial-gradient(circle at 50% 30%,rgba(255,255,255,.14),transparent 62%),
+        repeating-linear-gradient(135deg,#0c0918 0 14px,#0a0714 14px 28px);
+}
+.prize-fallback b{
+    font-family:var(--pixel);font-size:1.05rem;line-height:1.5;color:#fff;
+    text-shadow:0 0 20px var(--prize,#22e6ff);word-break:break-word;
+}
+.prize-fallback em{
+    font-family:var(--pixel);font-size:.4rem;letter-spacing:.16em;font-style:normal;
+    color:var(--prize,#22e6ff);
+}
+.prize-shine{
+    position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;
+    background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.55) 48%,transparent 64%);
+    transform:translateX(-120%);
+}
+.prize-overlay.open .prize-shine{animation:cardShine 1.2s ease .95s both;}
+@keyframes cardShine{to{transform:translateX(120%);}}
+.prize-hint{
+    position:relative;font-family:var(--pixel);font-size:.44rem;letter-spacing:.12em;
+    color:#cfc6f0;text-align:center;
+}
 .prize-btn{
-    font-family:var(--pixel);font-size:.55rem;letter-spacing:.08em;
-    padding:12px 20px;border-radius:999px;border:2px solid rgba(255,255,255,.5);
+    position:relative;font-family:var(--pixel);font-size:.5rem;letter-spacing:.08em;
+    padding:10px 22px;border-radius:999px;border:2px solid rgba(255,255,255,.5);
     background:transparent;color:#fff;cursor:pointer;transition:all .2s ease;
 }
 .prize-btn:hover{border-color:#fff;box-shadow:0 0 18px rgba(255,255,255,.35);}
-.prize-btn.primary{
-    background:var(--prize,#22e6ff);border-color:#fff;color:#08040f;
-    box-shadow:0 0 24px var(--prize,#22e6ff);
-}
-.prize-btn.primary:hover{filter:brightness(1.12);}
 @media (max-width:640px){
-    .prize-card{padding:24px 18px 20px;}
-    .prize-capsule{width:78px;height:78px;margin:16px auto;}
-    .prize-card h2{font-size:1.2rem;}
+    .prize-overlay{gap:10px;padding:18px 14px;}
+    .prize-card{width:min(250px,64vw);}
+    .prize-kicker{font-size:.42rem;}
 }
 </style>
 </head>
@@ -1616,16 +1670,24 @@ body::after{
 
 <div class="prize-overlay" id="prizePanel" aria-hidden="true">
     <div class="prize-backdrop" data-prize-close></div>
-    <section class="prize-card" role="dialog" aria-modal="true" aria-labelledby="prizeTitle">
-        <p class="prize-kicker" id="prizeKicker">CLAW MACHINE · PRIZE</p>
-        <div class="prize-capsule" aria-hidden="true"></div>
-        <h2 id="prizeTitle">???</h2>
-        <p class="prize-sub">A RANDOM CABINET HAS BEEN DRAWN</p>
-        <div class="prize-actions">
-            <button class="prize-btn primary" id="prizeOpen" type="button">OPEN PROJECT</button>
-            <button class="prize-btn" id="prizeClose" type="button">KEEP IT</button>
+    <p class="prize-kicker" id="prizeKicker">CLAW MACHINE · PRIZE</p>
+    <div class="prize-stage">
+        <span class="prize-halo" aria-hidden="true"></span>
+        <div class="prize-tilt" id="prizeTilt">
+            <a class="prize-card" id="prizeCard" href="#" target="_blank" rel="noopener">
+                <span class="prize-face">
+                    <img id="prizeImage" alt="" style="display:none;">
+                    <span class="prize-fallback" id="prizeFallback">
+                        <b id="prizeTitle">???</b>
+                        <em>PROJECT CARD</em>
+                    </span>
+                    <span class="prize-shine" aria-hidden="true"></span>
+                </span>
+            </a>
         </div>
-    </section>
+        <p class="prize-hint" id="prizeHint">CLICK CARD TO ENTER</p>
+    </div>
+    <button class="prize-btn" id="prizeClose" type="button">CLOSE</button>
 </div>
 
 <script>
@@ -1727,6 +1789,13 @@ body::after{
             });
             unlockProject(currentId);
             burstConfetti();
+            var wonId = currentId;
+            setTimeout(function(){
+                if(!wonId || !modal.classList.contains('open')) return;
+                document.dispatchEvent(new CustomEvent('arcade:prize', {
+                    detail: { id: wonId, source: 'arcade' }
+                }));
+            }, 900);
             stageMsg.innerHTML = '<strong>' + title + '</strong><span>' + (sub || '') + '</span><small>点击查看项目档案 · 或「重新投币」再玩一次</small>';
             stageMsg.dataset.action = 'view';
         }else{
@@ -3087,7 +3156,7 @@ body::after{
 })();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="arcade3d.js?v=7"></script>
+<script src="arcade3d.js?v=8"></script>
 <script>
 (function(){
     'use strict';
@@ -3119,32 +3188,153 @@ body::after{
         });
     });
 
+    /* 卡片配置：variants[rarity] 可放多张；未提供的品质用项目名占位 */
+    var CARD_INFO = {
+        hpwy: {
+            marquee: 'PHANTOM SOUL',
+            url: 'https://aaronswartz0217.github.io/HPWY/',
+            variants: { white: ['assets/cards/phantom-soul.jpg'] }
+        },
+        wupo: {
+            marquee: 'SPIRIT TALES',
+            url: 'https://aaronswartz0217.github.io/Spirit-Tales/',
+            variants: {
+                purple: [
+                    'assets/cards/spirit-tales-purple.jpg',
+                    'assets/cards/spirit-tales-purple-wide.jpg'
+                ]
+            }
+        },
+        finch: { marquee: 'FINCH ROOM', url: 'https://www.taptap.cn/app/716586?os=android' },
+        robot: { marquee: 'ROBOT EXPRESS', url: 'https://pan.baidu.com/s/15u2_A0HJg8D-MaUmgcH3LQ' },
+        universal: { marquee: 'RENDER LAB', url: 'https://github.com/AaronSwartz0217/Universal-Hall' }
+    };
+
+    var RARITY = {
+        white: { label: 'WHITE', color: 0xf2f5ff },
+        purple: { label: 'PURPLE', color: 0xb56bff },
+        gold: { label: 'GOLD', color: 0xffcf4a }
+    };
+
+    function rollRarity(){
+        var r = Math.random();
+        if(r < 0.6) return 'white';
+        if(r < 0.9) return 'purple';
+        return 'gold';
+    }
+
+    function hexColor(n){
+        return '#' + ('000000' + (n & 0xffffff).toString(16)).slice(-6);
+    }
+
     var prize = document.getElementById('prizePanel');
-    var prizeId = null;
+    var prizeCard = document.getElementById('prizeCard');
+    var prizeTilt = document.getElementById('prizeTilt');
+    var prizeImage = document.getElementById('prizeImage');
+    var prizeFallback = document.getElementById('prizeFallback');
+    var prizeHint = document.getElementById('prizeHint');
+    var prizeTitle = document.getElementById('prizeTitle');
+
+    function fitPrizeCard(){
+        var iw = prizeImage.naturalWidth;
+        var ih = prizeImage.naturalHeight;
+        if(!iw || !ih) return;
+        var ratio = iw / ih;
+        var maxW = ratio > 1.1 ? Math.min(window.innerWidth * 0.88, 560) : Math.min(window.innerWidth * 0.7, 300);
+        var maxH = window.innerHeight * 0.56;
+        var w = Math.min(maxW, maxH * ratio);
+        var h = w / ratio;
+        prizeCard.style.width = Math.round(w) + 'px';
+        prizeCard.style.height = Math.round(h) + 'px';
+    }
+
     function closePrize(){
         if(!prize || !prize.classList.contains('open')) return;
         prize.classList.remove('open');
         prize.setAttribute('aria-hidden','true');
+        if(prizeTilt) prizeTilt.style.transform = '';
     }
+
+    function showPrize(detail){
+        if(!prize) return;
+        var d = detail || {};
+        var meta = CARD_INFO[d.id] || {};
+        var rarity = RARITY[d.rarity] ? d.rarity : rollRarity();
+        var rar = RARITY[rarity];
+        var name = meta.marquee || d.marquee || '???';
+        var source = d.source === 'claw' ? 'CLAW MACHINE' :
+            (d.source === 'gacha' ? 'CAPSULE MACHINE' : 'ARCADE CLEAR');
+
+        prize.classList.remove('rarity-white','rarity-purple','rarity-gold');
+        prize.classList.add('rarity-' + rarity);
+        prize.style.setProperty('--prize', hexColor(rar.color));
+        document.getElementById('prizeKicker').textContent = source + ' · ' + rar.label + ' CARD';
+        prizeTitle.textContent = name;
+
+        var pool = [];
+        if(meta.variants && meta.variants[rarity] && meta.variants[rarity].length){
+            pool = meta.variants[rarity];
+        }else if(meta.image){
+            pool = [meta.image];
+        }
+        var src = pool.length ? pool[Math.floor(Math.random() * pool.length)] : '';
+
+        prizeCard.style.width = '';
+        prizeCard.style.height = '';
+        if(src){
+            prizeImage.style.display = 'block';
+            prizeFallback.style.display = 'none';
+            prizeImage.alt = name + ' ' + rar.label.toLowerCase() + ' card';
+            prizeImage.onerror = function(){
+                prizeImage.style.display = 'none';
+                prizeFallback.style.display = 'flex';
+                prizeCard.style.width = '';
+                prizeCard.style.height = '';
+            };
+            prizeImage.src = src;
+            if(prizeImage.complete) fitPrizeCard();
+            window.setTimeout(fitPrizeCard, 120);
+        }else{
+            prizeImage.removeAttribute('src');
+            prizeImage.style.display = 'none';
+            prizeFallback.style.display = 'flex';
+        }
+
+        prizeCard.href = meta.url || '#';
+        prizeCard.setAttribute('aria-label', meta.url ? 'Open ' + name + ' website' : name + ' card');
+        prizeHint.textContent = meta.url ? 'CLICK CARD TO ENTER' : 'CARD PENDING · LINK COMING SOON';
+
+        prize.classList.remove('open');
+        void prize.offsetWidth;
+        prize.classList.add('open');
+        prize.setAttribute('aria-hidden','false');
+    }
+
     if(prize){
-        document.addEventListener('arcade:prize', function(e){
-            var d = e.detail || {};
-            prizeId = d.id || null;
-            var neon = typeof d.neon === 'number' ? d.neon : 0xffffff;
-            prize.style.setProperty('--prize', '#' + ('000000' + (neon & 0xffffff).toString(16)).slice(-6));
-            var title = document.getElementById('prizeTitle');
-            var kicker = document.getElementById('prizeKicker');
-            if(title) title.textContent = d.marquee || '???';
-            if(kicker) kicker.textContent = (d.source === 'claw' ? 'CLAW MACHINE' : 'CAPSULE MACHINE') + ' · PRIZE';
-            prize.classList.add('open');
-            prize.setAttribute('aria-hidden','false');
-        });
+        document.addEventListener('arcade:prize', function(e){ showPrize(e.detail); });
+        prizeImage.addEventListener('load', fitPrizeCard);
         document.getElementById('prizeClose').addEventListener('click', closePrize);
         prize.querySelector('[data-prize-close]').addEventListener('click', closePrize);
-        document.getElementById('prizeOpen').addEventListener('click', function(){
-            var id = prizeId;
-            closePrize();
-            if(id && window.Arcade && window.Arcade.startGame) window.Arcade.startGame(id);
+        prizeCard.addEventListener('click', function(e){
+            var href = prizeCard.getAttribute('href');
+            if(!href || href === '#') e.preventDefault();
+        });
+        prizeCard.addEventListener('pointermove', function(e){
+            if(e.pointerType === 'touch') return;
+            var r = prizeCard.getBoundingClientRect();
+            var px = (e.clientX - r.left) / r.width - 0.5;
+            var py = (e.clientY - r.top) / r.height - 0.5;
+            prizeTilt.style.transform = 'perspective(900px) rotateX(' +
+                (-py * 10).toFixed(2) + 'deg) rotateY(' +
+                (px * 14).toFixed(2) + 'deg) translateZ(16px)';
+        });
+        prizeCard.addEventListener('pointerleave', function(){
+            prizeTilt.style.transform = '';
+        });
+        window.addEventListener('resize', function(){
+            if(prize.classList.contains('open') && prizeImage.style.display !== 'none'){
+                fitPrizeCard();
+            }
         });
     }
 
