@@ -1,0 +1,9 @@
+/* WebGL3D Pipeline v1.0.0 — orbit + WASDQE roam controls. */
+(function(global){'use strict';
+  function create(canvas,opt={}){const target=(opt.target||[0,1,0]).slice();let yaw=opt.yaw??.65,pitch=opt.pitch??.35,distance=opt.distance??9;const keys=Object.create(null),speed=opt.speed??3,drag=opt.drag??.004;let active=false,lx=0,ly=0;
+    function eye(){const cp=Math.cos(pitch);return[target[0]+Math.sin(yaw)*cp*distance,target[1]+Math.sin(pitch)*distance,target[2]+Math.cos(yaw)*cp*distance];}
+    canvas.style.touchAction='none';canvas.addEventListener('pointerdown',e=>{active=true;lx=e.clientX;ly=e.clientY;canvas.setPointerCapture?.(e.pointerId);});canvas.addEventListener('pointermove',e=>{if(!active)return;yaw-=(e.clientX-lx)*drag;pitch=Math.max(-1.35,Math.min(1.35,pitch+(e.clientY-ly)*drag));lx=e.clientX;ly=e.clientY;});canvas.addEventListener('pointerup',()=>active=false);canvas.addEventListener('pointercancel',()=>active=false);canvas.addEventListener('wheel',e=>{e.preventDefault();distance=Math.max(.8,Math.min(120,distance*Math.exp(e.deltaY*.001)));},{passive:false});addEventListener('keydown',e=>{if(/^Key[WASDQE]$/.test(e.code)||e.code.startsWith('Shift')){keys[e.code]=true;e.preventDefault();}});addEventListener('keyup',e=>keys[e.code]=false);
+    function update(dt){const f=(keys.KeyW?1:0)-(keys.KeyS?1:0),r=(keys.KeyD?1:0)-(keys.KeyA?1:0),u=(keys.KeyE?1:0)-(keys.KeyQ?1:0);if(!f&&!r&&!u)return;const k=speed*(keys.ShiftLeft||keys.ShiftRight?3:1)*Math.min(dt,.05),sy=Math.sin(yaw),cy=Math.cos(yaw);target[0]+=(f*sy+r*cy)*k;target[2]+=(f*cy-r*sy)*k;target[1]+=u*k;}
+    return{target,update,get eye(){return eye();},get yaw(){return yaw;},get pitch(){return pitch;},get distance(){return distance;},apply(camera){camera.eye=eye();camera.target=target;return camera;}};}
+  global.GL3DOrbit={create};
+})(window);

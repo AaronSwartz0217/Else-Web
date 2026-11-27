@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>达克效应 · D 废墟之上（城堡大殿）</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0810; overflow: hidden; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="../vendor/webgl_post.js"></script>
+<script src="../vendor/roam.js"></script>
+<script src="common.js"></script>
+<script>
+'use strict';
+/* ============================================================================
+   达克效应 · ⑩ 废墟之上（源帧 675–788）—— 点题
+   场景＝**城堡内部的大殿废墟**（不是露天荒野）：坍塌的拱顶漏下几道光柱、后墙破玫瑰窗、
+   侧墙高窗、断柱、垂落的旗、翻倒的火盆 —— 装饰丰富、亮度够、暖金与冷蓝形成色彩平衡。
+   画面拉远上升成俯视；第四个勇士 2D 剪影站在三具尸体与龙的残骸堆成的山丘上（他极小）；
+   远处又一批勇士从殿那头走进来。色调：暗金、深红、灰蓝。
+   ========================================================================== */
+const SEG_START = 675, SEG_LEN = 113;
+const W = 1920, H = 1080, TAU = Math.PI * 2;
+
+const {
+  clamp, lerp, smoothstep, srnd, subA,
+  CAM, proj, face, seg3, discY, silhouette, POSE, drawDragon, billboard,
+  fillLimb, fillDisc, glowAt, glow, band, skyGrad, fxFlame, fxEmbers,
+  bakeText, drawText, chapterLabel, checkerOverlay,
+} = DK;
+
+let S = null;
+
+/* ---------------- 空间：大殿 ---------------- */
+const HX = 20, HZF = -18, HZB = 38, HCEIL = 20;
+const COLZ = [3, 10, 17, 24, 31];
+const BROKEN = { 1: 9.5, 3: 12.5 };                          // 断柱：残留高度
+const PILE = { x: 0.4, z: 15.0 };
+const MOUND = [
+  { r: 3.5, y0: 0.0, y1: 0.45 },
+  { r: 2.7, y0: 0.45, y1: 0.92 },
+  { r: 2.0, y0: 0.92, y1: 1.38 },
+  { r: 1.25, y0: 1.38, y1: 1.82 },
+];
+const E4 = { x: PILE.x + 0.15, y: 1.82, z: PILE.z - 0.25 };
+// 拱顶破洞（漏光的位置）
+const HOLES = [{ x: -8.5, z: 8.0 }, { x: 2.0, z: 17.0 }, { x: 11.0, z: 27.0 }];
+
+function mul(c, k, a) {
+  return 'rgba(' + Math.round(c[0] * k) + ',' + Math.round(c[1] * k) + ',' + Math.round(c[2] * k) + ',' + (a === undefined ? 1 : a) + ')';
+}
+function box3(x0, x1, y0, y1, z0, z1, col, lit) {
+  face([[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]], mul(col, 1.0 * lit, 1), 1);
+  face([[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0]], mul(col, 0.72 * lit, 1), 1);
+  face([[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]], mul(col, 0.50 * lit, 1), 1);
+  face([[x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]], mul(col, 0.84 * lit, 1), 1);
+  face([[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]], mul(col, 0.40 * lit, 1), 1);
+}
+function prismCol(x, z, r0, r1, y0, y1, N, col, lit, LAN) {
+  const faces = [];
+  for (let i = 0; i < N; i++) {
+    const a0 = i / N * TAU, a1 = (i + 1) / N * TAU, am = (a0 + a1) / 2;
+    faces.push({ am, pts: [
+      [x + Math.cos(a0) * r0, y0, z + Math.sin(a0) * r0],
+      [x + Math.cos(a1) * r0, y0, z + Math.sin(a1) * r0],
+      [x + Math.cos(a1) * r1, y1, z + Math.sin(a1) * r1],
+      [x + Math.cos(a0) * r1, y1, z + Math.sin(a0) * r1],
+    ] });
+  }
+  faces.sort((A, B) => (z + Math.sin(B.am) * r0) - (z + Math.sin(A.am) * r0));
+  for (const fc of faces) {
+    const k = 0.30 + 0.70 * Math.max(0, Math.cos(fc.am - (LAN || -0.6)));
+    face(fc.pts, mul(col, k * lit, 1), 1);
+  }
+}
+function archRib(x0, x1, y, z, rise, col, w) {
+  for (let i = 0; i < 8; i++) {
+    const u0 = i / 8, u1 = (i + 1) / 8;
+    seg3([lerp(x0, x1, u0), y + Math.sin(u0 * Math.PI) * rise, z],
+         [lerp(x0, x1, u1), y + Math.sin(u1 * Math.PI) * rise, z], col, w, 1);
+  }
+}
+
+/* ---------------- 尸山 ---------------- */
+function lyingBody(col, out) {
+  fillLimb([[0.06, -0.10], [-0.30, -0.115], [-0.64, -0.10]], 0.088, 0.070, col, out, 0.006);
+  fillLimb([[-0.64, -0.10], [-0.94, -0.055]], 0.066, 0.044, col, out, 0.006);
+  fillLimb([[-0.12, -0.14], [-0.36, -0.055]], 0.040, 0.028, col, out, 0.005);
+  fillDisc(0.07, -0.105, 0.070, col, out, 0.005);
+}
+const CORPSES = [
+  { x: PILE.x + 2.35, y: 0.45, z: PILE.z + 1.55, hw: 1.90, rot: 0.16, col: '#12101c' },
+  { x: PILE.x - 1.75, y: 0.92, z: PILE.z + 0.75, hw: 1.90, rot: -0.26, col: '#151320' },
+  { x: PILE.x + 0.75, y: 1.38, z: PILE.z - 0.70, hw: 1.88, rot: 0.62, col: '#100e18' },
+];
+const RUBBLE = (() => {
+  const out = [];
+  for (let i = 0; i < 34; i++) {
+    out.push({ x: -19 + srnd(i * 3.1) * 38, z: -6 + srnd(i * 5.3) * 42, w: 0.7 + srnd(i * 7.7) * 2.4, h: 0.5 + srnd(i * 2.9) * 1.8 });
+  }
+  return out;
+})();
+
+/* ---------------- 光柱 ---------------- */
+function lightShaft(x, z, w0, w1, col, glowCol, alpha) {
+  const a = proj(x - w0, HCEIL, z), b = proj(x + w0, HCEIL, z);
+  const c = proj(x + w1, 0, z + 2.6), d = proj(x - w1, 0, z + 2.6);
+  S.save(); S.globalCompositeOperation = 'lighter';
+  if (a && b && c && d) {
+    S.globalAlpha = alpha;
+    S.beginPath(); S.moveTo(a.x, a.y); S.lineTo(b.x, b.y); S.lineTo(c.x, c.y); S.lineTo(d.x, d.y); S.closePath();
+    S.fillStyle = col; S.fill();
+    S.globalAlpha = alpha * 0.7;
+    S.beginPath();
+    S.moveTo(lerp(a.x, b.x, 0.28), lerp(a.y, b.y, 0.28));
+    S.lineTo(lerp(a.x, b.x, 0.72), lerp(a.y, b.y, 0.72));
+    S.lineTo(lerp(c.x, d.x, 0.70), lerp(c.y, d.y, 0.70));
+    S.lineTo(lerp(c.x, d.x, 0.30), lerp(c.y, d.y, 0.30));
+    S.closePath(); S.fill();
+  }
+  S.restore();
+  const p = proj(x, 0.03, z + 2.6);
+  if (p) band(p.x, p.y, p.s * w1 * 1.9, p.s * w1 * 0.8, glowCol, alpha * 2.4, 'lighter');
+}
+
+/* ---------------- 按帧定机位（拉远 + 抬升成俯视） ---------------- */
+function setCam(f) {
+  const u = smoothstep(684, 742, f);
+  CAM.x = lerp(-2.4, -0.5, u);
+  CAM.y = lerp(2.9, 16.5, u);
+  CAM.z = lerp(6.6, -12.5, u);
+  CAM.pitch = lerp(0.02, 0.44, u);
+  CAM.focal = lerp(980, 900, u);
+}
+
+/* ---------------- 一帧 ---------------- */
+function draw(f) {
+  S = DK.ctx;
+  S.setTransform(1, 0, 0, 1, 0, 0);
+  const appr = smoothstep(704, 738, f);
+
+  // 天空（只从拱顶破洞与高窗透进来）：黄昏冷暖过渡
+  skyGrad('ruinhall', [[0, '#2a1c40'], [0.35, '#6a2c48'], [0.60, '#c05a34'], [0.78, '#e89a4c'], [1, '#6a3040']], 0, H, 1, null);
+  // —— 墙 / 顶 / 地 ——
+  face([[-HX, 0, HZB], [HX, 0, HZB], [HX, HCEIL, HZB], [-HX, HCEIL, HZB]], '#3a3040');
+  // 后墙：破玫瑰窗 + 一圈尖拱窗
+  face([[-7.5, 7.5, HZB - 0.06], [7.5, 7.5, HZB - 0.06], [7.5, 16.5, HZB - 0.06], [-7.5, 16.5, HZB - 0.06]], 'rgba(22,16,26,0.9)', 1);
+  for (let i = 0; i < 12; i++) {
+    const a0 = i / 12 * TAU, a1 = (i + 1) / 12 * TAU;
+    const r0 = 2.1, r1 = 6.4;
+    face([[Math.cos(a0) * r0, 12 + Math.sin(a0) * r0, HZB - 0.08],
+          [Math.cos(a1) * r0, 12 + Math.sin(a1) * r0, HZB - 0.08],
+          [Math.cos(a1) * r1, 12 + Math.sin(a1) * r1, HZB - 0.08],
+          [Math.cos(a0) * r1, 12 + Math.sin(a0) * r1, HZB - 0.08]], 'rgba(255,178,88,0.86)', 1);
+  }
+  for (let i = 0; i < 12; i++) {                       // 窗辐
+    const a = i / 12 * TAU;
+    seg3([Math.cos(a) * 2.1, 12 + Math.sin(a) * 2.1, HZB - 0.10],
+         [Math.cos(a) * 6.4, 12 + Math.sin(a) * 6.4, HZB - 0.10], 'rgba(60,34,16,0.75)', 0.16, 1);
+  }
+  face([[-2.1, 10.4, HZB - 0.10], [2.1, 10.4, HZB - 0.10], [2.1, 13.6, HZB - 0.10], [-2.1, 13.6, HZB - 0.10]], 'rgba(255,240,196,0.95)', 1);
+  const rw = proj(0, 12, HZB - 0.2);
+  if (rw) {
+    band(rw.x, rw.y, rw.s * 9.0, rw.s * 9.0, 'rgba(255,170,80,A)', 0.30, 'lighter');
+    band(rw.x, rw.y, rw.s * 2.4, rw.s * 2.4, 'rgba(255,236,180,A)', 0.55, 'lighter');
+  }
+  for (let i = 0; i < 6; i++) {                       // 后墙侧翼尖拱窗
+    const wx = -16 + i * 6.4;
+    if (Math.abs(wx) < 8) continue;
+    face([[wx - 0.9, 6, HZB - 0.06], [wx + 0.9, 6, HZB - 0.06], [wx + 0.9, 12, HZB - 0.06], [wx - 0.9, 12, HZB - 0.06]], 'rgba(180,206,244,0.72)', 1);
+    face([[wx - 0.9, 12, HZB - 0.06], [wx + 0.9, 12, HZB - 0.06], [wx, 13.4, HZB - 0.06]], 'rgba(180,206,244,0.72)', 1);
+  }
+  // 侧墙 + 高窗（冷蓝外光，与暖金室内形成平衡）
+  for (const sx of [-HX, HX]) {
+    face([[sx, 0, HZF], [sx, 0, HZB], [sx, HCEIL, HZB], [sx, HCEIL, HZF]], '#332a3a');
+    for (let i = 0; i < 4; i++) {
+      const wz = 2 + i * 9;
+      face([[sx, 6, wz - 1.1], [sx, 6, wz + 1.1], [sx, 13, wz + 1.1], [sx, 13, wz - 1.1]], 'rgba(186,212,248,0.70)', 1);
+      const p = proj(sx, 9.5, wz);
+      if (p) band(p.x, p.y, p.s * 2.2, p.s * 5.0, 'rgba(170,204,248,A)', 0.20, 'lighter');
+    }
+  }
+  // 地面：石板 + 接缝
+  face([[-HX, 0, HZF], [HX, 0, HZF], [HX, 0, HZB], [-HX, 0, HZB]], '#4a4048');
+  face([[-HX, 0.004, HZF], [HX, 0.004, HZF], [HX, 0.004, HZB], [-HX, 0.004, HZB]], 'rgba(200,160,130,0.16)', 1);
+  for (let i = -4; i <= 4; i++) seg3([i * 4.4, 0.006, HZF], [i * 4.4, 0.006, HZB], 'rgba(120,104,116,0.45)', 0.05, 1);
+  for (let z = HZF + 4; z < HZB; z += 5.5) seg3([-HX, 0.006, z], [HX, 0.006, z], 'rgba(120,104,116,0.35)', 0.05, 1);
+  // 柱 + 拱（断柱：一半断口）
+  const list = COLZ.slice().sort((a, b) => b - a);
+  for (const z of list) {
+    const br = BROKEN[z];
+    for (const cx of [-9, 9]) {
+      prismCol(cx, z, 1.6, 1.34, 0, br ? br : HCEIL, 8, [104, 92, 108], 0.92, -0.6);
+      prismCol(cx, z, 2.0, 1.7, 0, 0.8, 8, [92, 80, 96], 1.02, -0.6);
+      if (br) {                                       // 断口
+        face([[cx - 1.34, br, z - 1.34], [cx + 1.34, br, z - 1.34], [cx + 1.2, br + 0.9, z - 0.3], [cx - 1.2, br + 0.4, z + 0.4]], 'rgba(120,108,120,1)', 1);
+      } else {
+        prismCol(cx, z, 1.42, 1.42, 18.6, 19.0, 8, [196, 152, 76], 1.0, -0.6);
+      }
+    }
+    if (!br) archRib(-9, 9, 19.0, z, 3.4, 'rgb(128,112,126)', 0.5);
+  }
+  // 拱顶（留破洞，天空与光柱才串得起来）
+  const zEdges = [HZF, -6, 4, 12, 21, 29, HZB];
+  for (let i = 0; i < zEdges.length - 1; i++) {
+    const z0 = zEdges[i], z1 = zEdges[i + 1];
+    const hole = HOLES.some(h => h.z > z0 - 3 && h.z < z1 + 3);
+    if (hole) continue;
+    face([[-HX, HCEIL, z0], [HX, HCEIL, z0], [HX, HCEIL, z1], [-HX, HCEIL, z1]], '#3c3446');
+  }
+  // 光柱（三束，暖金）—— 大殿的主要亮度来源
+  for (let i = 0; i < HOLES.length; i++) {
+    const h = HOLES[i];
+    const k = 0.72 + 0.28 * Math.sin(f / 90 + i * 2.1);
+    lightShaft(h.x, h.z, 4.4 - i * 0.5, 5.6 - i * 0.4, 'rgba(255,226,168,0.13)', 'rgba(255,200,126,A)', 1.5 * k);
+  }
+  // 垂落的旗（红金）
+  for (const b of [[-15.5, 6, 9.5], [-15.5, 20, 7.0], [15.5, 12, 10.0], [15.5, 26, 6.2]]) {
+    const bx = b[0], bz = b[1], by = b[2];
+    face([[bx, by, bz - 2.0], [bx, by, bz + 2.0], [bx, by - 10, bz + 1.4], [bx, by - 10, bz - 1.4]], 'rgba(158,44,40,0.95)', 1);
+    face([[bx, by, bz - 2.0], [bx, by, bz + 2.0], [bx, by - 1.1, bz + 1.9], [bx, by - 1.1, bz - 1.9]], 'rgba(226,176,84,0.95)', 1);
+  }
+  // 翻倒的火盆（仍燃着）+ 坍塌的吊灯
+  for (const br of [[-13, 12], [13.5, 22], [-4, 30]]) {
+    prismCol(br[0], br[1], 0.95, 0.7, 0.4, 1.5, 8, [96, 74, 62], 1.0, -0.6);
+    const p = proj(br[0], 1.6, br[1]);
+    if (p) {
+      fxFlame(p.x, p.y, p.s * 0.5, p.s * 1.7, br[1] * 3.1 + br[0], 1.0, 1.0);
+      fxEmbers(p.x, p.y, p.s * 1.0, p.s * 2.6, 9, br[1] * 2.3 + br[0], 0.75);
+      band(p.x, p.y, p.s * 3.0, p.s * 3.0, 'rgba(255,146,64,A)', 0.22, 'lighter');
+    }
+  }
+  S.save();                                           // 吊灯残链
+  seg3([0, HCEIL - 0.5, 20], [2.6, 5.0, 19.0], 'rgba(96,84,72,1)', 0.16, 1);
+  seg3([0, HCEIL - 0.5, 20], [-3.2, 7.5, 21.0], 'rgba(96,84,72,1)', 0.16, 1);
+  const cp = proj(0, 7.0, 20);
+  if (cp) band(cp.x, cp.y, cp.s * 2.4, cp.s * 2.4, 'rgba(255,206,120,A)', 0.28, 'lighter');
+  S.restore();
+  // 碎石 / 灰烬堆
+  for (const R of RUBBLE) {
+    box3(R.x - R.w, R.x + R.w, 0, R.h, R.z - R.w * 0.7, R.z + R.w * 0.7, [86, 74, 84], 0.95);
+  }
+  // 玫瑰窗坠落的彩色玻璃：冷蓝、暗红、旧金散在光柱里，丰富地面近景。
+  const GLASS = [
+    [-8.0,8.0,0.7,'rgba(104,154,206,0.62)'],[-5.2,13.0,0.5,'rgba(184,54,48,0.58)'],
+    [6.8,10.5,0.8,'rgba(214,170,76,0.58)'],[9.6,18.0,0.6,'rgba(92,142,190,0.60)'],
+    [-10.5,22.0,0.7,'rgba(164,48,52,0.54)'],[5.0,28.0,0.55,'rgba(206,164,82,0.56)'],
+  ];
+  for (const g of GLASS) {
+    face([[g[0]-g[2],0.025,g[1]],[g[0]+g[2]*0.65,0.025,g[1]-g[2]*0.35],[g[0]+g[2]*0.18,0.025,g[1]+g[2]]], g[3], 1);
+  }
+  box3(-14.5, -7.0, 0, 2.6, -3.0, 3.5, [78, 66, 78], 0.95);
+  box3(8.0, 16.0, 0, 2.2, -4.0, 2.5, [74, 62, 74], 0.95);
+  // 勇士一那把剑：插在地上（与 ⑥ 呼应）
+  billboard(-3.6, 0, 12.0, 1.45, () => {
+    S.fillStyle = '#1a1a26'; S.strokeStyle = 'rgba(6,6,12,0.9)'; S.lineWidth = 0.007;
+    S.beginPath(); S.moveTo(-0.013, -0.92); S.lineTo(0.013, -0.92); S.lineTo(0.010, 0); S.lineTo(-0.010, 0);
+    S.closePath(); S.fill(); S.stroke();
+    S.beginPath(); S.moveTo(-0.090, -1.02); S.lineTo(0.082, -1.02); S.lineTo(0.064, -1.10); S.lineTo(-0.072, -1.10);
+    S.closePath(); S.fill(); S.stroke();
+    S.fillRect(-0.016, -1.30, 0.032, 0.20);
+  });
+  // —— 尸山 ——
+  for (let k = MOUND.length - 1; k >= 0; k--) {
+    const L = MOUND[k];
+    for (let i = 0; i < 16; i++) {
+      const a0 = i / 16 * TAU, a1 = (i + 1) / 16 * TAU;
+      face([[PILE.x + Math.cos(a0) * L.r, L.y0, PILE.z + Math.sin(a0) * L.r * 0.82],
+            [PILE.x + Math.cos(a1) * L.r, L.y0, PILE.z + Math.sin(a1) * L.r * 0.82],
+            [PILE.x + Math.cos(a1) * L.r, L.y1, PILE.z + Math.sin(a1) * L.r * 0.82],
+            [PILE.x + Math.cos(a0) * L.r, L.y1, PILE.z + Math.sin(a0) * L.r * 0.82]], mul([74, 62, 74], 1.0, 1), 1);
+    }
+    face(discY(PILE.x, PILE.z, L.r, L.r * 0.82, L.y1, 16), mul([94, 80, 90], 1.0, 1), 1);
+  }
+  for (let i = 0; i < 22; i++) {
+    const a = srnd(i * 4.1) * TAU, r = 0.5 + srnd(i * 6.3) * 3.0;
+    const y = 0.45 + srnd(i * 2.7) * 1.3;
+    box3(PILE.x + Math.cos(a) * r - 0.3, PILE.x + Math.cos(a) * r + 0.3, y, y + 0.22 + srnd(i * 8.1) * 0.3,
+      PILE.z + Math.sin(a) * r * 0.8 - 0.25, PILE.z + Math.sin(a) * r * 0.8 + 0.25, [88, 74, 84], 0.95);
+  }
+  for (let i = CORPSES.length - 1; i >= 0; i--) {
+    const C = CORPSES[i];
+    billboard(C.x, C.y, C.z, C.hw, () => { S.save(); S.rotate(C.rot); lyingBody(C.col, 'rgba(6,6,12,0.92)'); S.restore(); });
+  }
+  billboard(PILE.x - 2.35, 0.80, PILE.z - 0.35, 1.85, () => {
+    S.save(); S.rotate(0.98); S.globalAlpha = 0.97;
+    // 龙的残骸：比 ⑥⑦⑨ 暗一档的橙（死了的焦橙色）、单色不留内部色差
+    drawDragon({ fill: '#9a5423', fill2: '#9a5423', out: 'rgba(34,14,4,0.95)', rim: 'rgba(206,138,70,A)', rimDX: 0.016, eye: 0, spikeHide: true, t: 0.4 });
+    S.restore();
+  });
+  // 顶上第四个勇士（背影、无脸、极小）
+  silhouette(E4.x, E4.y, E4.z, 1.80, POSE.standBack(), {
+    fill: '#100e18', rim: 'rgba(255,220,140,A)', rimA: 0.85, rimDX: -0.028, rimDY: -0.010,
+    variant: 3, detail: '#62596f', metal: '#e2bf70',
+  });
+  // 远处又一批勇士从殿那头走来
+  if (appr > 0.02) {
+    for (let i = 0; i < 7; i++) {
+      const z0 = 26 + srnd(i * 3.3) * 11;
+      const bx = -17 + i * 3.0 + (f - 704) * 0.060;
+      const ph = (f - 704) / 22 + i * 0.37;
+      const p = proj(bx, 1.2, z0);
+      if (p) band(p.x, p.y, p.s * 1.7, p.s * 1.5, 'rgba(255,168,86,A)', 0.16 * appr, 'lighter');
+      silhouette(bx, 0, z0, 1.85, POSE.walkSide(ph), {
+        fill: '#14121e', rim: 'rgba(255,200,124,A)', rimA: 0.9 * appr, rimDX: -0.026, alpha: appr,
+        variant: i % 4, detail: '#5b586b', metal: i % 2 ? '#aeb9ca' : '#c7a45f',
+      });
+    }
+  }
+  // 空气里的尘埃（光柱里最明显）
+  S.save(); S.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 90; i++) {
+    const x = srnd(i * 2.7) * W, y = srnd(i * 5.3) * H;
+    const a = (0.05 + 0.10 * srnd(i * 8.1)) * (0.6 + 0.4 * Math.sin(f / 40 + i));
+    S.globalAlpha = a; S.fillStyle = 'rgba(255,226,180,1)';
+    S.fillRect(x, y, 2.2, 2.2);
+  }
+  S.restore();
+  fxEmbers(W * 0.5, H * 0.80, W * 1.2, H * 0.5, 22, 5.3, 0.40);
+
+  checkerOverlay(0.040);
+  // ---------- 2D 覆盖层 ----------
+  chapterLabel('⑩ 废墟之上', subA(f, 677, 687, 748, 762), false);
+  if (f >= 700) {
+    const a1 = subA(f, 700, 710, 722, 730);
+    if (a1 > 0.01) {
+      const sp = bakeText('r1', '他赢，不是因为他最能打。', 52, 'rgba(248,240,226,0.97)', 'rgba(0,0,0,0.92)', '3px');
+      drawText(sp, W / 2, 430 + (1 - a1) * 14, 1, a1);
+    }
+    const a2 = subA(f, 728, 738, 748, 756);
+    if (a2 > 0.01) {
+      const sp = bakeText('r2', '是因为他看见了那根刺。', 52, 'rgba(255,228,174,0.98)', 'rgba(90,44,8,0.95)', '3px');
+      drawText(sp, W / 2, 430 + (1 - a2) * 14, 1, a2);
+    }
+  }
+  const tIn = smoothstep(744, 760, f);
+  if (tIn > 0.01) {
+    const pop = smoothstep(744, 762, f);
+    const spT = bakeText('dkTitle', '达克效应', 132, 'rgba(255,248,232,1)', 'rgba(186,112,36,0.95)', '12px');
+    drawText(spT, W / 2, lerp(470, 452, pop), 1, tIn, lerp(0.92, 1.0, pop));
+    S.save(); S.globalAlpha = tIn * 0.65; S.fillStyle = 'rgba(236,198,124,1)';
+    S.fillRect(W / 2 - 250, 546, 500, 2); S.restore();
+  }
+  const sIn = smoothstep(756, 770, f);
+  if (sIn > 0.01) {
+    const spS = bakeText('dkSub', '越不懂，越觉得自己什么都懂。越懂，越知道自己不知道什么。', 30,
+      'rgba(232,220,200,0.94)', 'rgba(0,0,0,0.92)', '2px');
+    drawText(spS, W / 2, 610, 1, sIn);
+  }
+  const eIn = smoothstep(766, 778, f);
+  if (eIn > 0.01) {
+    const spE = bakeText('dkEnd', '剧  终', 40, 'rgba(242,232,216,0.95)', 'rgba(0,0,0,0.92)', '10px');
+    drawText(spE, W / 2, 900, 1, eIn);
+  }
+}
+
+DK.boot({
+  total: 788,
+  seg: [SEG_START, SEG_LEN],
+  cam: { x: -2.4, y: 2.9, z: 6.6, focal: 980, pitch: 0.02, yaw: 0 },
+  bg: '#0a0810',
+  scene: draw,
+  setCam: setCam,
+  post: f => ({ scan: 0.40, grain: 0.046, chroma: 0.045, grade: 0.10, vig: 0.28, glitch: 0.010 }),
+  clamp: c => { c.x = clamp(c.x, -19, 19); c.y = clamp(c.y, 0.8, 19); c.z = clamp(c.z, -17, 37); },
+  hud: () => '大殿 40 × 20 × 56 · 柱 x=±9 · 破洞 3 处 · 尸山 z=15',
+});
+</script>
+</body>
+</html>

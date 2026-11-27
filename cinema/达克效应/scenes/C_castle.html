@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>达克效应 · C 城堡与四勇士</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #05060a; overflow: hidden; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="../vendor/webgl_post.js"></script>
+<script src="../vendor/roam.js"></script>
+<script src="common.js"></script>
+<script>
+'use strict';
+/* ============================================================================
+   达克效应 · ⑤ 城堡远景（248–293）· ⑥⑦⑧⑨ 四个勇士（293–675）
+   ⑤ 黑红暗紫：3D 黑色城堡巨大压中央，门缝红光、岩浆裂纹、乌鸦、雷电。
+   ⑥ 白金黑：举剑 → 冲 → 龙炎吞屏 → 白光过曝 → 剑落地人消失。
+   ⑦ 暗红黑银：翻滚避火 → 逼近龙腹 → 利爪黑影覆盖 → 只余黑影与冷光。
+   ⑧ 灰蓝暗红：城门口徘徊 → 放下武器 → 张口试图交流 → 龙低头红光一闪 → 消失。
+   ⑨ 金白黑：疾冲 → 侧身避火 → 翻滚避爪 → 绕到龙背后 → 拔出背上那根刺 → 龙崩解。
+   人物与恶龙一律 2D 剪影；发出的瞬间强光靠「先压暗再爆亮」才读得出（本片通用手法）。
+   ========================================================================== */
+const SEG_START = 248, SEG_LEN = 427;
+const W = 1920, H = 1080, TAU = Math.PI * 2;
+
+const T_EXT = [248, 293];
+const T_W1 = [293, 383], T_W2 = [383, 473], T_W3 = [473, 563], T_W4 = [563, 675];
+
+const {
+  clamp, lerp, smoothstep, easeInOut, srnd, subA,
+  CAM, proj, face, faceO, seg3, dot3, silhouette, POSE, drawDragon, billboard,
+  dialog, chapterLabel, glowAt, glow, band, fxFlame, fxEmbers, fxBolt, fxCrows,
+  fxLavaCrack, fxSparks, screenFlash, checkerOverlay,
+} = DK;
+
+let S = null;
+
+/* ---------------- 空间常量 ---------------- */
+const XL = 16, ZF = -8, ZB = 44;
+const COLZ = [8, 16, 24, 32, 40];
+const DRG = { x: 1.00, z: 11.5, hw: 3.20 };                          // 恶龙（全场不动，保证连贯）
+// 龙的单位空间坐标 → 世界坐标（便于取口 / 眼 / 背上那根刺的锚点）
+function drgPt(ux, uy) { return [DRG.x + ux * DRG.hw, -uy * DRG.hw, DRG.z]; }
+const MOUTH = [-1.00, -1.66], EYE = [-0.78, -1.88], SPIKE = [0.70, -1.42], BACK = [0.95, -1.30];
+const GATE = { x: -11.0, z: 20.0, h: 7.0, half: 2.4 };              // 场内「城门」拱
+const GOLD = 'rgba(255,228,146,A)';
+// 恶龙画法（定稿：硬切面）；临时对比可加 ?dkstyle=ink|cut
+const DKSTYLE = new URLSearchParams(location.search).get('dkstyle') || 'facet';
+
+function mul(c, k, a) {
+  return 'rgba(' + Math.round(c[0] * k) + ',' + Math.round(c[1] * k) + ',' + Math.round(c[2] * k) + ',' + (a === undefined ? 1 : a) + ')';
+}
+function prismCol(x, z, r0, r1, y0, y1, N, col, lit, LAN) {
+  const faces = [];
+  for (let i = 0; i < N; i++) {
+    const a0 = i / N * TAU, a1 = (i + 1) / N * TAU, am = (a0 + a1) / 2;
+    faces.push({ am, pts: [
+      [x + Math.cos(a0) * r0, y0, z + Math.sin(a0) * r0],
+      [x + Math.cos(a1) * r0, y0, z + Math.sin(a1) * r0],
+      [x + Math.cos(a1) * r1, y1, z + Math.sin(a1) * r1],
+      [x + Math.cos(a0) * r1, y1, z + Math.sin(a0) * r1],
+    ] });
+  }
+  faces.sort((A, B) => (z + Math.sin(B.am) * r0) - (z + Math.sin(A.am) * r0));
+  for (const fc of faces) {
+    const k = 0.22 + 0.78 * Math.max(0, Math.cos(fc.am - (LAN || -0.5)));
+    face(fc.pts, mul(col, k * lit, 1), 1);
+  }
+}
+function box3(x0, x1, y0, y1, z0, z1, col, lit) {
+  face([[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]], mul(col, 1.0 * lit, 1), 1);
+  face([[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0]], mul(col, 0.66 * lit, 1), 1);
+  face([[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]], mul(col, 0.42 * lit, 1), 1);
+  face([[x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]], mul(col, 0.80 * lit, 1), 1);
+  face([[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]], mul(col, 0.34 * lit, 1), 1);
+}
+
+/* ---------------- 岩浆裂纹（固定几何） ---------------- */
+const LAVA = (() => {
+  const out = [];
+  for (let i = 0; i < 9; i++) {
+    const pts = []; let x = -14 + srnd(i * 3.1) * 28, z = 1 + srnd(i * 5.3) * 34;
+    for (let k = 0; k < 8; k++) {
+      pts.push([x, 0.03, z]);
+      x += (srnd(i * 7.1 + k * 1.9) - 0.5) * 4.6;
+      z += (srnd(i * 2.3 + k * 3.7) - 0.5) * 4.6;
+    }
+    out.push(pts);
+  }
+  return out;
+})();
+function lavaPulse(f, seed) { return 0.55 + 0.45 * Math.sin(f / 34 + seed * 2.1); }
+
+/* ================================ ⑤ 城堡远景 ================================ */
+/* 色彩参考：魔界黄昏 —— 高空靛紫 → 品红 → 地平线橙金；城堡本体用「暗紫罗兰石材」
+   ＋ 暖金勾边 ＋ 橙红窗火，天空亮、城堡半亮，画面不再是黑剪影。 */
+const CZ_F = 50, CZ_B = 78;
+const LAN5 = -0.75;
+function spire(x, z, r, y0, y1, N, col, lit) {
+  const faces = [];
+  for (let i = 0; i < N; i++) {
+    const a0 = i / N * TAU, a1 = (i + 1) / N * TAU, am = (a0 + a1) / 2;
+    faces.push({ am, pts: [
+      [x + Math.cos(a0) * r, y0, z + Math.sin(a0) * r],
+      [x + Math.cos(a1) * r, y0, z + Math.sin(a1) * r],
+      [x, y1, z],
+    ] });
+  }
+  faces.sort((A, B) => (z + Math.sin(B.am) * r) - (z + Math.sin(A.am) * r));
+  for (const fc of faces) {
+    const k = 0.34 + 0.66 * Math.max(0, Math.cos(fc.am - LAN5));
+    face(fc.pts, mul(col, k * lit, 1), 1);
+  }
+  // 塔尖金顶线
+  const ap = proj(x, y1, z), bp = proj(x, y0, z);
+  if (ap && bp) seg3([x, y0, z], [x, y1, z], mul([232, 176, 84], 0.55 + 0.45 * lit, 0.85), 0.10, 1);
+}
+function crenel(x0, x1, y, z0, z1, col, lit, n) {
+  const w = (x1 - x0) / (2 * n - 1);
+  for (let i = 0; i < n; i++) {
+    const cx = x0 + i * 2 * w;
+    box3(cx, cx + w, y, y + 0.9, z0, z1, col, lit);
+  }
+}
+// 竖长窗（发光）：贴在 z 平面上的前排面
+function windows(zf, y0, y1, xs, w, col, glowCol, alpha) {
+  for (const x of xs) {
+    face([[x - w, y0, zf], [x + w, y0, zf], [x + w, y1, zf], [x - w, y1, zf]], col, 1);
+    const p = proj(x, (y0 + y1) / 2, zf);
+    if (p) glowAt(p.x, p.y, p.s * (y1 - y0) * 0.5, p.s * (y1 - y0) * 0.45, glow(glowCol || 'rgba(255,150,60,A)'), alpha === undefined ? 0.34 : alpha, 'lighter');
+  }
+}
+function drawExterior(f) {
+  const push = smoothstep(T_EXT[0], T_EXT[1], f);
+  const lit = 0.86 + 0.14 * push;
+  // 天空：魔界黄昏（亮，不再压黑）
+  DK.skyGrad('night', [[0, '#231340'], [0.30, '#46215e'], [0.50, '#8a2f62'], [0.63, '#c8492e'],
+    [0.72, '#e88a3c'], [0.80, '#c85a2a'], [1, '#5a2330']], 0, H, 1, null);
+  // 月亮（淡金）
+  const mx = W * 0.79, my = H * 0.20;
+  S.save(); S.globalCompositeOperation = 'lighter';
+  glowAt(mx, my, 420, 420, glow('rgba(255,214,150,A)'), 0.34, 'lighter');
+  S.restore();
+  S.save(); S.fillStyle = 'rgb(246,226,182)'; S.beginPath(); S.arc(mx, my, 74, 0, TAU); S.fill();
+  S.globalAlpha = 0.16; S.fillStyle = 'rgba(150,120,90,1)';
+  S.beginPath(); S.arc(mx - 22, my - 18, 26, 0, TAU); S.fill();
+  S.beginPath(); S.arc(mx + 26, my + 20, 18, 0, TAU); S.fill(); S.restore();
+  // 云带（紫红，带暖边）
+  for (let i = 0; i < 6; i++) {
+    const cy = H * (0.10 + srnd(i * 3.3) * 0.30);
+    const cx = W * (0.06 + i * 0.17) + Math.sin(f / 110 + i) * 50;
+    band(cx, cy, W * 0.24, H * 0.048, 'rgba(74,28,66,A)', 0.55, 'source-over');
+    band(cx, cy + H * 0.036, W * 0.22, H * 0.014, 'rgba(255,150,96,A)', 0.22, 'lighter');
+  }
+  // 远山
+  face([[-150, 0, 200], [150, 0, 200], [150, 22, 200], [-150, 22, 200]], '#2a1636', 1);
+  face([[-150, 22, 200], [-40, 42, 200], [60, 30, 200], [150, 26, 200], [150, 0, 200], [-150, 0, 200]], '#331a3e', 1);
+
+  /* ---------- 城堡本体：暗紫罗兰石材 + 暖金勾边 + 橙红窗火 ---------- */
+  const ST = [96, 74, 116];                       // 石材（亮面 ≈ #60536f，暗面更沉）
+  const ST2 = [78, 60, 98];
+  const ROOF = [140, 62, 62];                     // 屋顶（暗红）
+  // 基座 / 二层 / 三层退台主楼
+  box3(-30, 30, 0, 15, CZ_F, CZ_B, ST, lit);
+  crenel(-30, 30, 15, CZ_F, CZ_F + 1.4, ST2, lit * 0.95, 13);
+  box3(-23, 23, 15, 27, CZ_F + 2, CZ_B, ST, lit * 0.97);
+  crenel(-23, 23, 27, CZ_F + 2, CZ_F + 3.2, ST2, lit * 0.95, 10);
+  box3(-15, 15, 27, 36, CZ_F + 4, CZ_B, ST, lit * 1.02);
+  crenel(-15, 15, 36, CZ_F + 4, CZ_F + 5.2, ST2, lit, 7);
+  // 中央高塔 + 尖顶
+  box3(-8, 8, 36, 50, CZ_F + 8, CZ_B - 2, ST2, lit);
+  spire(0, CZ_F + 14, 8.6, 50, 62, 8, ROOF, lit);
+  // 两侧大塔（一高一矮）+ 尖顶
+  box3(-38, -26, 0, 44, CZ_F + 4, CZ_F + 16, ST, lit * 0.96);
+  crenel(-38, -26, 44, CZ_F + 4, CZ_F + 16, ST2, lit, 6);
+  spire(-32, CZ_F + 10, 6.6, 44, 55, 8, ROOF, lit);
+  box3(26, 38, 0, 50, CZ_F + 4, CZ_F + 16, ST, lit * 0.96);
+  crenel(26, 38, 50, CZ_F + 4, CZ_F + 16, ST2, lit, 6);
+  spire(32, CZ_F + 10, 6.6, 50, 61, 8, ROOF, lit);
+  // 四角小角楼 + 尖顶
+  for (const s of [[-30, 12], [30, 12], [-24, CZ_B - 6], [24, CZ_B - 6]]) {
+    box3(s[0] - 4, s[0] + 4, 0, 34, s[1] - 4, s[1] + 4, ST2, lit * 0.94);
+    spire(s[0], s[1], 4.4, 34, 43, 6, ROOF, lit);
+  }
+  // 扶壁 / 桥墩
+  for (let i = 0; i < 3; i++) {
+    box3(-24 + i * 24 - 2, -24 + i * 24 + 2, 0, 20, CZ_F - 6, CZ_F, ST2, lit * 0.9);
+  }
+  // 城齿之间的暖金勾边（让石材有亮线）
+  for (const y of [15, 27, 36]) {
+    const hx = y === 15 ? 30 : y === 27 ? 23 : 15;
+    seg3([-hx, y, CZ_F], [hx, y, CZ_F], mul([236, 178, 86], 0.5 + 0.5 * lit, 0.9), 0.14, 1);
+  }
+  // 竖长窗（橙红发光）：主楼 + 双塔
+  windows(CZ_F - 0.06, 3.0, 12.5, [-22, -14, -6, 6, 14, 22], 1.1, 'rgba(255,132,52,0.95)', 'rgba(255,150,60,A)', 0.40);
+  windows(CZ_F - 0.06, 18.0, 25.5, [-18, -9, 0, 9, 18], 1.0, 'rgba(255,142,60,0.92)', 'rgba(255,150,60,A)', 0.34);
+  windows(CZ_F + 3.94, 30.0, 34.6, [-10, -3, 4, 11], 0.8, 'rgba(255,158,72,0.92)', 'rgba(255,150,60,A)', 0.30);
+  windows(CZ_F + 3.94, 6.0, 16.0, [-34, -28], 1.0, 'rgba(255,132,52,0.95)', 'rgba(255,150,60,A)', 0.34);
+  windows(CZ_F + 13.94, 8.0, 18.0, [-34, -28], 1.0, 'rgba(255,132,52,0.95)', 'rgba(255,150,60,A)', 0.34);
+  windows(CZ_F + 3.94, 8.0, 20.0, [28, 34], 1.0, 'rgba(255,132,52,0.95)', 'rgba(255,150,60,A)', 0.34);
+  windows(CZ_F + 13.94, 8.0, 22.0, [28, 34], 1.0, 'rgba(255,132,52,0.95)', 'rgba(255,150,60,A)', 0.34);
+  // 塔尖上的尖角旗
+  for (const t of [[-32, 55.6], [32, 61.6], [0, 62.6]]) {
+    face([[t[0], t[1], CZ_F + 10], [t[0], t[1], CZ_F + 13], [t[0], t[1] + 2.0, CZ_F + 10]], 'rgba(206,52,44,0.95)', 1);
+  }
+  // 悬挂的旗帜（红 / 金）
+  for (const b of [[-26, 12], [26, 12], [-12, 20], [12, 20]]) {
+    const bx = b[0], by = b[1];
+    face([[bx - 1.8, by, CZ_F - 0.08], [bx + 1.8, by, CZ_F - 0.08], [bx + 1.0, by - 8.5, CZ_F - 0.08], [bx - 1.0, by - 8.5, CZ_F - 0.08]],
+      'rgba(178,38,34,0.96)', 1);
+    face([[bx - 1.8, by, CZ_F - 0.10], [bx + 1.8, by, CZ_F - 0.10], [bx + 1.8, by - 0.8, CZ_F - 0.10], [bx - 1.8, by - 0.8, CZ_F - 0.10]],
+      'rgba(232,176,80,0.95)', 1);
+  }
+
+  /* ---------- 大门 / 桥 / 岩浆护城河 ---------- */
+  const GX = 0;
+  // 拱门（橙红火光从门缝里透出来）
+  face([[GX - 7, 0, CZ_F - 0.10], [GX + 7, 0, CZ_F - 0.10], [GX + 7, 9.5, CZ_F - 0.10], [GX - 7, 9.5, CZ_F - 0.10]],
+    'rgba(226,58,30,0.92)', 1);
+  face([[GX - 4.4, 0, CZ_F - 0.14], [GX + 4.4, 0, CZ_F - 0.14], [GX + 4.4, 12.0, CZ_F - 0.14], [GX - 4.4, 12.0, CZ_F - 0.14]],
+    'rgba(255,206,150,0.95)', 1);
+  const gp = proj(GX, 5.4, CZ_F - 0.2);
+  if (gp) glowAt(gp.x, gp.y, gp.s * 5.4, gp.s * 6.2, glow('rgba(255,104,44,A)'), 0.66, 'lighter');
+  // 门栅（竖栅栏剪影）
+  for (let i = -3; i <= 3; i++) seg3([GX + i * 1.5, 0, CZ_F - 0.22], [GX + i * 1.5, 10.6, CZ_F - 0.22], 'rgba(24,16,26,0.9)', 0.16, 1);
+  // 门两侧火把
+  for (const tx of [GX - 9.5, GX + 9.5]) {
+    seg3([tx, 0, CZ_F - 0.3], [tx, 6.2, CZ_F - 0.3], 'rgba(52,34,52,1)', 0.24, 1);
+    const tp = proj(tx, 6.5, CZ_F - 0.3);
+    if (tp) { fxFlame(tp.x, tp.y, tp.s * 0.22, tp.s * 0.62, tx * 3.1, 1.0, 1.0); fxEmbers(tp.x, tp.y, tp.s * 0.5, tp.s * 1.4, 6, tx, 0.7); }
+  }
+  // 桥（从近处通向城门）
+  box3(-6, 6, -0.6, 1.6, 18, CZ_F + 0.5, [72, 56, 84], lit * 0.95);
+  crenel(-6, 6, 1.6, 18, 20, [58, 44, 68], lit * 0.9, 8);
+  crenel(-6, 6, 1.6, 26, 28, [58, 44, 68], lit * 0.9, 8);
+  for (const p of [[-6, 18], [6, 18], [-6, 30], [6, 30]]) {
+    seg3([p[0], 0, p[1]], [p[0], 3.4, p[1]], 'rgba(58,42,68,1)', 0.26, 1);
+    const tp = proj(p[0], 3.7, p[1]);
+    if (tp) fxFlame(tp.x, tp.y, tp.s * 0.20, tp.s * 0.55, p[1] * 2.3, 1.0, 1.0);
+  }
+  // 岩浆护城河
+  face([[-46, 0.02, 40], [-6.5, 0.02, 40], [-6.5, 0.02, 47], [-46, 0.02, 47]], 'rgba(255,110,36,0.85)', 1);
+  face([[6.5, 0.02, 40], [46, 0.02, 40], [46, 0.02, 47], [6.5, 0.02, 47]], 'rgba(255,110,36,0.85)', 1);
+  for (let i = 0; i < 10; i++) {
+    const p = proj(-40 + i * 8.6, 0.4, 43.5);
+    if (p) band(p.x, p.y, p.s * 3.0, p.s * 1.0, 'rgba(255,140,50,A)', 0.34, 'lighter');
+    const p2 = proj(8 + i * 8.6, 0.4, 43.5);
+    if (p2) band(p2.x, p2.y, p2.s * 3.0, p2.s * 1.0, 'rgba(255,140,50,A)', 0.34, 'lighter');
+  }
+  // 地面 + 岩浆裂纹 + 枯树
+  face([[-80, 0, -30], [80, 0, -30], [80, 0, 110], [-80, 0, 110]], '#463152', 1);
+  face([[-80, 0.004, -30], [80, 0.004, -30], [80, 0.004, 110], [-80, 0.004, 110]], 'rgba(186,118,86,0.20)', 1);
+  // 城门在湿地上的暖光倒影
+  for (let i = 0; i < 8; i++) {
+    const p = proj(0, 0.05, 6 + i * 6);
+    if (p) band(p.x, p.y, p.s * 4.4, p.s * 0.85, 'rgba(255,152,72,A)', 0.24, 'lighter');
+  }
+  // 地平线暖雾（把远处地面提亮，画面不会下半截发闷）
+  band(W * 0.5, H * 0.60, W * 1.25, H * 0.11, 'rgba(255,168,92,A)', 0.30, 'lighter');
+  for (const pts of LAVA) {
+    if (pts[0][2] > 40) continue;
+    fxLavaCrack(pts.map(p => [p[0] * 3.0, p[1], p[2] * 2.4]), 0.40 * lavaPulse(f, pts[0][0]), 'rgba(255,96,32,A)', 0.17);
+  }
+  for (let i = 0; i < 18; i++) {                     // 近处碎石（暗紫，压住下缘）
+    const rx = -46 + srnd(i * 3.7) * 92, rz = -6 + srnd(i * 5.1) * 34;
+    const rw = 0.8 + srnd(i * 7.3) * 2.4;
+    box3(rx - rw, rx + rw, 0, 0.4 + srnd(i * 2.9) * 1.1, rz - rw * 0.6, rz + rw * 0.6, [58, 42, 68], lit * 0.9);
+  }
+  for (let i = 0; i < 7; i++) {                       // 枯树剪影
+    const tx = -34 + srnd(i * 5.1) * 68, tz = 6 + srnd(i * 2.7) * 28;
+    const h = 6 + srnd(i * 7.3) * 6;
+    seg3([tx, 0, tz], [tx + (srnd(i * 3.3) - 0.5) * 2.4, h, tz + (srnd(i * 6.1) - 0.5) * 2], '#2a1c34', 0.34, 1);
+    for (let k = 0; k < 4; k++) {
+      const u = 0.5 + k * 0.14;
+      seg3([tx, h * u, tz], [tx + (srnd(i * 4.1 + k) - 0.5) * 5.2, h * (u + 0.24), tz + (srnd(i * 8.3 + k) - 0.5) * 3.2], '#2a1c34', 0.20, 1);
+    }
+  }
+  // 四勇士站在桥头，小如尘埃
+  for (let i = 0; i < 4; i++) {
+    silhouette(GX - 2.1 + i * 1.4, 1.6, 22.0, 1.80, POSE.standBack(0), {
+      fill: '#160f22', rim: 'rgba(255,168,84,A)', rimA: 0.85, rimDX: -0.026,
+    });
+  }
+  // 蝙蝠 / 乌鸦
+  fxCrows(W * 0.42, H * 0.26, 470, 9, 3.1, 0.55);
+  fxCrows(W * 0.70, H * 0.34, 300, 5, 8.4, 0.45);
+  // 雷电（两记，短促）
+  const bolts = [[258, 0.9, 0.40], [276, 1.0, 0.46]];
+  for (let i = 0; i < bolts.length; i++) {
+    const tf = bolts[i][0], wdt = bolts[i][1];
+    const d = Math.abs(f - tf) / wdt;
+    if (d > 2.2) continue;
+    const a = Math.max(0, 1 - d) * (d < 0.55 ? 1 : 0.32);
+    if (a <= 0.02) continue;
+    fxBolt(lerp(260, 1660, srnd(i * 3.7)), -40, lerp(700, 1300, srnd(i * 5.1)), H * 0.38, i * 13.7, a, 'rgba(226,226,255,0.95)');
+    screenFlash('rgba(200,196,255,1)', 0.10 * a, 'lighter');
+  }
+  // 整体暖雾（把画面压成「黄昏魔界」而不是夜景）
+  band(W * 0.5, H * 0.62, W * 1.1, H * 0.52, 'rgba(255,140,70,A)', 0.14, 'lighter');
+}
+
+/* ================================ 场内（⑥⑦⑨ 共用） ================================ */
+/* 装饰语汇：拱肋 + 后墙一排高窗（发光）+ 悬挂旗帜 + 柱基火盆 + 金线，
+   让「城堡内部」不只是黑房间；亮度按 mood 调，不再压到看不清。 */
+function archRib(x0, x1, y, z, rise, col, w) {
+  const N = 8;
+  for (let i = 0; i < N; i++) {
+    const u0 = i / N, u1 = (i + 1) / N;
+    const ya = y + Math.sin(u0 * Math.PI) * rise, yb = y + Math.sin(u1 * Math.PI) * rise;
+    seg3([lerp(x0, x1, u0), ya, z], [lerp(x0, x1, u1), yb, z], col, w, 1);
+  }
+}
+function wallBanner(x, z, y0, y1, col, trim) {
+  face([[x, y1, z - 1.5], [x, y1, z + 1.5], [x, y0, z + 1.1], [x, y0, z - 1.1]], col, 1);
+  face([[x, y1, z - 1.5], [x, y1, z + 1.5], [x, y1 - 0.9, z + 1.45], [x, y1 - 0.9, z - 1.45]], trim, 1);
+}
+function drawHall(f, mood) {
+  // 顶（拱顶）/ 后墙 / 侧墙 / 地
+  face([[XL, 22, ZF], [XL, 22, ZB], [-XL, 22, ZB], [-XL, 22, ZF]], mood.ceil, 1);
+  face([[-XL, 0, ZB], [XL, 0, ZB], [XL, 22, ZB], [-XL, 22, ZB]], mood.wall, 1);
+  face([[XL, 0, ZF], [XL, 0, ZB], [XL, 22, ZB], [XL, 22, ZF]], mood.wall, 1);
+  face([[-XL, 0, ZF], [-XL, 0, ZB], [-XL, 22, ZB], [-XL, 22, ZF]], mood.wall, 1);
+  face([[-XL, 0, ZF], [XL, 0, ZF], [XL, 0, ZB], [-XL, 0, ZB]], mood.floor, 1);
+  face([[-XL, 0.004, ZF], [XL, 0.004, ZF], [XL, 0.004, ZB], [-XL, 0.004, ZB]], 'rgba(190,150,120,0.14)', 1);
+  // 地砖分缝、中央磨损带与悬链，补出大厅的尺度和使用痕迹。
+  for (let z = -4; z <= 42; z += 4.0) seg3([-15, 0.012, z], [15, 0.012, z], 'rgba(168,136,118,0.20)', 0.035, 1);
+  for (const x of [-11.5, -5.8, 0, 5.8, 11.5]) seg3([x, 0.013, ZF], [x, 0.013, ZB], 'rgba(158,126,108,0.15)', 0.030, 1);
+  face([[-2.4,0.018,ZF], [2.4,0.018,ZF], [1.5,0.018,ZB], [-1.5,0.018,ZB]], 'rgba(120,72,54,0.16)', 1);
+  for (const c of [[-5.5,12,1.4],[4.8,21,-1.2],[-2.0,34,0.8]]) {
+    seg3([c[0], 21.8, c[1]], [c[0] + c[2], 8.4, c[1] + 0.7], 'rgba(72,62,66,0.82)', 0.075, 1);
+    seg3([c[0] + 0.22, 21.8, c[1]], [c[0] + c[2] + 0.22, 8.4, c[1] + 0.7], 'rgba(118,96,76,0.34)', 0.018, 1);
+  }
+  // 后墙一排高窗（发光）—— 城堡内部的「光源」
+  for (let i = 0; i < 7; i++) {
+    const wx = -12 + i * 4, yb = 7.0, yt = 17.0;
+    face([[wx - 1.0, yb, ZB - 0.06], [wx + 1.0, yb, ZB - 0.06], [wx + 1.0, yt, ZB - 0.06], [wx - 1.0, yt, ZB - 0.06]], mood.win, 1);
+    face([[wx - 1.0, yt, ZB - 0.04], [wx + 1.0, yt, ZB - 0.04], [wx, yt + 1.3, ZB - 0.04]], mood.win, 0.9);
+    const p = proj(wx, 12, ZB - 0.1);
+    if (p) {
+      band(p.x, p.y, p.s * 2.6, p.s * 7.0, mood.winGlow, 0.26, 'lighter');
+      band(p.x, p.y - p.s * 6, p.s * 5.0, p.s * 9.0, mood.winGlow, 0.14, 'lighter');
+    }
+  }
+  // 侧墙旗 + 金线
+  for (const b of [[-13.5, 10], [-13.5, 24], [13.5, 10], [13.5, 24]]) {
+    wallBanner(b[0], b[1], 5.5, 15.5, 'rgb(154,32,30)', 'rgb(226,172,78)');
+  }
+  // 拱肋（柱列之上跨过中殿）
+  for (const z of COLZ) archRib(-7.5, 7.5, 17.0, z, 3.6, mood.stone, 0.42);
+  // 柱
+  const list = COLZ.slice().sort((a, b) => b - a);
+  for (const z of list) {
+    prismCol(-7.5, z, 1.5, 1.25, 0, 17, 8, mood.base, 0.9, -0.5);
+    prismCol(7.5, z, 1.5, 1.25, 0, 17, 8, mood.base, 0.9, -0.5);
+    prismCol(-7.5, z, 1.9, 1.6, 0, 0.7, 8, mood.base, 1.05, -0.5);
+    prismCol(7.5, z, 1.9, 1.6, 0, 0.7, 8, mood.base, 1.05, -0.5);
+    prismCol(-7.5, z, 1.32, 1.32, 15.6, 16.0, 8, mood.trim, 1.0, -0.5);
+    prismCol(7.5, z, 1.32, 1.32, 15.6, 16.0, 8, mood.trim, 1.0, -0.5);
+  }
+  // 柱基火盆（照亮柱脚与地面）
+  for (const bz of [10, 24]) {
+    for (const bx of [-9.6, 9.6]) {
+      prismCol(bx, bz, 0.85, 0.6, 0.75, 1.5, 8, [92, 72, 62], 1.0, -0.5);
+      seg3([bx, 0, bz], [bx, 0.75, bz], 'rgb(64,48,44)', 0.26, 1);
+      const p = proj(bx, 1.55, bz);
+      if (p) {
+        fxFlame(p.x, p.y, p.s * 0.42, p.s * 1.5, bz * 3.3 + bx, 1.0, 1.0);
+        fxEmbers(p.x, p.y, p.s * 0.9, p.s * 2.4, 8, bz * 2.1 + bx, 0.7);
+        band(p.x, p.y, p.s * 2.6, p.s * 2.6, 'rgba(255,140,60,A)', 0.20, 'lighter');
+      }
+    }
+  }
+  // 地面金线
+  seg3([-13, 0.02, ZF], [-13, 0.02, ZB], mood.trimLine, 0.10, 1);
+  seg3([13, 0.02, ZF], [13, 0.02, ZB], mood.trimLine, 0.10, 1);
+  // 岩浆裂纹
+  for (let i = 0; i < LAVA.length; i++) {
+    fxLavaCrack(LAVA[i], 0.62 * mood.lava * lavaPulse(f, LAVA[i][0][0] * 0.3 + i), 'rgba(255,86,28,A)', 0.16);
+  }
+  // 场内「城门」拱（⑧ 的城门口）
+  const gx = GATE.x, gz = GATE.z, gh = GATE.h, ghf = GATE.half;
+  face([[gx, 0, gz - ghf], [gx, gh, gz - ghf], [gx, gh, gz + ghf], [gx, 0, gz + ghf]], mood.gateCol, 1);
+  face([[gx + 0.03, 0, gz - ghf * 0.74], [gx + 0.03, gh * 0.9, gz - ghf * 0.74],
+        [gx + 0.03, gh * 0.9, gz + ghf * 0.74], [gx + 0.03, 0, gz + ghf * 0.74]], mood.gateInner, 1);
+  face([[gx, gh, gz - ghf], [gx, gh, gz + ghf], [gx, gh - 1.6, gz + ghf], [gx, gh - 1.6, gz - ghf]], mood.stone, 1);
+  const gpr = proj(gx + 1.0, 2.2, gz);
+  if (gpr) band(gpr.x, gpr.y, gpr.s * 1.8, gpr.s * 2.4, 'rgba(220,232,252,A)', 0.26, 'lighter');
+  // 柱脚碎屑、灰烬与低位薄烟，作为前景遮挡层。
+  for (let i = 0; i < 18; i++) {
+    const bx = (i % 2 ? -1 : 1) * (6.0 + srnd(i * 4.3) * 7.0);
+    const bz = 4 + srnd(i * 7.1) * 34;
+    const rr = 0.12 + srnd(i * 2.1) * 0.32;
+    box3(bx - rr, bx + rr, 0, rr * 0.65, bz - rr, bz + rr, mood.base, 0.55 + srnd(i) * 0.3);
+  }
+  fxEmbers(W * 0.5, H * 0.78, W * 0.95, H * 0.42, 28, 17.4, 0.24 + 0.18 * mood.lava);
+  band(W * 0.5, H * 0.60, W * 1.0, H * 0.5, mood.amb, 0.20, 'lighter');
+}
+
+/* ---------------- 恶龙（橙色 2D 剪影，含崩解） ---------------- */
+function dragonOpts(f, extra) {
+  const t = f / 70;
+  return Object.assign({
+    t, style: DKSTYLE,
+    fill: '#e8732c', fill2: '#c2561d', fill3: '#f59a4e', out: 'rgba(56,16,4,0.95)',
+    rim: 'rgba(255,196,120,A)', rimDX: 0.020, rimA: 0.85,
+  }, extra || {});
+}
+function dragonDraw(f, extra, alpha) {
+  const o = dragonOpts(f, extra);
+  return billboard(DRG.x, 0, DRG.z, DRG.hw, () => drawDragon(o), alpha);
+}
+// 崩解：横向切片 → 每片错位漂移 + 黑烟 + 光点
+function dragonDissolve(f, k, extra) {
+  const BANDS = 18, o = dragonOpts(f, Object.assign({}, extra, { t: 0.5 }));
+  for (let i = 0; i < BANDS; i++) {
+    S.save();
+    S.beginPath(); S.rect(0, i * H / BANDS - 1, W, H / BANDS + 2); S.clip();
+    const drift = (srnd(i * 3.1) - 0.5) * 90 * k;
+    const rise = -(20 + srnd(i * 7.7) * 90) * k;
+    billboard(DRG.x + drift / 90, rise / 90 * 0.6, DRG.z, DRG.hw, () => drawDragon(o), 1 - k * 0.95);
+    S.restore();
+  }
+  S.save(); S.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 40; i++) {                      // 上扬的光点
+    const a = srnd(i * 2.3) * TAU, r = 1.5 + srnd(i * 5.1) * 3.4;
+    const x = DRG.x + Math.cos(a) * r, y = 1.0 + srnd(i * 7.3) * 6.0 + k * 5.5;
+    const p = proj(x, y, DRG.z + Math.sin(a) * r * 0.4);
+    if (!p) continue;
+    const al = k * (0.35 + 0.5 * srnd(i * 3.7));
+    S.globalAlpha = al;
+    glowAt(p.x, p.y, 16, 16, glow('rgba(255,232,180,A)'), al * 0.9, 'lighter');
+    S.fillStyle = 'rgba(255,246,220,1)'; S.fillRect(p.x - 1.6, p.y - 1.6, 3.2, 3.2);
+  }
+  S.restore();
+  // 黑烟
+  S.save();
+  for (let i = 0; i < 16; i++) {
+    const bx = DRG.x - 1.4 + srnd(i * 4.1) * 5.6;
+    const pr = proj(bx, 1.2 + srnd(i * 6.3) * 3.4 + k * 5.0, DRG.z + (srnd(i * 8.1) - 0.5) * 2.0);
+    if (!pr) continue;
+    band(pr.x, pr.y, pr.s * 1.6 * (0.6 + k), pr.s * 1.1 * (0.6 + k), 'rgba(10,9,14,A)', 0.55 * k, 'source-over');
+  }
+  S.restore();
+}
+
+/* ---------------- 火柱 / 火墙 / 利爪 / 剑 ---------------- */
+// 火柱：三层多边形火舌（外橙 / 中黄 / 内白），带阶梯抖动的锯齿边
+function fireJet(ax, ay, bx, by, k, seed) {
+  if (k <= 0.01) return;
+  const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+  const nx = -uy, ny = ux;
+  const len = L * Math.min(1, k * 1.15);
+  const t = Math.floor(DK.frame / 2);
+  S.save(); S.globalCompositeOperation = 'lighter';
+  const layers = [
+    { f: 1.00, wid: 0.30, col: 'rgba(255,86,18,0.72)' },
+    { f: 0.62, wid: 0.34, col: 'rgba(255,168,48,0.82)' },
+    { f: 0.28, wid: 0.38, col: 'rgba(255,248,214,0.95)' },
+  ];
+  for (let li = 0; li < layers.length; li++) {
+    const LY = layers[li], N = 16;
+    S.beginPath(); S.moveTo(ax, ay);
+    for (let i = 1; i <= N; i++) {
+      const u = i / N;
+      const w = LY.f * (18 + 190 * u);
+      const j = (srnd(seed + t * 1.7 + li * 5.3 + i * 2.3) - 0.5) * w * LY.wid;
+      S.lineTo(ax + ux * len * u + nx * (w + j), ay + uy * len * u + ny * (w + j));
+    }
+    for (let i = N; i >= 1; i--) {
+      const u = i / N;
+      const w = LY.f * (18 + 190 * u);
+      const j = (srnd(seed + t * 1.7 + li * 5.3 + i * 3.1) - 0.5) * w * LY.wid;
+      S.lineTo(ax + ux * len * u - nx * (w + j), ay + uy * len * u - ny * (w + j));
+    }
+    S.closePath(); S.fillStyle = LY.col; S.fill();
+  }
+  glowAt(ax + ux * len * 0.10, ay + uy * len * 0.10, 150, 110, glow('rgba(255,236,190,A)'), 0.5, 'lighter');
+  S.restore();
+}
+function fireWall(cx, cy, w, h, k, seed) {
+  if (k <= 0.01) return;
+  const t = Math.floor(DK.frame / 2);
+  S.save(); S.globalCompositeOperation = 'lighter';
+  const layers = [
+    { f: 1.00, col: 'rgba(255,84,18,0.70)' },
+    { f: 0.66, col: 'rgba(255,164,46,0.80)' },
+    { f: 0.34, col: 'rgba(255,246,206,0.92)' },
+  ];
+  for (let li = 0; li < layers.length; li++) {
+    const LY = layers[li], N = 22;
+    S.beginPath(); S.moveTo(cx - w / 2, cy + h * 0.5);
+    for (let i = 0; i <= N; i++) {
+      const u = i / N;
+      const hh = LY.f * h * (0.30 + 0.70 * (0.5 + 0.5 * Math.sin(u * 9.0 + seed)));
+      const j = (srnd(seed + t * 2.1 + li * 7.7 + i * 3.3) - 0.5) * hh * 0.5;
+      S.lineTo(cx - w / 2 + w * u, cy + h * 0.5 - hh - j);
+    }
+    S.lineTo(cx + w / 2, cy + h * 0.5); S.closePath();
+    S.fillStyle = LY.col; S.fill();
+  }
+  S.restore();
+}
+function clawShadow(k, cx, cy) {
+  if (k <= 0.004) return;
+  const sc = lerp(0.42, 2.5, k), ty = lerp(-760, 180, k);
+  S.save();
+  S.globalAlpha = clamp(k * 1.35, 0, 1);
+  S.translate(cx, cy + ty);
+  S.scale(sc, sc * lerp(0.5, 1.05, k));
+  S.fillStyle = 'rgba(5,4,7,0.96)';
+  S.beginPath(); S.ellipse(0, 0, 300, 168, 0, 0, TAU); S.fill();
+  for (let i = 0; i < 5; i++) {
+    const ang = -1.30 + i * 0.50;
+    const L = 300 + (i === 2 ? 130 : 0);
+    const dx2 = Math.cos(ang) * 120, dy2 = 176 + Math.abs(Math.sin(ang)) * 26;
+    S.beginPath();
+    S.moveTo(dx2 - 34, dy2 - 34);
+    S.quadraticCurveTo(dx2 + Math.cos(ang) * L * 0.5, dy2 + L * 0.62, dx2 + Math.cos(ang) * L, dy2 + L * 0.96);
+    S.quadraticCurveTo(dx2 + Math.cos(ang) * L * 0.5 + 34, dy2 + L * 0.60, dx2 + 34, dy2 - 34);
+    S.closePath(); S.fill();
+  }
+  S.restore();
+}
+function swordInGround(x, z, hw, tilt) {
+  billboard(x, 0, z, hw, () => {
+    S.save(); if (tilt) S.rotate(tilt);
+    S.fillStyle = '#151520'; S.strokeStyle = 'rgba(4,4,8,0.9)'; S.lineWidth = 0.007;
+    S.beginPath(); S.moveTo(-0.013, -0.92); S.lineTo(0.013, -0.92); S.lineTo(0.010, 0.0); S.lineTo(-0.010, 0.0);
+    S.closePath(); S.fill(); S.stroke();
+    S.beginPath(); S.moveTo(-0.090, -1.02); S.lineTo(0.082, -1.02); S.lineTo(0.064, -1.10); S.lineTo(-0.072, -1.10);
+    S.closePath(); S.fill(); S.stroke();
+    S.fillRect(-0.016, -1.30, 0.032, 0.20);
+    S.restore();
+  });
+}
+function actorAt(f, x, y, z, hw, pose, o) { return silhouette(x, y, z, hw, pose, o); }
+
+/* ---------------- 按帧定机位 ---------------- */
+function setCam(f) {
+  if (f < T_EXT[1]) {                                        // ⑤ 外景：缓慢推轨（广角看全城堡）
+    const u = smoothstep(T_EXT[0], T_EXT[1], f);
+    CAM.x = 0; CAM.y = lerp(6.0, 4.2, u); CAM.z = lerp(-24, -9, u);
+    CAM.pitch = lerp(-0.145, -0.100, u); CAM.yaw = 0; CAM.focal = 620;
+    return;
+  }
+  if (f < T_W2[0]) {                                         // ⑥ 举剑→龙炎
+    const u = smoothstep(T_W1[0], T_W1[1], f);
+    CAM.x = lerp(-1.2, -0.2, u); CAM.y = lerp(2.9, 2.5, u); CAM.z = lerp(-2.2, -1.0, u);
+    CAM.pitch = 0.02; CAM.yaw = 0; CAM.focal = 1000;
+    return;
+  }
+  if (f < T_W3[0]) {                                         // ⑦ 翻滚→利爪
+    const u = smoothstep(T_W2[0], T_W2[1], f);
+    CAM.x = lerp(0.4, 1.4, u); CAM.y = lerp(2.7, 4.2, smoothstep(430, 470, f)); CAM.z = -1.2;
+    CAM.pitch = lerp(0.03, 0.16, smoothstep(430, 470, f)); CAM.yaw = 0; CAM.focal = 1000;
+    return;
+  }
+  if (f < T_W4[0]) {                                         // ⑧ 城门口
+    CAM.x = -1.4; CAM.y = 2.5; CAM.z = 2.6;
+    CAM.pitch = 0.02; CAM.yaw = -0.20; CAM.focal = 1000;
+    return;
+  }
+  // ⑨ 疾冲 → 绕到龙背后（镜头跟着往里、往上抬）
+  const u = smoothstep(620, 652, f);
+  CAM.x = lerp(-1.0, 1.9, u); CAM.y = lerp(2.9, 3.5, u); CAM.z = lerp(-1.4, 0.2, u);
+  CAM.pitch = lerp(0.02, 0.06, u); CAM.yaw = 0; CAM.focal = 1000;
+}
+
+/* ---------------- 一帧 ---------------- */
+function draw(f) {
+  S = DK.ctx;
+  S.setTransform(1, 0, 0, 1, 0, 0);
+
+  if (f < T_EXT[1]) {                                        // ===== ⑤ 城堡远景 =====
+    drawExterior(f);
+    checkerOverlay(0.040);
+    chapterLabel('⑤ 城堡 · 远景', subA(f, 250, 260, 284, 293));
+    dialog('抵达城堡。', 256, { alpha: 1 - smoothstep(282, 292, f), label: 'CASTLE' });
+    return;
+  }
+
+  const mood = f < T_W3[0]
+    ? { base: [82, 70, 78], floor: '#332630', wall: '#241b24', ceil: '#2a1f28', stone: 'rgb(96,80,88)',
+        trim: [208, 158, 68], trimLine: 'rgba(222,176,86,0.55)',
+        win: 'rgba(255,150,64,0.95)', winGlow: 'rgba(255,150,60,A)',
+        lava: 1.0, gateCol: 'rgba(150,54,38,0.85)', gateInner: 'rgba(244,126,68,0.62)', amb: 'rgba(160,44,26,A)' }
+    : f < T_W4[0]
+      ? { base: [76, 86, 106], floor: '#242c3a', wall: '#181e2a', ceil: '#1e2430', stone: 'rgb(86,98,118)',
+          trim: [198, 172, 116], trimLine: 'rgba(206,190,150,0.45)',
+          win: 'rgba(194,222,252,0.95)', winGlow: 'rgba(150,196,246,A)',
+          lava: 0.5, gateCol: 'rgba(104,132,164,0.85)', gateInner: 'rgba(214,232,250,0.68)', amb: 'rgba(84,128,172,A)' }
+      : { base: [86, 74, 68], floor: '#342622', wall: '#241a18', ceil: '#2a1e1a', stone: 'rgb(102,84,76)',
+          trim: [220, 168, 74], trimLine: 'rgba(232,186,96,0.55)',
+          win: 'rgba(255,214,140,0.95)', winGlow: 'rgba(255,196,110,A)',
+          lava: 1.0, gateCol: 'rgba(156,124,62,0.85)', gateInner: 'rgba(255,228,168,0.68)', amb: 'rgba(200,136,48,A)' };
+  drawHall(f, mood);
+
+  if (f < T_W2[0]) {
+    /* ===================== ⑥ 第一个勇士 · 龙炎 ===================== */
+    const glintIn = smoothstep(300, 318, f);                 // 剑身高光扫过
+    const run = smoothstep(320, 344, f);
+    const fire = smoothstep(344, 352, f) * (1 - smoothstep(360, 366, f));
+    const white = subA(f, 360, 365, 372, 379);
+    const wx = lerp(-6.4, -3.6, run);
+    const gone = smoothstep(362, 374, f);
+    dragonDraw(f, { rim: 'rgba(255,236,190,A)', eye: 0.35 + 0.5 * smoothstep(330, 350, f), mouthGlow: 0.55 * smoothstep(338, 350, f), spikeGold: GOLD });
+    if (gone < 0.999) {
+      const pose = run > 0.02 ? POSE.runSide((f - 320) / 14) : POSE.sword(smoothstep(300, 320, f));
+      actorAt(f, wx, 0, 9.6, 1.85, pose, {
+        fill: '#0c0c13', rim: 'rgba(255,224,150,A)', rimA: 0.75, rimDX: -0.024, alpha: 1 - gone,
+        variant: 0, detail: '#5b596d', metal: '#d4ad62',
+      });
+      if (run < 0.02) {                                      // 剑身反光：从剑格扫到剑尖
+        const gy = lerp(1.0, 2.55, glintIn);
+        const hp = proj(wx + 0.41, gy, 9.6);
+        if (hp) band(hp.x, hp.y, hp.s * 0.72, hp.s * 0.20, 'rgba(255,252,230,A)', 0.9 * Math.sin(Math.min(1, glintIn + 0.18) * Math.PI), 'lighter');
+      }
+    }
+    // 龙炎：从龙口喷向左侧（拉长成一条火柱，勇士正站在火柱里）
+    const mp = proj(drgPt(MOUTH[0], MOUTH[1])[0], drgPt(MOUTH[0], MOUTH[1])[1], DRG.z);
+    if (mp && fire > 0.01) fireJet(mp.x, mp.y, mp.x - 820, mp.y + 90, fire, 3.7);
+    if (fire > 0.4) screenFlash('rgba(255,132,40,1)', 0.22 * fire, 'lighter');
+    if (white > 0.01) {                                      // 白光吞没一切
+      screenFlash('rgba(255,150,60,1)', 0.5 * white, 'lighter');
+      screenFlash('rgba(255,255,255,1)', 0.95 * smoothstep(362, 367, f) * (1 - smoothstep(370, 379, f)));
+    }
+    if (gone > 0.2) swordInGround(-0.5, 11.2, 1.45, 0.10);   // 剑落地、人消失
+    chapterLabel('⑥ 勇士一 · 龙炎', subA(f, 296, 306, 372, 383));
+    dialog('他以为剑够快。', 302, { perChar: 2.2, alpha: 1 - smoothstep(336, 346, f), label: 'WARRIOR I' });
+    dialog('他不知道龙根本不给他靠近的机会。', 348, { perChar: 2.0, alpha: 1 - smoothstep(374, 382, f), label: 'WARRIOR I' });
+    return;
+  }
+
+  if (f < T_W3[0]) {
+    /* ===================== ⑦ 第二个勇士 · 利爪 ===================== */
+    const roll = smoothstep(383, 400, f) * (1 - smoothstep(402, 412, f));
+    const approach = smoothstep(408, 432, f) * (1 - smoothstep(438, 448, f));
+    const claw = smoothstep(432, 452, f);
+    const gone = smoothstep(440, 452, f);
+    const wx = roll > 0.01 ? lerp(-1.0, 2.6, smoothstep(383, 408, f))
+      : lerp(2.6, DRG.x + 0.2, approach);
+    dragonDraw(f, { rim: 'rgba(214,228,248,A)', eye: 0.3 + 0.3 * smoothstep(400, 430, f), spikeGold: GOLD });
+    // 火墙横扫（从右往左）
+    const wall = subA(f, 386, 392, 406, 414);
+    if (wall > 0.01) fireWall(lerp(W * 1.05, W * 0.15, smoothstep(386, 410, f)), H * 0.62, W * 0.5, 520, wall, 6.1);
+    if (gone < 0.999) {
+      const pose = roll > 0.01 ? POSE.rollSide(f / 22) : (approach > 0.01 ? POSE.walkSide(f / 9) : POSE.standBack());
+      actorAt(f, wx, 0, 11.0, 1.85, pose, {
+        fill: '#0e0c14', rim: 'rgba(206,220,238,A)', rimA: 0.7, rimDX: -0.022, alpha: 1 - gone,
+        rot: roll > 0.01 ? (f - 390) * 0.11 : 0, variant: 1, detail: '#5b6475', metal: '#bdc8d8',
+      });
+    }
+    if (claw > 0.01) clawShadow(claw, lerp(W * 0.62, W * 0.44, claw), H * 0.30);
+    // 爪影压下来时给他一束银灰冷光（不然黑影里看不见人）
+    if (claw > 0.02 && gone < 0.999) {
+      const bp = proj(wx, 1.0, 11.0);
+      if (bp) band(bp.x, bp.y, bp.s * 1.5, bp.s * 1.8, 'rgba(196,214,240,A)', 0.28 * claw, 'lighter');
+    }
+    // 利爪落下时全屏压黑影
+    screenFlash('rgba(4,3,6,1)', 0.72 * smoothstep(438, 452, f) * (1 - smoothstep(458, 470, f)));
+    // 456–473 只余黑影与银灰冷光
+    if (f > 452) band(W * 0.5, H * 0.56, W * 0.8, H * 0.4, 'rgba(150,170,200,A)', 0.10 * (1 - smoothstep(466, 473, f)), 'lighter');
+    chapterLabel('⑦ 勇士二 · 利爪', subA(f, 386, 396, 462, 473));
+    dialog('他躲过了火，', 390, { perChar: 2.2, alpha: 1 - smoothstep(420, 430, f), label: 'WARRIOR II' });
+    dialog('却没想过龙还有爪子。', 434, { perChar: 2.0, alpha: 1 - smoothstep(464, 472, f), label: 'WARRIOR II' });
+    return;
+  }
+
+  if (f < T_W4[0]) {
+    /* ===================== ⑧ 第三个勇士 · 对话 ===================== */
+    const pace = smoothstep(473, 480, f) * (1 - smoothstep(502, 510, f));
+    const drop = smoothstep(505, 524, f);                    // 放下武器
+    const talk = smoothstep(528, 540, f) * (1 - smoothstep(548, 556, f));
+    const gaze = smoothstep(548, 562, f);
+    const gone = smoothstep(550, 562, f);
+    const wph = (f - 473) / 13;
+    const walkT = clamp((f - 473) / 18, 0, 1);
+    dragonDraw(f, { rim: 'rgba(150,180,210,A)', rimDX: 0.018, eye: 0.25 + 0.7 * smoothstep(544, 552, f), headDip: 0.85 * gaze, spikeGold: GOLD });
+    if (gone < 0.999) {
+      const X = lerp(-5.6, -2.6, walkT) + Math.sin(wph * TAU) * 1.6 * pace;
+      const pose = talk > 0.05 ? POSE.talk(talk) : (pace > 0.05 ? POSE.pace(wph) : POSE.walkSide(wph * 0.5));
+      actorAt(f, X, 0, 12.6, 1.85, pose, {
+        fill: '#0c0e14', rim: 'rgba(168,192,216,A)', rimA: 0.7, rimDX: -0.022, alpha: 1 - gone,
+        variant: 2, detail: '#53566b', metal: '#9dadc2',
+      });
+      if (drop > 0.05 && talk <= 0.05) swordInGround(X + 1.0, 12.9, 1.4, 0.14);
+    }
+    if (drop > 0.05 && talk > 0.05) swordInGround(-4.6, 12.8, 1.4, 0.14);
+    if (gaze > 0.1) {                                        // 龙低头 → 红光一闪 → 消失
+      const ep = drgPt(EYE[0], EYE[1] - 0.30 * gaze);
+      const hp = proj(ep[0], ep[1], ep[2]);
+      if (hp) {
+        const fl = subA(f, 548, 552, 556, 562);
+        if (fl > 0) glowAt(hp.x, hp.y, hp.s * 5.0, hp.s * 3.2, glow('rgba(255,50,36,A)'), 0.85 * fl, 'lighter');
+      }
+    }
+    screenFlash('rgba(255,60,40,1)', 0.42 * subA(f, 548, 553, 556, 562), 'lighter');
+    chapterLabel('⑧ 勇士三 · 对话', subA(f, 476, 486, 552, 563));
+    dialog('他想了很久，', 480, { perChar: 2.2, alpha: 1 - smoothstep(508, 518, f), label: 'WARRIOR III' });
+    dialog('却选了最蠢的办法。', 534, { perChar: 2.0, alpha: 1 - smoothstep(554, 562, f), label: 'WARRIOR III' });
+    return;
+  }
+
+  /* ===================== ⑨ 第四个勇士 · 尖刺 ===================== */
+  const charge = smoothstep(563, 590, f);                    // 疾冲
+  const dodge = subA(f, 590, 600, 606, 614);                 // 侧身避火
+  const duck = subA(f, 608, 618, 624, 632);                  // 翻滚避爪
+  const behind = smoothstep(626, 646, f);                    // 绕到龙背后
+  const pull = smoothstep(646, 656, f);                      // 拔刺
+  const burst = smoothstep(660, 674, f);                     // 崩解
+  const wx = charge > 0.01 ? lerp(-7.0, 1.4, charge) : lerp(1.4, DRG.x + 2.2, behind);
+  dragonDraw(f, {
+    rim: 'rgba(255,214,140,A)', eye: 0.35,
+    spikeGold: GOLD, spikeHide: pull > 0.75,
+    t: burst > 0.01 ? 0.5 : f / 70,
+  }, 1 - burst);
+  if (burst > 0.01) dragonDissolve(f, burst, { rim: null, eye: 0, spikeHide: true });
+  // 火焰喷来（他侧身）
+  const mp = proj(DRG.x - 1.02 * DRG.hw, 1.06 * DRG.hw, DRG.z);
+  const wp = proj(wx, 1.1, 11.0);
+  if (mp && wp && dodge > 0.01) fireJet(mp.x, mp.y, mp.x - 900, wp.y + 160, dodge, 9.3);
+  if (dodge > 0.4) screenFlash('rgba(255,140,50,1)', 0.16 * dodge, 'lighter');
+  // 利爪落下（他翻滚）
+  if (duck > 0.01) clawShadow(duck, W * 0.55, H * 0.18);
+  if (duck > 0.02 && behind < 0.999) {
+    const dp = proj(wx, 1.0, 11.0);
+    if (dp) band(dp.x, dp.y, dp.s * 1.5, dp.s * 1.8, 'rgba(255,228,180,A)', 0.26 * duck, 'lighter');
+  }
+  if (behind < 0.999) {
+    actorAt(f, wx, 0, 11.0, 1.85, POSE.runSide((f - 563) / 12), {
+      fill: '#0b0b13', rim: 'rgba(255,236,180,A)', rimA: 0.75, rimDX: -0.024,
+      variant: 3, detail: '#5f566b', metal: '#e2bf6a',
+    });
+  }
+  if (behind > 0.35) {                                       // 爬上龙背，伸手拔刺
+    const bp0 = drgPt(BACK[0], BACK[1]);
+    const bx = bp0[0], by = bp0[1];
+    // 背后补一圈亮光，黑影才从橙龙身上站得出来
+    const bp = proj(bx, by + 0.9, DRG.z - 0.5);
+    if (bp) band(bp.x, bp.y, bp.s * 2.0, bp.s * 2.4, 'rgba(255,226,168,A)', 0.34, 'lighter');
+    actorAt(f, bx, by, DRG.z - 0.6, 1.85, POSE.reach(smoothstep(646, 656, f)), {
+      fill: '#191927', rim: 'rgba(255,244,206,A)', rimA: 1.0, rimDX: -0.030, rimDY: -0.010, mir: true,
+      variant: 3, detail: '#696075', metal: '#f0cb76',
+    });
+    // 那根刺（金色）被拔出 → 握在手里
+    const sp0 = drgPt(SPIKE[0], SPIKE[1]);
+    const sp = proj(lerp(sp0[0], bx - 0.9, pull), lerp(sp0[1] + 0.35, by + 1.1, pull), lerp(sp0[2], DRG.z - 0.7, pull));
+    if (sp) {
+      S.save();
+      S.translate(sp.x, sp.y); S.rotate(lerp(0.0, -0.72, pull));
+      const halfW = 13, len = 74 + 34 * pull;
+      S.fillStyle = 'rgba(255,214,120,1)'; S.strokeStyle = 'rgba(120,80,16,0.9)'; S.lineWidth = 2;
+      S.beginPath();
+      S.moveTo(-halfW, 0); S.lineTo(halfW, 0); S.lineTo(4, -len); S.lineTo(-4, -len);
+      S.closePath(); S.fill(); S.stroke();
+      S.restore();
+      glowAt(sp.x - 6, sp.y - 22, 70, 70, glow('rgba(255,232,168,A)'), 0.5 + 0.3 * pull, 'lighter');
+    }
+    if (pull > 0.3 && pull < 0.9 && sp) fxSparks(sp.x, sp.y, 16, 80, 11.7, 0.85, 'rgba(255,246,214,1)');
+  }
+  // 拔刺那一瞬间：全屏亮一下 + 龙体一僵
+  screenFlash('rgba(255,240,200,1)', 0.30 * subA(f, 646, 650, 654, 660), 'lighter');
+  chapterLabel('⑨ 勇士四 · 尖刺', subA(f, 566, 576, 660, 675));
+  dialog('他冲到龙背后，', 572, { perChar: 2.2, alpha: 1 - smoothstep(624, 634, f), label: 'WARRIOR IV' });
+  dialog('拔出了那根刺。', 640, { perChar: 2.2, alpha: 1 - smoothstep(668, 675, f), label: 'WARRIOR IV' });
+}
+
+DK.boot({
+  total: 788,
+  seg: [SEG_START, SEG_LEN],
+  cam: { x: 0, y: 3.0, z: -16, focal: 900, pitch: -0.10, yaw: 0 },
+  bg: '#05060a',
+  scene: draw,
+  setCam: setCam,
+  post: f => {
+    if (f < T_EXT[1]) return { scan: 0.42, grain: 0.05, chroma: 0.06, grade: -0.18, vig: 0.36, glitch: 0.02 };
+    if (f < T_W3[0]) return { scan: 0.42, grain: 0.05, chroma: 0.07, grade: 0.06, vig: 0.34, glitch: 0.018, wobble: 0.0035 };
+    if (f < T_W4[0]) return { scan: 0.42, grain: 0.05, chroma: 0.05, grade: -0.24, vig: 0.36, glitch: 0.014 };
+    return { scan: 0.44, grain: 0.052, chroma: 0.06, grade: 0.10, vig: 0.34, glitch: 0.018, wobble: 0.0035 };
+  },
+  clamp: c => { c.x = clamp(c.x, -13, 13); c.y = clamp(c.y, 0.8, 16); c.z = clamp(c.z, -20, 40); },
+  hud: () => '场内 32 × 20 × 52 · 柱 x=±7.5 · 龙 (2.4, 11.5) hw2.9 · 城门拱 x=-8 z=14',
+});
+</script>
+</body>
+</html>

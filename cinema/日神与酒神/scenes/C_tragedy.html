@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="zh">
+<head><meta charset="UTF-8"><title>日神与酒神 · ③ 悲剧 · 半圆剧场（1200–1800）</title></head>
+<body>
+<script src="../vendor/webgl3d-pipeline/webgl3d_pipeline.js"></script>
+<script src="../../共享资源/roam.js"></script>
+<script src="common.js"></script>
+<script>
+'use strict';
+/* ============================================================================
+   ③ 悲剧 · 半圆剧场（源帧 1200–1800 · 20s）
+   狄俄尼索斯剧场 · 破晓：九级半圆看台 + 舞台建筑（skene，三扇门 + 六柱 + 山花）
+   + 歌队席（十四名持火把的暗色人影） + 台上那一个戴面具的人 + 祭坛 / 三脚鼎 / 挂面具的杆。
+   悲剧 = 日神的梦（台上那个清清楚楚的人）+ 酒神的醉（台下黑压压唱歌的一群人）
+   → 两股光在舞台上合流，然后压暗，只留点题卡。
+   配色纪律：破晓只用 **深蓝 → 尘紫 → 琥珀金**（不用玫瑰粉），
+   把**酒红整族留给点题卡的标题**。
+   ========================================================================== */
+const { srnd, TAU, clamp, lerp, smoothstep, subA, seq } = DION;
+function plane1(app, GL3D) { return app.createMesh(GL3D.Geometry.plane(1, 1)); }
+function triPrism(w, h, d) {
+  const x = w / 2, z = d / 2;
+  const positions = [
+    -x, 0, z, x, 0, z, 0, h, z,
+    x, 0, -z, -x, 0, -z, 0, h, -z,
+    -x, 0, -z, -x, 0, z, 0, h, z, -x, 0, -z, 0, h, z, 0, h, -z,
+    x, 0, z, x, 0, -z, 0, h, -z, x, 0, z, 0, h, -z, 0, h, z,
+    -x, 0, z, x, 0, z, x, 0, -z, -x, 0, z, x, 0, -z, -x, 0, -z,
+  ];
+  return { positions: positions, indices: Array.from({ length: positions.length / 3 }, (_, i) => i), uvs: new Array(positions.length / 3 * 2).fill(0) };
+}
+
+DION.boot({
+  range: [1200, 1800],
+  clearColor: [0.10, 0.11, 0.18, 1],
+  near: 0.22, far: 260,
+
+  camk: [
+    { f: 1200, eye: [0.40, 11.50, 11.00], tgt: [0.00, 1.60, -6.00], focal: 1000 },   // 从看台高处俯瞰整座剧场
+    { f: 1300, eye: [0.30, 7.00, 8.50], tgt: [0.00, 1.80, -7.00], focal: 1050 },   // 顺着台阶下
+    { f: 1400, eye: [0.10, 3.20, 4.60], tgt: [0.00, 2.00, -8.50], focal: 1150 },   // c2 落定 · 歌队席
+    { f: 1500, eye: [0.00, 2.50, 2.40], tgt: [0.00, 2.40, -9.50], focal: 1200 },   // 台上那个人
+    { f: 1600, eye: [0.00, 2.55, 0.90], tgt: [0.00, 2.45, -9.60], focal: 1360 },   // 越肩：歌队头顶上看台上
+    { f: 1800, eye: [0.00, 2.55, 0.80], tgt: [0.00, 2.50, -9.70], focal: 1360 },   // 驻留到片尾
+  ],
+  /* 破晓：太阳在歌队身后升起（所以舞台正面是亮的、歌队是逆光暗影） */
+  light: [
+    { f: 1200, amb: [0.20, 0.21, 0.30], col: [0.52, 0.50, 0.60], dir: [0.36, -0.70, -0.62] },
+    { f: 1450, amb: [0.26, 0.25, 0.30], col: [0.86, 0.68, 0.54], dir: [0.36, -0.66, -0.64] },
+    { f: 1580, amb: [0.30, 0.27, 0.30], col: [0.98, 0.76, 0.56], dir: [0.36, -0.62, -0.66] },
+    { f: 1800, amb: [0.08, 0.07, 0.10], col: [0.30, 0.26, 0.24], dir: [0.36, -0.62, -0.66] },
+  ],
+  post: {
+    exp: [[1200, 0.86], [1300, 0.98], [1560, 1.00], [1596, 0.24], [1800, 0.24]],
+    con: [[1200, 1.04], [1800, 1.02]],
+    sat: [[1200, 0.84], [1400, 0.98], [1560, 1.00], [1596, 0.58], [1800, 0.58]],
+    vig: [[1200, 0.42], [1450, 0.34], [1560, 0.32], [1596, 0.62], [1800, 0.62]],
+    grain: [[1200, 0.048], [1560, 0.040], [1596, 0.022], [1800, 0.022]],
+    chr: [[1200, 0.0008], [1400, 0.0010], [1560, 0.0008], [1596, 0.0], [1800, 0.0]],
+  },
+  kicker: { act: 2, from: 1200, to: 1580, main: '03 / 03 · 悲剧', sub: 'THE BIRTH OF TRAGEDY · 半圆剧场 · 破晓' },
+  caps: [
+    { s: 1228, e: 1298, t: '只靠日神，世界只是一层漂亮的假象。', kw: '假象', kc: 'brass', a: [0.00, 2.50, -12.4], lx: 960, ly: 214, size: 46, align: 'c' },
+    { s: 1304, e: 1374, t: '只靠酒神，人会被混沌吞掉。', kw: '混沌', kc: 'rust', a: [0.00, 1.50, -4.60], lx: 960, ly: 214, size: 46, align: 'c' },
+    { s: 1380, e: 1450, t: '希腊人把两股力量，按在同一座剧场里。', kw: '同一座剧场', kc: 'brass', a: [0.00, 0.90, -3.20], lx: 960, ly: 214, size: 46, align: 'c' },
+    { s: 1456, e: 1526, t: '台上那个清清楚楚的人，是日神的梦。', kw: '日神的梦', kc: 'brass', a: [0.00, 2.10, -9.40], lx: 960, ly: 880, size: 46, align: 'c' },
+    { s: 1532, e: 1600, t: '台下唱歌的一群人，是酒神的醉。', kw: '酒神的醉', kc: 'rust', a: [1.60, 1.40, -2.90], lx: 960, ly: 880, size: 46, align: 'c' },
+    { s: 1606, e: 1676, t: '看着一个人毁灭，你却觉得活着真好——这就是悲剧。', kw: '这就是悲剧', kc: 'brass', a: [0.00, 2.10, -9.40], lx: 960, ly: 880, size: 46, align: 'c' },
+  ],
+  card: {
+    from: 1580, to: 1800,
+    title: '日神与酒神',
+    tag: 'APOLLO & DIONYSUS · 《悲剧的诞生》1872',
+    lines: [
+      { t: '只靠日神，世界是一层漂亮的假象；只靠酒神，人会被混沌吞掉。', size: 52, y: 700, s: 1616, col: DION.PAL.ivory },
+      { t: '希腊人把两者按在同一座剧场里——于是有了悲剧。', size: 52, y: 784, s: 1652, col: '#FFFFFF' },
+      { t: '—— 弗里德里希·尼采《悲剧的诞生》1872', size: 30, y: 876, s: 1690, col: DION.PAL.dim },
+    ],
+    darkTex: DION.mk(960, 540, (g, w, h) => {
+      const rg = g.createRadialGradient(w / 2, h / 2, 50, w / 2, h / 2, 640);
+      rg.addColorStop(0, 'rgba(6,6,10,0.46)'); rg.addColorStop(0.62, 'rgba(4,5,8,0.70)'); rg.addColorStop(1, 'rgba(2,3,5,0.88)');
+      g.fillStyle = rg; g.fillRect(0, 0, w, h);
+    }),
+  },
+  roam: {
+    clamp: c => { c.x = DION.clamp(c.x, -17.0, 17.0); c.y = DION.clamp(c.y, 0.5, 16.0); c.z = DION.clamp(c.z, -14.0, 20.0); },
+    hud: '狄俄尼索斯剧场 · 半圆看台九级 · 歌队十四人 · 台上一个人',
+  },
+
+  build: function (app, T, GL3D) {
+    const items = [], DYN = {};
+    const M_ = app.createMaterial, M = (p, r, s) => GL3D.Mat4.trs(p || [0, 0, 0], r || [0, 0, 0], s || [1, 1, 1]);
+    const I = () => GL3D.Mat4.identity();
+    const tex = c => app.createTexture(c);
+    const boxAt = (w, h, d, x, y, z, rot) => T.boxAt(GL3D, w, h, d, x, y, z, rot);
+    const CTR = [0, -5.0];                       // 歌队席圆心
+
+    /* ---- 破晓天幕 + 残月 + 远山 ---- */
+    DYN.sky = {
+      name: 'sky', mesh: plane1(app, GL3D), billboard: true, position: [0, 10, 130], scale: [352, 198, 1],
+      material: M_({ texture: tex(T.makeSky([[0, '#141A30'], [0.34, '#2E3350'], [0.66, '#6A5A72'], [0.86, '#B08A6E'], [1, '#E8B478']])), unlit: true, alphaMode: 'mask', alphaCutoff: 0.02, doubleSided: true }),
+    };
+    items.push(DYN.sky);
+    const glowTex = tex(T.makeGlow('rgba(255,238,208,0.95)', 'rgba(255,206,150,0.34)', 256));
+    items.push({ name: 'dawn', mesh: plane1(app, GL3D), billboard: true, position: [4, 2.6, 74], scale: [30, 20, 1], material: M_({ texture: glowTex, alphaMode: 'blend', unlit: true, depthWrite: false, color: [1, 0.92, 0.78, 0.5] }) });
+    items.push({ name: 'moon', mesh: plane1(app, GL3D), billboard: true, position: [-30, 24, 108], scale: [4, 4, 1], material: M_({ texture: tex(T.makeGlow('rgba(214,226,246,0.85)', 'rgba(180,196,230,0.22)', 128)), alphaMode: 'blend', unlit: true, depthWrite: false, color: [1, 1, 1, 0.7] }) });
+    const hillTex = tex(T.mk(512, 200, (g, w, h) => {
+      g.clearRect(0, 0, w, h);
+      g.fillStyle = 'rgba(30,32,48,0.95)';
+      g.beginPath(); g.moveTo(0, h);
+      for (let x = 0; x <= w; x += 16) g.lineTo(x, h - 48 - 26 * Math.sin(x * 0.011) - 16 * srnd(x * 0.13));
+      g.lineTo(w, h); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(20,22,34,0.96)';
+      g.beginPath(); g.moveTo(0, h);
+      for (let x = 0; x <= w; x += 16) g.lineTo(x, h - 20 - 14 * Math.sin(x * 0.019 + 2) - 12 * srnd(x * 0.31));
+      g.lineTo(w, h); g.closePath(); g.fill();
+    }));
+    items.push({ name: 'hills', mesh: plane1(app, GL3D), billboard: true, position: [0, 4.5, 66], scale: [150, 30, 1], material: M_({ texture: hillTex, alphaMode: 'mask', alphaCutoff: 0.05, unlit: true, doubleSided: true }) });
+
+    /* ---- 地面（夯土）+ 歌队席圆台 ---- */
+    items.push({ name: 'ground', mesh: app.createMesh(GL3D.Geometry.ground(52, 50)), material: M_({ color: [0.44, 0.42, 0.38, 1], texture: tex(T.makePaving('#6E675C', 'rgba(40,36,30,0.55)', 16, 16)) }), model: M([0, 0, 0]) });
+    items.push({ name: 'orchestra', mesh: app.createMesh(GL3D.Geometry.ground(17.5, 17.5)), material: M_({ color: [0.56, 0.52, 0.46, 1], texture: tex(T.makePaving('#8A8272', 'rgba(52,48,40,0.5)', 12, 12)) }), model: M([CTR[0], 0.05, CTR[1]]) });
+
+    /* ---- 九级半圆看台（旋转后的盒子拼出弧线）+ 上下通道梯 + 外围墙 ---- */
+    const seats = [], ROWS = 9, SEG = 13;
+    for (let r = 0; r < ROWS; r++) {
+      const R = 8.6 + r * 1.16, y = 0.60 + r * 0.48, segW = (R * (3.10 / SEG)) * 1.06;
+      for (let s = 0; s < SEG; s++) {
+        const a = -1.55 + (s + 0.5) / SEG * 3.10;
+        seats.push(boxAt(segW, 0.48, 1.30, CTR[0] + Math.sin(a) * R, y, CTR[1] + Math.cos(a) * R, [0, a, 0]));
+      }
+    }
+    for (let i = 0; i < 5; i++) {                                  // 三座向下的通道梯
+      const a = -1.10 + i * 0.55;
+      for (let r = 0; r < ROWS; r += 2) {
+        const R = 8.6 + r * 1.16;
+        seats.push(boxAt(1.05, 0.49, 2.5, CTR[0] + Math.sin(a) * R, 0.60 + r * 0.48 - 0.06, CTR[1] + Math.cos(a) * R, [0, a, 0]));
+      }
+    }
+    seats.push(boxAt(0.9, 5.2, 30.0, CTR[0] - 17.4, 3.4, CTR[1] + 1.0, [0, -1.05, 0]));   // 两侧外墙
+    seats.push(boxAt(0.9, 5.2, 30.0, CTR[0] + 17.4, 3.4, CTR[1] + 1.0, [0, 1.05, 0]));
+    items.push({ name: 'seats', mesh: T.mergeParts(app, GL3D, seats), material: M_({ color: [0.60, 0.57, 0.51, 1] }), model: I() });
+
+    /* ---- 舞台建筑 skene：前台墙 + 三扇门 + 六柱 + 楣梁 + 山花 ---- */
+    const skene = [
+      boxAt(15.0, 5.60, 0.70, 0, 2.80, -13.0),
+      boxAt(16.4, 0.44, 1.10, 0, 5.70, -12.7),
+      boxAt(17.2, 0.38, 1.30, 0, 6.11, -12.7),
+    ];
+    items.push({ name: 'skene', mesh: T.mergeParts(app, GL3D, skene), material: M_({ color: [0.62, 0.58, 0.50, 1] }), model: I() });
+    const doors = [];
+    for (const dx of [-4.6, 0, 4.6]) { doors.push(boxAt(1.90, 3.40, 0.20, dx, 1.70, -12.55)); doors.push(boxAt(2.30, 0.30, 0.30, dx, 3.55, -12.5)); }
+    items.push({ name: 'doors', mesh: T.mergeParts(app, GL3D, doors), material: M_({ color: [0.10, 0.09, 0.10, 1] }), model: I() });
+    const skCols = [];
+    for (let i = 0; i < 6; i++) {
+      const x = -6.2 + i * 2.48, b = 0.20;
+      skCols.push(boxAt(0.72, 0.20, 0.72, x, b + 0.10, -11.6));
+      skCols.push(boxAt(0.80, 0.14, 0.80, x, b + 0.27, -11.6));
+      skCols.push(T.cylAt(GL3D, 0.25, 4.90, x, b + 2.80, -11.6, 12));
+      skCols.push(boxAt(0.68, 0.30, 0.68, x, b + 5.35, -11.6));
+    }
+    items.push({ name: 'skCols', mesh: T.mergeParts(app, GL3D, skCols), material: M_({ color: [0.66, 0.62, 0.54, 1] }), model: I() });
+    items.push({ name: 'skPed', mesh: T.mergeParts(app, GL3D, [{ geo: triPrism(17.2, 2.10, 1.30), m: M([0, 6.30, -12.7]) }]), material: M_({ color: [0.60, 0.56, 0.48, 1] }), model: I() });
+
+    /* ---- 舞台平台 + 台阶 ---- */
+    items.push({
+      name: 'stage', mesh: T.mergeParts(app, GL3D, [
+        boxAt(13.0, 0.60, 4.0, 0, 0.30, -9.6), boxAt(13.4, 0.16, 4.4, 0, 0.68, -9.6),
+        boxAt(13.0, 0.30, 0.8, 0, 0.15, -7.3), boxAt(13.0, 0.15, 0.8, 0, 0.08, -6.7),
+      ]), material: M_({ color: [0.58, 0.55, 0.48, 1] }), model: I(),
+    });
+
+    /* ---- 祭坛 / 三脚鼎 / 挂面具的杆（歌队席里） ---- */
+    items.push({
+      name: 'orchProps', mesh: T.mergeParts(app, GL3D, [
+        boxAt(1.40, 0.70, 1.00, -6.4, 0.40, -3.2), boxAt(1.70, 0.14, 1.30, -6.4, 0.82, -3.2),
+        T.cylAt(GL3D, 0.26, 0.90, 6.6, 0.50, -3.4, 10), T.cylAt(GL3D, 0.36, 0.10, 6.6, 0.99, -3.4, 10),
+        T.cylAt(GL3D, 0.07, 3.10, -1.6, 1.60, -6.6, 6), boxAt(0.90, 0.14, 0.14, -1.6, 3.05, -6.6),
+      ]), material: M_({ color: [0.46, 0.42, 0.36, 1] }), model: I(),
+    });
+    items.push({ name: 'poleMask', mesh: plane1(app, GL3D), billboard: true, position: [-1.6, 3.20, -6.6], scale: [0.86, 1.08, 1], material: M_({ texture: tex(T.makeMask(1)), alphaMode: 'blend', unlit: true, depthWrite: false, color: [0.78, 0.70, 0.58, 0.96] }) });
+
+    /* ---- 两株橄榄树 ---- */
+    const oliveTex = tex(T.makeCanopy('#3A4A2A', '#233018'));
+    for (let i = 0; i < 2; i++) {
+      const x = i ? 15.2 : -15.4, z = 4.6 + i * 3.0;
+      items.push({ name: 'trunk' + i, mesh: T.mergeParts(app, GL3D, [T.cylAt(GL3D, 0.32, 3.2, x, 1.6, z, 8)]), material: M_({ color: [0.34, 0.28, 0.22, 1] }), model: I() });
+      items.push({ name: 'olive' + i, mesh: plane1(app, GL3D), billboard: true, position: [x, 4.0, z], scale: [6.2, 4.2, 1], material: M_({ texture: oliveTex, alphaMode: 'blend', depthWrite: false, unlit: true, color: [0.9, 0.92, 0.86, 0.85] }) });
+    }
+
+    /* ---- 歌队：十四名持火把的暗色人影（挤在一起）+ 火把光晕 ---- */
+    const chorusPal = {
+      body: '#2A2434', coat: '#332C3C', coatTop: '#453C4E', coatBot: '#1A1620',
+      fold: 'rgba(18,14,20,0.8)', rim: '#FFC070', rimA: 0.72, flare: 0.048, skirt: 0.320,
+      legW: 0.058, armW: 0.048, shade: 'rgba(10,8,12,1)', shadeA: 0.42, torch: true,
+    };
+    DYN.chorusTex = [];
+    for (let i = 0; i < 6; i++) DYN.chorusTex.push(tex(T.mk(T.FIG_W, T.FIG_H, (g, w, h) => T.paintFigure(g, w, h, 'sway', i, chorusPal))));
+    const warmGlow = tex(T.makeGlow('rgba(255,200,124,0.95)', 'rgba(255,150,60,0.30)', 256));
+    DYN.chorus = [];
+    for (let i = 0; i < 14; i++) {
+      const a = -1.42 + i / 13 * 2.84, R = 2.5 + (i % 2) * 0.65;
+      const x = CTR[0] + Math.sin(a) * R, z = CTR[1] + Math.cos(a) * R * 0.75 + 1.1;
+      const hgt = 1.66 + srnd(i * 5.9) * 0.20;
+      const it = {
+        name: 'chorus' + i, mesh: plane1(app, GL3D), billboard: true, position: [x, hgt / 2, z],
+        scale: [hgt * (T.FIG_W / T.FIG_H), hgt, 1],
+        material: M_({ texture: DYN.chorusTex[i % 6], alphaMode: 'blend', depthWrite: true, unlit: true }), seed: i, base: [x, hgt / 2, z],
+      };
+      items.push(it); DYN.chorus.push(it);
+      if (i % 2 === 0) {
+        items.push({ name: 'cGlow' + i, mesh: plane1(app, GL3D), billboard: true, position: [x, 2.55, z], scale: [4.6, 4.6, 1], material: M_({ texture: warmGlow, alphaMode: 'blend', depthWrite: false, unlit: true, color: [1, 0.76, 0.46, 0.26] }) });
+      }
+    }
+
+    /* ---- 台上那一个人（面具 + 长袍 · 缓缓抬手） ---- */
+    const actorPal = {
+      body: '#C9C2B2', coat: '#DAD3C2', coatTop: '#F4EEE0', coatBot: '#A79F8E',
+      fold: 'rgba(110,104,92,0.58)', rim: '#FFF0D8', rimA: 0.55, flare: 0.03, skirt: 0.330,
+      legW: 0.062, armW: 0.052, shade: 'rgba(96,90,80,1)', shadeA: 0.34, mask: true, maskCol: '#E2D6B6',
+    };
+    DYN.actorTex = [];
+    for (let i = 0; i < 6; i++) DYN.actorTex.push(tex(T.mk(T.FIG_W, T.FIG_H, (g, w, h) => T.paintFigure(g, w, h, 'raise', i, actorPal))));
+    DYN.actor = { name: 'actor', mesh: plane1(app, GL3D), billboard: true, position: [0.0, 1.58, -9.4], scale: [1.20, 1.80, 1], material: M_({ texture: DYN.actorTex[0], alphaMode: 'blend', depthWrite: true, unlit: true }) };
+    items.push(DYN.actor);
+
+    return { items, DYN };
+  },
+
+  update: function (f, ctx) {
+    const { DYN } = ctx, T = DION;
+    const cam = ctx.CAM, f3 = T.fwdOf(cam.yaw, cam.pitch), D = 130;
+    DYN.sky.position = [cam.x + f3[0] * D, cam.y + f3[1] * D, cam.z + f3[2] * D];
+
+    /* 歌队：挤在一起轻轻摇晃（越到后面幅度越大 —— "醉"在涨） */
+    const amp = T.seq(f, [[1200, 0.6], [1580, 1.5]]);
+    DYN.chorus.forEach((c, i) => {
+      const k = Math.floor(f * 0.30 + i * 1.7) % 6;
+      c.material.texture = DYN.chorusTex[(k + 6) % 6];
+      const sway = Math.sin(f * 0.055 + i * 0.9) * 0.14 * amp;
+      const bob = 0.018 * Math.abs(Math.sin(f * 0.07 + i * 0.6)) * amp;
+      c.position = [c.base[0] + sway, c.base[1] + bob, c.base[2] + Math.cos(f * 0.043 + i * 0.7) * 0.10 * amp];
+      c.material.color = [1, 0.98, 0.94, T.subA(f, 1240 + i * 5, 1266 + i * 5, 1720, 1796)];
+    });
+    /* 台上的人：缓缓抬手（0→5 姿态），到结尾手臂才举到最高 */
+    const ra = T.clamp((f - 1420) / 260, 0, 1);
+    DYN.actor.material.texture = DYN.actorTex[Math.min(5, Math.round(ra * 5))];
+    DYN.actor.material.color = [1, 1, 1, T.subA(f, 1330, 1370, 1730, 1800)];
+    DYN.actor.position = [0.0, 1.58 + 0.012 * Math.sin(f * 0.04), -9.4];
+  },
+});
+</script>
+</body>
+</html>

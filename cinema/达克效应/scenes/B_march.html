@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>达克效应 · B 行进（雪山·森林·荒漠）</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #05070a; overflow: hidden; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="../vendor/webgl_post.js"></script>
+<script src="../vendor/roam.js"></script>
+<script src="common.js"></script>
+<script>
+'use strict';
+/* ============================================================================
+   达克效应 · ② 雪山（113–158）· ③ 森林（158–203）· ④ 荒漠（203–248）
+   手段统一（3D 场景 + 2D 彩色剪影 + RPG 对话框），配色与气氛逐场不同。
+   ② 蓝白银：3D 巨峰 + 风雪 + 冰面折射冷光；四勇士深黑背影，依次掠过，同向走去。
+   ③ 绿紫暗金：3D 巨树 + 盘错树根 + 雾 + 萤火；光斑打在背上。
+   ④ 红橙黑：3D 沙丘 + 红月低垂 + 枯骨 + 热浪；脚印被风沙抹去。
+   ========================================================================== */
+const SEG_START = 113, SEG_LEN = 135;
+const W = 1920, H = 1080, TAU = Math.PI * 2;
+const T_SNOW = [113, 158], T_FOREST = [158, 203], T_DESERT = [203, 248];
+
+const {
+  clamp, lerp, smoothstep, easeInOut, srnd, subA,
+  CAM, proj, face, seg3, silhouette, POSE, dialog, chapterLabel,
+  glowAt, glow, band, fxParticles, fxFireflies, fxBone, screenFlash, checkerOverlay, fxEmbers,
+} = DK;
+
+let S = null;
+
+/* ---------------- 四勇士（背影，朝同一方向走去） ---------------- */
+const MARCH = [
+  { x: -2.15, z0: 7.6, fill: '#0b0b11', rimA: 1.0, variant: 0, detail: '#5b596b', metal: '#c7a65f' },
+  { x: -0.75, z0: 10.6, fill: '#0d0d14', rimA: 0.92, variant: 1, detail: '#596273', metal: '#b6c2d1' },
+  { x: 0.70, z0: 13.6, fill: '#0c0c13', rimA: 0.86, variant: 2, detail: '#535169', metal: '#9daabd' },
+  { x: 2.05, z0: 16.6, fill: '#0a0a10', rimA: 0.80, variant: 3, detail: '#5d5267', metal: '#dfbd68' },
+];
+const WALK_AWAY = 0.055;                       // 源帧 → 远离速度（米/帧）
+function mz(i, f, t0) { return MARCH[i].z0 + WALK_AWAY * (f - t0); }
+function mx(i, f, t0) { return MARCH[i].x - 0.010 * (f - t0); }
+// 行进者在各段落里统一的绘制
+function drawMarch(f, t0, rim, hw) {
+  for (let i = 0; i < 4; i++) {
+    const ph = (f - t0) / 26 + i * 0.31;
+    silhouette(mx(i, f, t0), 0, mz(i, f, t0), hw, POSE.walkBack(ph), {
+      fill: MARCH[i].fill, rim: rim,
+      rimA: MARCH[i].rimA * 0.9, rimDX: -0.026, rimDY: -0.010,
+      variant: MARCH[i].variant, detail: MARCH[i].detail, metal: MARCH[i].metal,
+    });
+  }
+}
+
+/* ================================ ② 雪山 ================================ */
+const RIDGES = [
+  { z: 78, seed: 1.7, amp: 15.0, span: 150, col: [38, 54, 82], snow: 4.0, snowCol: [206, 224, 246] },
+  { z: 108, seed: 4.3, amp: 20.0, span: 200, col: [30, 44, 70], snow: 6.5, snowCol: [226, 238, 252] },
+  { z: 150, seed: 8.9, amp: 26.0, span: 300, col: [24, 35, 56], snow: 9.5, snowCol: [238, 246, 255] },
+];
+function ridgeProfile(z, seed, amp, span, n) {
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const u = i / n;
+    const x = -span / 2 + span * u;
+    let h = 0;
+    h += Math.abs(Math.sin(u * 7.1 + seed)) * amp * 0.72;
+    h += Math.abs(Math.sin(u * 13.7 + seed * 2.3)) * amp * 0.26;
+    h += srnd(seed * 3.1 + i * 1.7) * amp * 0.10;
+    pts.push([x, h, z]);
+  }
+  return pts;
+}
+function iceSpire(x, z, h, w, col, hi) {
+  face([[x - w, 0, z], [x + w, 0, z], [x + w * 0.18, h, z], [x - w * 0.16, h * 0.72, z]], col, 1);
+  face([[x + w, 0, z], [x + w * 0.50, 0, z + w], [x + w * 0.18, h, z]], hi, 0.92);
+}
+function drawSnow(f) {
+  const u = smoothstep(T_SNOW[0], T_SNOW[1], f);
+  DK.skyGrad('snow', [[0, '#1c3a63'], [0.42, '#4d78a8'], [0.70, '#93b6d4'], [1, '#d6e6f2']], 0, H, 1, null);
+  for (let k = RIDGES.length - 1; k >= 0; k--) {
+    const R = RIDGES[k];
+    const pts = ridgeProfile(R.z, R.seed, R.amp, R.span, 42);
+    face(pts.concat([[R.span / 2, 0, R.z], [-R.span / 2, 0, R.z]]), `rgb(${R.col[0]},${R.col[1]},${R.col[2]})`, 1);
+    const cap = pts.map(p => [p[0], Math.max(p[1], R.snow), R.z]);
+    face(cap.concat([[R.span / 2, R.snow, R.z], [-R.span / 2, R.snow, R.z]]),
+      `rgb(${R.snowCol[0]},${R.snowCol[1]},${R.snowCol[2]})`, 1);
+  }
+  // 雪地（一直铺到山脚）
+  face([[-90, 0, -4], [90, 0, -4], [90, 0, 95], [-90, 0, 95]], '#c9dcee', 1);
+  face([[-90, 0.002, -4], [90, 0.002, -4], [90, 0.002, 95], [-90, 0.002, 95]], 'rgba(150,182,214,0.55)', 1);
+  // 前景冰晶与半埋岩脊，建立可读的近景尺度。
+  for (const q of [[-8.8,7.5,2.6,0.48],[-6.9,12.5,1.6,0.34],[8.2,9.0,2.2,0.42],[6.6,18.0,1.3,0.28]]) {
+    iceSpire(q[0], q[1], q[2], q[3], 'rgba(116,158,204,0.78)', 'rgba(214,238,255,0.84)');
+  }
+  // 山脚大气透视：把远山的暗岩底没进雪雾里
+  band(W * 0.5, H * 0.50, W * 1.3, 96, 'rgba(206,228,246,A)', 0.60, 'source-over');
+  band(W * 0.5, H * 0.475, W * 1.3, 52, 'rgba(222,238,252,A)', 0.42, 'source-over');
+  // 冰面折射冷光（斜向光带）
+  S.save(); S.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 7; i++) {
+    const t = i * 0.19 + 0.03;
+    const p = proj(-14 + i * 4.4, 0.03, 2.0 + i * 2.6);
+    if (!p) continue;
+    S.save(); S.translate(p.x, p.y); S.rotate(-0.42 + 0.06 * Math.sin(f / 40 + i));
+    band(0, 0, p.s * 3.4, p.s * 0.30, 'rgba(178,214,255,A)', 0.26, 'lighter');
+    S.restore();
+  }
+  S.restore();
+  // 脚印（雪地上被新雪盖回去）
+  for (let i = 0; i < 4; i++) {
+    for (let k = 1; k <= 7; k++) {
+      const tf = f - k * 4.0 - i * 1.4;
+      if (tf < T_SNOW[0]) continue;
+      const a = Math.max(0, 1 - (f - tf) / (30 + k * 2.2));
+      if (a <= 0.02) continue;
+      const p = proj(mx(i, tf, T_SNOW[0]), 0.02, mz(i, tf, T_SNOW[0]));
+      if (!p) continue;
+      S.save(); S.globalAlpha = a * 0.45; S.fillStyle = 'rgba(96,124,158,1)';
+      S.beginPath(); S.ellipse(p.x, p.y, p.s * 0.16, p.s * 0.07, 0, 0, TAU); S.fill(); S.restore();
+    }
+  }
+  drawMarch(f, T_SNOW[0], 'rgba(214,236,255,A)', 1.80);
+  // 风雪粒子横飞
+  fxParticles({ n: 300, wind: -3.4, fall: 4.4, len: 34, size: 2.0, col: 'rgba(232,244,255,1)', alpha: 0.85, seed: 21 });
+  fxParticles({ n: 120, wind: -1.6, fall: 7.4, len: 0, size: 3.2, col: 'rgba(255,255,255,1)', alpha: 0.55, seed: 37 });
+  // 冷雾
+  band(W * 0.5, H * 0.60, W * 0.9, H * 0.30, 'rgba(150,190,240,A)', 0.16, 'lighter');
+  screenFlash('rgba(226,240,255,1)', 0.10 * (1 - u), 'lighter');
+}
+
+/* ================================ ③ 森林 ================================ */
+const TREES = [
+  { x: -5.4, z: 7.0, r: 1.05, h: 26 }, { x: 4.6, z: 9.6, r: 0.92, h: 24 },
+  { x: -2.0, z: 14.0, r: 0.72, h: 22 }, { x: 7.4, z: 16.5, r: 0.84, h: 23 },
+  { x: -8.4, z: 19.0, r: 0.78, h: 22 }, { x: 1.4, z: 23.0, r: 0.62, h: 20 },
+];
+function trunkPrism(x, z, r0, r1, y0, y1, col) {
+  const faces = [], N = 7;
+  for (let i = 0; i < N; i++) {
+    const a0 = i / N * TAU, a1 = (i + 1) / N * TAU, am = (a0 + a1) / 2;
+    faces.push({ am, pts: [
+      [x + Math.cos(a0) * r0, y0, z + Math.sin(a0) * r0],
+      [x + Math.cos(a1) * r0, y0, z + Math.sin(a1) * r0],
+      [x + Math.cos(a1) * r1, y1, z + Math.sin(a1) * r1],
+      [x + Math.cos(a0) * r1, y1, z + Math.sin(a0) * r1],
+    ] });
+  }
+  faces.sort((A, B) => (z + Math.sin(B.am) * r0) - (z + Math.sin(A.am) * r0));
+  for (const fc of faces) {
+    const k = 0.30 + 0.70 * Math.max(0, Math.cos(fc.am + 0.7));
+    face(fc.pts, 'rgb(' + Math.round(col[0] * k) + ',' + Math.round(col[1] * k) + ',' + Math.round(col[2] * k) + ')', 1);
+  }
+}
+function drawForest(f) {
+  const u = smoothstep(T_FOREST[0], T_FOREST[1], f);
+  DK.skyGrad('forest', [[0, '#050b08'], [0.46, '#0e1d16'], [0.78, '#1d3423'], [1, '#2b4830']], 0, H, 1, null);
+  // 树冠（压在画面上缘，把树顶的空白填掉）
+  S.save();
+  S.fillStyle = 'rgba(7,14,10,0.96)';
+  S.beginPath(); S.moveTo(-40, -40); S.lineTo(W + 40, -40); S.lineTo(W + 40, H * 0.10);
+  for (let i = 26; i >= 0; i--) {
+    const x = W * i / 26;
+    S.lineTo(x, H * (0.10 + srnd(i * 3.3) * 0.15));
+  }
+  S.closePath(); S.fill();
+  for (let i = 0; i < 26; i++) {                          // 垂吊的枝叶团
+    const x = srnd(i * 5.1) * W, y = H * 0.10 + srnd(i * 2.7) * H * 0.10;
+    const r = 34 + srnd(i * 7.7) * 66;
+    S.globalAlpha = 0.85; S.fillStyle = 'rgba(9,18,13,1)';
+    S.beginPath(); S.ellipse(x, y + r * 0.4, r, r * 0.62, 0, 0, TAU); S.fill();
+  }
+  S.restore();
+  // 远处树干（墨绿，粗细 / 远近 / 高低全打散）
+  for (let i = 0; i < 44; i++) {
+    const z = 8.5 + srnd(i * 1.7) * 62;
+    const x = -30 + srnd(i * 3.1) * 60;
+    const w = 0.18 + srnd(i * 5.3) * 0.78, h = 16 + srnd(i * 7.7) * 18;
+    const d = (z - 8.5) / 62;
+    const base = 22 + (1 - d) * 26 + srnd(i * 9.1) * 12;
+    face([[x - w, 0, z], [x + w, 0, z], [x + w, h, z], [x - w, h, z]],
+      'rgb(' + Math.round(base * 0.62) + ',' + Math.round(base * 1.10) + ',' + Math.round(base * 0.72) + ')', 1);
+  }
+  // 近处巨树（有体积）
+  const list = TREES.slice().sort((a, b) => b.z - a.z);
+  for (const t of list) {
+    trunkPrism(t.x, t.z, t.r, t.r * 0.72, 0, t.h, [34, 52, 36]);
+    trunkPrism(t.x, t.z, t.r * 1.6, t.r, 0, 1.5, [26, 40, 28]);        // 根部扩张
+    // 盘错的树根（如网）
+    for (let k = 0; k < 9; k++) {
+      const a = k / 9 * TAU + srnd(t.x * 3.1 + k) * 0.5;
+      const L = 2.6 + srnd(t.z + k * 2.7) * 2.4;
+      const A = [t.x + Math.cos(a) * t.r * 1.5, 0.55, t.z + Math.sin(a) * t.r * 1.5];
+      const B = [t.x + Math.cos(a) * (t.r * 1.5 + L), 0.10, t.z + Math.sin(a) * (t.r * 1.5 + L)];
+      const C = [B[0] + Math.cos(a) * 1.1, 0.06, B[2] + Math.sin(a) * 1.1];
+      seg3(A, B, 'rgb(28,42,30)', 0.24, 1); seg3(B, C, 'rgb(22,34,24)', 0.16, 1);
+    }
+  }
+  // 林地 + 中间一条被光打亮的苔径
+  face([[-90, 0, -4], [90, 0, -4], [90, 0, 80], [-90, 0, 80]], '#1b3122', 1);
+  face([[-90, 0.002, -4], [90, 0.002, -4], [90, 0.002, 80], [-90, 0.002, 80]], 'rgba(40,66,44,0.55)', 1);
+  face([[-7.5, 0.006, -4], [7.5, 0.006, -4], [7.5, 0.006, 46], [-7.5, 0.006, 46]], 'rgba(74,108,62,0.52)', 1);
+  // 树根旁的发光菌与垂藤，让森林从“树柱阵列”变成有生命的空间。
+  for (let i = 0; i < 16; i++) {
+    const x = -9 + srnd(i * 4.7) * 18, z = 6 + srnd(i * 8.3) * 25;
+    const p = proj(x, 0.16, z); if (!p) continue;
+    const rr = p.s * (0.06 + srnd(i * 2.9) * 0.045);
+    glowAt(p.x, p.y, rr * 5, rr * 3.2, glow('rgba(126,220,154,A)'), 0.20, 'lighter');
+    S.save(); S.globalAlpha = 0.72; S.fillStyle = 'rgba(156,218,160,1)';
+    S.beginPath(); S.ellipse(p.x, p.y, rr, rr * 0.44, 0, 0, TAU); S.fill(); S.restore();
+  }
+  for (let i = 0; i < 9; i++) {
+    const x = -10 + i * 2.5, z = 11 + srnd(i * 6.1) * 18;
+    seg3([x, 8 + srnd(i) * 8, z], [x + Math.sin(f / 50 + i) * 0.35, 2.2, z + 0.4], 'rgba(42,78,48,0.72)', 0.055, 1);
+  }
+  for (let i = 0; i < 7; i++) {
+    const rp = proj(-24 + i * 8, 0.02, 6 + srnd(i * 3.7) * 30);
+    if (rp) band(rp.x, rp.y, rp.s * 1.6, rp.s * 0.8, 'rgba(120,160,96,A)', 0.14, 'lighter');
+  }
+  // 多层雾
+  DK.fxFog(H * 0.56, W * 0.7, 90, 'rgba(112,146,124,A)', 0.20, 3, 5.1);
+  DK.fxFog(H * 0.68, W * 0.8, 70, 'rgba(88,120,104,A)', 0.16, 2, 9.7);
+  drawMarch(f, T_FOREST[0], 'rgba(210,226,180,A)', 1.80);
+  // 树隙光斑打在背上
+  S.save(); S.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 4; i++) {
+    const p = proj(mx(i, f, T_FOREST[0]), 1.15, mz(i, f, T_FOREST[0]));
+    if (!p) continue;
+    const flick = 0.72 + 0.28 * Math.sin(f / 21 + i * 2.1);
+    band(p.x, p.y, p.s * 1.05, p.s * 1.25, 'rgba(226,206,120,A)', 0.34 * flick, 'lighter');
+  }
+  S.restore();
+  // 树隙光柱
+  S.save(); S.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 6; i++) {
+    const x = -520 + i * 240 + Math.sin(f / 60 + i * 2.2) * 40;
+    band(x, H * 0.34, 130, H * 0.46, 'rgba(226,200,110,A)', 0.13, 'lighter');
+  }
+  S.restore();
+  // 萤火虫
+  fxFireflies(46, 0, H * 0.25, W, H * 0.82, 13.7, 0.9);
+  screenFlash('rgba(196,222,150,1)', 0.10 * (1 - u), 'lighter');
+}
+
+/* ================================ ④ 荒漠 ================================ */
+function duneProfile(z, seed, amp, span, n) {
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const u = i / n, x = -span / 2 + span * u;
+    const h = amp * (0.45 + 0.55 * Math.sin(u * 5.2 + seed)) + srnd(seed * 2.1 + i * 1.3) * amp * 0.16;
+    pts.push([x, Math.max(0.2, h), z]);
+  }
+  return pts;
+}
+function drawDesert(f) {
+  const u = smoothstep(T_DESERT[0], T_DESERT[1], f);
+  DK.skyGrad('desert', [[0, '#1b0509'], [0.34, '#4a0f10'], [0.62, '#8e2a12'], [0.82, '#c2541c'], [1, '#7a2a12']], 0, H, 1, null);
+  // 红月低垂
+  const moonX = W * 0.235, moonY = H * 0.335 + Math.sin(f / 90) * 4;
+  S.save(); S.globalCompositeOperation = 'lighter';
+  glowAt(moonX, moonY, 520, 520, glow('rgba(255,72,44,A)'), 0.42, 'lighter');
+  S.restore();
+  S.save(); S.fillStyle = 'rgb(224,86,52)'; S.beginPath(); S.arc(moonX, moonY, 132, 0, TAU); S.fill();
+  S.globalAlpha = 0.25; S.fillStyle = 'rgba(120,30,20,1)';
+  S.beginPath(); S.arc(moonX - 34, moonY - 28, 44, 0, TAU); S.fill();
+  S.beginPath(); S.arc(moonX + 40, moonY + 34, 30, 0, TAU); S.fill();
+  S.restore();
+  // 沙丘（多层）
+  const DUNES = [
+    { z: 46, seed: 1.3, amp: 9.5, span: 190, col: [78, 34, 22] },
+    { z: 68, seed: 5.7, amp: 13.5, span: 260, col: [58, 24, 17] },
+    { z: 96, seed: 9.1, amp: 17.0, span: 340, col: [40, 16, 13] },
+  ];
+  for (let k = DUNES.length - 1; k >= 0; k--) {
+    const D = DUNES[k];
+    const pts = duneProfile(D.z, D.seed, D.amp, D.span, 36);
+    face(pts.concat([[D.span / 2, 0, D.z], [-D.span / 2, 0, D.z]]),
+      'rgb(' + D.col[0] + ',' + D.col[1] + ',' + D.col[2] + ')', 1);
+  }
+  // 近处沙地
+  face([[-70, 0, -6], [70, 0, -6], [70, 0, 52], [-70, 0, 52]], '#5c2517', 1);
+  face([[-70, 0.002, -6], [70, 0.002, -6], [70, 0.002, 52], [-70, 0.002, 52]], 'rgba(120,52,26,0.45)', 1);
+  // 风蚀石柱和碎岩提供中景遮挡，避免沙漠只有两层平面。
+  for (const r of [[-10,18,4.8,1.2],[-7.5,27,2.6,0.8],[10.5,22,4.0,1.0],[8.0,34,2.2,0.7]]) {
+    face([[r[0]-r[3],0,r[1]],[r[0]+r[3],0,r[1]],[r[0]+r[3]*0.38,r[2],r[1]],[r[0]-r[3]*0.22,r[2]*0.82,r[1]]], 'rgba(72,31,24,0.92)', 1);
+    face([[r[0]+r[3],0,r[1]],[r[0]+r[3]*0.55,0,r[1]+r[3]],[r[0]+r[3]*0.38,r[2],r[1]]], 'rgba(126,55,32,0.82)', 1);
+  }
+  // 地平线的红雾
+  band(W * 0.5, H * 0.52 + 120, W * 0.9, 150, 'rgba(220,96,40,A)', 0.16, 'lighter');
+  // 枯骨散落
+  fxBone(-5.2, 0.02, 12.0, 0.85, 0, 0.85);
+  fxBone(6.4, 0.02, 15.5, 0.70, 1, 0.7);
+  fxBone(2.2, 0.02, 24.0, 0.95, 2, 0.6);
+  fxBone(-9.0, 0.02, 30.0, 1.15, 0, 0.5);
+  // 脚印：踩下 → 被风沙抹去
+  for (let i = 0; i < 4; i++) {
+    for (let k = 1; k <= 9; k++) {
+      const tf = f - k * 3.6 - i * 1.2;
+      if (tf < T_DESERT[0]) continue;
+      const age = f - tf;
+      const a = Math.max(0, 1 - age / (26 + k * 1.8));
+      if (a <= 0.02) continue;
+      const windDrift = age * 0.020;                       // 风把脚印往左吹散
+      const p = proj(mx(i, tf, T_DESERT[0]) - windDrift, 0.02, mz(i, tf, T_DESERT[0]));
+      if (!p) continue;
+      S.save(); S.globalAlpha = a * 0.55; S.fillStyle = 'rgb(46,18,12)';
+      S.beginPath(); S.ellipse(p.x, p.y, p.s * 0.17 * (1 + age * 0.010), p.s * 0.065, 0, 0, TAU); S.fill(); S.restore();
+    }
+  }
+  drawMarch(f, T_DESERT[0], 'rgba(255,150,84,A)', 1.80);
+  // 热浪：横向抖动的高温气流
+  S.save(); S.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 5; i++) {
+    const y = H * 0.44 + i * 62 + Math.sin((f / 30 + i) * TAU) * 9;
+    band(W * 0.5 + Math.sin(f / 44 + i) * 60, y, W * 0.52, 26, 'rgba(255,130,60,A)', 0.10, 'lighter');
+  }
+  S.restore();
+  // 风沙
+  fxParticles({ n: 260, wind: -5.2, fall: 0.8, len: 54, size: 2.4, col: 'rgba(230,158,96,1)', alpha: 0.55, seed: 51 });
+  fxParticles({ n: 90, wind: -2.4, fall: 3.0, len: 0, size: 3.4, col: 'rgba(198,120,64,1)', alpha: 0.40, seed: 63 });
+  fxEmbers(W * 0.5, H * 0.9, W * 1.2, H * 0.7, 22, 4.9, 0.30);
+  screenFlash('rgba(255,150,80,1)', 0.12 * (1 - u), 'lighter');
+}
+
+/* ---------------- 一帧 ---------------- */
+function setCam(f) {
+  if (f < T_FOREST[0]) {                       // ② 雪山
+    const u = smoothstep(T_SNOW[0], T_SNOW[1], f);
+    CAM.x = lerp(-1.60, 1.60, u); CAM.y = 1.12; CAM.z = lerp(-1.4, 1.6, u);
+    CAM.pitch = lerp(0.030, -0.012, u); CAM.yaw = 0; CAM.focal = 1000;
+  } else if (f < T_DESERT[0]) {                // ③ 森林
+    const u = smoothstep(T_FOREST[0], T_FOREST[1], f);
+    CAM.x = lerp(1.70, -1.40, u); CAM.y = 1.30; CAM.z = lerp(-1.6, 1.2, u);
+    CAM.pitch = lerp(0.010, 0.034, u); CAM.yaw = 0; CAM.focal = 1000;
+  } else {                                     // ④ 荒漠
+    const u = smoothstep(T_DESERT[0], T_DESERT[1], f);
+    CAM.x = lerp(-1.50, 1.50, u); CAM.y = 1.22; CAM.z = lerp(-1.8, 1.0, u);
+    CAM.pitch = lerp(0.048, 0.014, u); CAM.yaw = 0; CAM.focal = 1000;
+  }
+}
+function draw(f) {
+  S = DK.ctx;
+  if (f < T_FOREST[0]) drawSnow(f);
+  else if (f < T_DESERT[0]) drawForest(f);
+  else drawDesert(f);
+  checkerOverlay(0.038);
+  // --- 2D 覆盖层 ---
+  if (f < T_FOREST[0]) {
+    chapterLabel('② 雪山', subA(f, 114, 124, 150, 158));
+    dialog('四个勇士，出发了。', 118, { alpha: 1 - smoothstep(150, 157, f), label: '雪山' });
+  } else if (f < T_DESERT[0]) {
+    chapterLabel('③ 森林', subA(f, 159, 169, 195, 203));
+    dialog('穿过森林。', 163, { alpha: 1 - smoothstep(195, 202, f), label: '森林' });
+  } else {
+    chapterLabel('④ 荒漠', subA(f, 204, 214, 240, 248));
+    dialog('穿过荒漠。', 208, { alpha: 1 - smoothstep(240, 247, f), label: '荒漠' });
+  }
+}
+
+DK.boot({
+  total: 788,
+  seg: [SEG_START, SEG_LEN],
+  cam: { x: -1.60, y: 1.12, z: -1.40, focal: 1000, pitch: 0.030, yaw: 0 },
+  bg: '#05070a',
+  scene: draw,
+  setCam: setCam,
+  post: f => {
+    if (f < T_DESERT[0]) return { scan: 0.42, grain: 0.05, chroma: 0.05, grade: f < T_FOREST[0] ? -0.22 : 0.02, vig: 0.34, glitch: 0.014 };
+    return { scan: 0.44, grain: 0.055, chroma: 0.07, grade: 0.20, vig: 0.36, glitch: 0.02, wobble: 0.0075 };  // 荒漠：热浪
+  },
+  clamp: c => { c.x = clamp(c.x, -40, 40); c.y = clamp(c.y, 0.4, 26); c.z = clamp(c.z, -6, 60); },
+  hud: () => '行进：雪山 / 森林 / 荒漠（113 / 158 / 203 三处硬切）',
+});
+</script>
+</body>
+</html>

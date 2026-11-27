@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WebGL3D Pipeline Template</title>
+<style>html,body,#c{width:100%;height:100%;margin:0;display:block;overflow:hidden;background:#070912}body{font:13px/1.5 ui-monospace,monospace;color:#dce9f4}.hud{position:fixed;left:14px;top:14px;padding:10px 12px;background:#07101dcc;border:1px solid #7fa4bd66;border-radius:8px;white-space:pre;pointer-events:none}</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud">WebGL2 · depth test · back-face culling<br>拖拽环视 · 滚轮缩放 · WASD/QE 漫游<br>1 正常 · 2 法线 · 3 深度</div>
+<script src="webgl3d_pipeline.js"></script><script src="orbit_controls.js"></script>
+<script>
+'use strict';
+const canvas=document.getElementById('c');
+const app=GL3D.create(canvas,{clearColor:[.025,.03,.055,1],maxDpr:2,preserveDrawingBuffer:true});
+const glErrors=[];
+function takeGlErrors(stage){let code;while((code=app.gl.getError())!==app.gl.NO_ERROR)glErrors.push({stage,code});}
+takeGlErrors('create');
+const orbit=GL3DOrbit.create(canvas,{target:[0,1,0],distance:9,yaw:.7,pitch:.28});
+const box=app.createMesh(GL3D.Geometry.box(2,2,2));
+const ground=app.createMesh(GL3D.Geometry.ground(18,18));
+const cardCanvas=document.createElement('canvas');cardCanvas.width=512;cardCanvas.height=256;const x=cardCanvas.getContext('2d');
+x.clearRect(0,0,512,256);x.fillStyle='#151827dd';x.fillRect(8,8,496,240);x.strokeStyle='#f0c879';x.lineWidth=8;x.strokeRect(8,8,496,240);x.fillStyle='#fff4d2';x.font='700 54px Microsoft YaHei';x.textAlign='center';x.fillText('DEPTH TEST',256,142);
+const card=app.createMesh(GL3D.Geometry.plane(3.6,1.8));
+const cardTex=app.createTexture(cardCanvas);
+takeGlErrors('assets');
+const items=[
+  {name:'ground',mesh:ground,material:app.createMaterial({color:[.16,.19,.24,1]}),model:GL3D.Mat4.identity()},
+  {name:'red-box',mesh:box,material:app.createMaterial({color:[.84,.29,.20,1]}),model:GL3D.Mat4.trs([-1,1,0],[0,.5,0])},
+  {name:'blue-box',mesh:box,material:app.createMaterial({color:[.18,.48,.88,1]}),model:GL3D.Mat4.trs([1,1,-1],[0,-.35,0],[1.15,.75,1.15])},
+  {name:'billboard',mesh:card,material:app.createMaterial({texture:cardTex,alphaMode:'mask',alphaCutoff:.08,doubleSided:true,unlit:true}),model:GL3D.Mat4.identity(),billboard:true,position:[0,2.5,-2.4]}
+];
+addEventListener('keydown',e=>{if(e.code==='Digit1')app.state.debugMode=0;if(e.code==='Digit2')app.state.debugMode=1;if(e.code==='Digit3')app.state.debugMode=2;});
+let last=performance.now(),frame=0;
+function loop(now){const dt=(now-last)/1000;last=now;orbit.update(dt);orbit.apply(app.state.camera);for(const item of items)if(item.billboard)item.model=GL3D.Mat4.billboard(item.position,app.state.camera.eye,[1,1,1]);app.state.frame=frame++;app.render(items);takeGlErrors('render-tail');window.__pipelineStatus={ready:true,version:GL3D.version,debugMode:app.state.debugMode,glErrors:app.state.glErrors.concat(glErrors)};requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+</script>
+</body></html>

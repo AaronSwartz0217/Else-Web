@@ -1964,37 +1964,6 @@
         gachaCapsule.visible = false;
     }
 
-    function startMachineDraw(type, ev) {
-        if (busy || seated || clawAnim || gachaAnim) return;
-        busy = true;
-        if (window.Arcade && window.Arcade.coinSound) window.Arcade.coinSound();
-        dropCoin(ev.clientX, ev.clientY);
-
-        var isResume = Math.random() < 0.01;
-        var isEmber = !isResume && Math.random() < 0.01;
-        var pick = isResume
-            ? { id: 'resume', marquee: 'RESUME', neon: 0xffcf4a }
-            : (isEmber
-                ? { id: 'ember', marquee: 'EMBER CHICK', neon: 0xff8a1f }
-                : PROJECTS[Math.floor(Math.random() * PROJECTS.length)]);
-        if (type === 'claw') startClawDraw();
-        else startGachaDraw();
-
-        setTimeout(function () {
-            resetMachineAnim();
-            busy = false;
-            document.dispatchEvent(new CustomEvent('arcade:prize', {
-                detail: {
-                    id: pick.id,
-                    marquee: pick.marquee,
-                    neon: pick.neon,
-                    rarity: (isResume || isEmber) ? 'gold' : null,
-                    source: type
-                }
-            }));
-        }, type === 'claw' ? 2350 : 1750);
-    }
-
     function pickMachine(x, y) {
         pointer.set((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
         raycaster.setFromCamera(pointer, camera);
@@ -2354,7 +2323,11 @@
             enterCabinet(hit.id, e);
         } else if (hit && hit.kind === 'machine') {
             setMachineHover(null);
-            startMachineDraw(hit.id, e);
+            if (window.Arcade && window.Arcade.startGame) {
+                if (window.Arcade.coinSound) window.Arcade.coinSound();
+                dropCoin(e.clientX, e.clientY);
+                window.Arcade.startGame(hit.id);
+            }
         } else if (hit && hit.kind === 'album') {
             document.dispatchEvent(new CustomEvent('arcade:album'));
         } else if (pickDoor(e.clientX, e.clientY)) {

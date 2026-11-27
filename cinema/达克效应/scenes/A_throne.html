@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>达克效应 · A 王国·宝座</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #050406; overflow: hidden; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="../vendor/webgl_post.js"></script>
+<script src="../vendor/roam.js"></script>
+<script src="common.js"></script>
+<script>
+'use strict';
+/* ============================================================================
+   达克效应 · ① 王国 · 宝座（源帧 0–113）
+   3D 殿堂：石柱高耸（透视列柱）/ 火盆橙红 / 地面反光；国王 2D 剪影端坐高处（侧面，
+   王冠尖利）；四个勇士 2D 剪影单膝跪地、背影、无脸。色调：金、红、黑。
+   ========================================================================== */
+const SEG_START = 0, SEG_LEN = 113;
+const W = 1920, H = 1080, TAU = Math.PI * 2;
+
+const {
+  clamp, lerp, smoothstep, easeInOut, easeOutCubic, srnd, subA,
+  CAM, proj, face, seg3, dot3, silhouette, POSE, dialog, chapterLabel,
+  glowAt, glow, band, fxFlame, fxEmbers, checkerOverlay, screenFlash,
+} = DK;
+
+let S = null;                                  // 场景画布（boot 时创建，draw() 里取）
+
+/* ---------------- 空间常量 ---------------- */
+const XL = 8.0, ZF = -13.0, ZB = 26.0, CEIL = 10.0;
+const COLZ = [0.5, 5.0, 9.5, 14.0, 18.5, 23.0];   // 石柱的 z（左右各一列）
+const BRZ = [6.0, 10.5, 15.0, 19.5];              // 火盆的 z（x = ±5.0，贴柱基）
+const DAIS_Z0 = 11.5, DAIS_Z1 = 17.0, DAIS_Y = 1.10;
+const THR = { x: -1.70, z: 14.0, seat: 2.30, w: 1.5, back: 5.30 };
+const KING_H = 1.90;
+const WLK = [                                              // 四勇士（跪在台前，面朝王座）
+  { x: -2.45, z: 7.9, fill: '#151120', rim: 'rgba(255,196,96,A)', variant: 0, detail: '#57566a', metal: '#c7a45a' },
+  { x: -0.85, z: 8.2, fill: '#181320', rim: 'rgba(255,170,84,A)', variant: 1, detail: '#596171', metal: '#aeb9c8' },
+  { x: 0.85, z: 8.2, fill: '#1a1420', rim: 'rgba(255,150,70,A)', variant: 2, detail: '#514f66', metal: '#9aa7bb' },
+  { x: 2.45, z: 7.9, fill: '#131018', rim: 'rgba(255,206,120,A)', variant: 3, detail: '#5c5265', metal: '#e0bd68' },
+];
+const DOOR = { x: -XL + 0.04, z: 10.2, half: 1.75, h: 5.4 };
+
+/* ---------------- 光照 ---------------- */
+const LAN = -0.62;                              // 主光方位角（火盆在左前方）
+function mul(c, k, a) {
+  return 'rgba(' + Math.round(c[0] * k) + ',' + Math.round(c[1] * k) + ',' + Math.round(c[2] * k) + ',' + (a === undefined ? 1 : a) + ')';
+}
+function prism(x, z, r0, r1, y0, y1, N, base, lit) {
+  const faces = [];
+  for (let i = 0; i < N; i++) {
+    const a0 = i / N * TAU, a1 = (i + 1) / N * TAU, am = (a0 + a1) / 2;
+    faces.push({ am, pts: [
+      [x + Math.cos(a0) * r0, y0, z + Math.sin(a0) * r0],
+      [x + Math.cos(a1) * r0, y0, z + Math.sin(a1) * r0],
+      [x + Math.cos(a1) * r1, y1, z + Math.sin(a1) * r1],
+      [x + Math.cos(a0) * r1, y1, z + Math.sin(a0) * r1],
+    ] });
+  }
+  faces.sort((A, B) => (z + Math.sin(B.am) * r0) - (z + Math.sin(A.am) * r0));   // 远先画
+  for (const fc of faces) {
+    const k = 0.24 + 0.76 * Math.max(0, Math.cos(fc.am - LAN));
+    face(fc.pts, mul(base, k * lit, 1), 1);
+  }
+}
+// 火盆燃料（0–34 建立期依次亮起）
+function fuelOf(i, f) { return smoothstep(4 + i * 5, 18 + i * 5, f); }
+
+/* ---------------- 按帧定机位 ---------------- */
+function setCam(f) {
+  const t = smoothstep(0, 34, f);
+  CAM.x = lerp(0.0, 0.15, t);
+  CAM.y = lerp(1.88, 1.62, t);
+  CAM.z = lerp(-8.0, -1.55, t);
+  CAM.pitch = lerp(-0.062, -0.020, t);
+  CAM.yaw = 0;
+  const w = smoothstep(78, 100, f);              // 78 起跟拍向左，殿门进画
+  CAM.x += -0.85 * w;
+  CAM.yaw = -0.10 * w;
+  CAM.z = lerp(CAM.z, -0.95, w);
+  CAM.pitch = lerp(CAM.pitch, 0.006, w);
+  CAM.focal = 1000;
+}
+
+/* ---------------- 殿堂结构（米白象牙石） ---------------- */
+function drawShell(lit) {
+  const g = lit;
+  // 后墙 / 左右墙 / 顶 / 地
+  face([[-XL, 0, ZB], [XL, 0, ZB], [XL, CEIL, ZB], [-XL, CEIL, ZB]], '#ddd3bf');
+  face([[XL, 0, ZF], [XL, 0, ZB], [XL, CEIL, ZB], [XL, CEIL, ZF]], '#c8bda6');
+  face([[-XL, 0, ZF], [-XL, 0, ZB], [-XL, CEIL, ZB], [-XL, CEIL, ZF]], '#cdc2ab');
+  face([[XL, CEIL, ZF], [XL, CEIL, ZB], [-XL, CEIL, ZB], [-XL, CEIL, ZF]], '#b3a892');
+  face([[-XL, 0, ZF], [XL, 0, ZF], [XL, 0, ZB], [-XL, 0, ZB]], '#b6ab92');
+  // 地面：米白石板 + 接缝 + 远处压暗
+  face([[-XL, 0.001, ZF], [XL, 0.001, ZF], [XL, 0.001, ZB], [-XL, 0.001, ZB]], 'rgba(150,140,118,0.30)', 1);
+  // 通向王座的红毯（金边）
+  face([[-2.15, 0.006, 2.0], [2.15, 0.006, 2.0], [2.15, 0.006, DAIS_Z0], [-2.15, 0.006, DAIS_Z0]], mul([176, 132, 58], 0.32 + 0.52 * g, 1), 1);
+  face([[-1.85, 0.010, 2.0], [1.85, 0.010, 2.0], [1.85, 0.010, DAIS_Z0], [-1.85, 0.010, DAIS_Z0]], mul([122, 30, 26], 0.72 + 0.28 * g, 1), 1);
+  // 地面纵向接缝
+  for (let i = -3; i <= 3; i++) seg3([i * 2.2, 0.004, ZF], [i * 2.2, 0.004, ZB], 'rgba(140,128,106,0.42)', 0.014, 1);
+  for (let z = ZF + 2; z < ZB; z += 3.2) seg3([-XL, 0.004, z], [XL, 0.004, z], 'rgba(140,128,106,0.30)', 0.014, 1);
+  // 后墙浮雕（中央深红菱形徽记 + 金边）
+  const ez = ZB - 0.06;
+  face([[-2.2, 4.4, ez], [0, 7.2, ez], [2.2, 4.4, ez], [0, 1.6, ez]], mul([126, 32, 28], 0.8 + 0.2 * g, 1));
+  face([[-1.7, 4.4, ez - 0.02], [0, 6.6, ez - 0.02], [1.7, 4.4, ez - 0.02], [0, 2.2, ez - 0.02]], mul([206, 158, 66], 0.55 + 0.45 * g, 1));
+  face([[-1.35, 4.4, ez - 0.04], [0, 6.1, ez - 0.04], [1.35, 4.4, ez - 0.04], [0, 2.7, ez - 0.04]], mul([126, 32, 28], 0.9 + 0.1 * g, 1));
+  for (let i = 0; i < 6; i++) {
+    seg3([-6.0 + i * 2.4, 0, ez], [-6.0 + i * 2.4, 8.4, ez], 'rgba(176,164,140,1)', 0.14, 1);
+  }
+  // 侧墙红色旗（左右各两面）
+  banner(-XL + 0.06, 12.4, g, 1);
+  banner(-XL + 0.06, 18.0, g, 1);
+  banner(XL - 0.06, 12.4, g, -1);
+  banner(XL - 0.06, 18.0, g, -1);
+  banner(-3.4, 25.7, g, 2);
+  banner(3.4, 25.7, g, 2);
+  // 殿门（左墙上的拱门，暖白光溢入）
+  drawDoor(g);
+}
+function banner(sx, z, lit, side) {
+  const isBack = side === 2;
+  const x0 = isBack ? sx - 1.15 : sx, x1 = isBack ? sx + 1.15 : sx;
+  const z0 = isBack ? 25.7 : z - 0.85, z1 = isBack ? 25.7 : z + 0.85;
+  const top = 8.2, bot = 2.6;
+  const p = isBack
+    ? [[x0, top, z0], [x1, top, z1], [x1, bot, z1], [x0, bot, z0]]
+    : [[x0, top, z0], [x0, top, z1], [x0, bot + 0.9, z1], [x0, bot, z0]];
+  face(p, mul([138, 32, 28], 0.80 + 0.20 * lit, 1), 1);
+  face([[p[0][0], top, p[0][2]], [p[1][0], top, p[1][2]],
+        [p[1][0], top - 0.42, p[1][2]], [p[0][0], top - 0.42, p[0][2]]], mul([206, 158, 66], 0.45 + 0.5 * lit, 0.95), 1);
+  // 旗面金纹
+  const mid = [(p[0][0] + p[1][0]) / 2, (p[0][2] + p[1][2]) / 2];
+  seg3([mid[0], top - 0.9, mid[1]], [mid[0], bot + 0.7, mid[1]], mul([206, 158, 66], 0.35 + 0.35 * lit, 0.55), 0.055, 1);
+}
+function drawDoor(lit) {
+  const x = DOOR.x, z = DOOR.z, hf = DOOR.half;
+  // 门框内：暖白光
+  face([[x, 0, z - hf], [x, DOOR.h, z - hf], [x, DOOR.h, z + hf], [x, 0, z + hf]], 'rgba(255,236,198,0.98)', 1);
+  face([[x + 0.02, 0, z - hf * 0.72], [x + 0.02, DOOR.h * 0.86, z - hf * 0.72],
+        [x + 0.02, DOOR.h * 0.86, z + hf * 0.72], [x + 0.02, 0, z + hf * 0.72]], 'rgba(255,250,232,0.98)', 1);
+  // 拱顶
+  face([[x, DOOR.h, z - hf], [x, DOOR.h, z + hf], [x, DOOR.h - 1.2, z + hf], [x, DOOR.h - 1.2, z - hf]], mul([196, 178, 150], 0.75 + 0.25 * lit, 1), 1);
+  // 门内光洒到地面
+  const p = proj(x + 1.6, 0.02, z), p2 = proj(x, 2.4, z);
+  if (p) band(p.x, p.y, p.s * 3.4, p.s * 0.9, 'rgba(255,214,150,A)', 0.30, 'lighter');
+  if (p2) band(p2.x, p2.y, p2.s * 2.0, p2.s * 2.6, 'rgba(255,222,166,A)', 0.24, 'lighter');
+}
+function drawColonnade(lit) {
+  // 越远越先画
+  const list = [];
+  for (const z of COLZ) { list.push({ z, x: -5.6 }, { z, x: 5.6 }); }
+  list.sort((a, b) => b.z - a.z);
+  for (const c of list) {
+    const d = c.z - CAM.z;
+    if (d < -1.5) continue;
+    prism(c.x, c.z, 1.02, 0.78, 0.0, 0.62, 10, [198, 188, 164], lit);
+    prism(c.x, c.z, 0.72, 0.62, 0.62, 8.55, 10, [220, 210, 188], lit);
+    prism(c.x, c.z, 0.64, 0.98, 8.55, 9.05, 10, [208, 198, 174], lit);
+    prism(c.x, c.z, 0.94, 0.94, 9.05, 9.22, 10, [196, 152, 62], 0.40 + 0.60 * lit);
+    // 柱身金色箍环
+    prism(c.x, c.z, 0.70, 0.70, 4.4, 4.52, 10, [194, 150, 62], 0.35 + 0.65 * lit);
+  }
+  // 横梁 + 拱
+  for (const z of COLZ) {
+    seg3([-5.6, 9.30, z], [5.6, 9.30, z], 'rgba(168,158,136,1)', 0.30, 1);
+    for (let i = 0; i < 7; i++) {
+      const u0 = i / 7, u1 = (i + 1) / 7;
+      const yA = 8.30 + Math.sin(u0 * Math.PI) * 1.05, yB = 8.30 + Math.sin(u1 * Math.PI) * 1.05;
+      seg3([lerp(-5.6, 5.6, u0), yA, z], [lerp(-5.6, 5.6, u1), yB, z], 'rgba(186,176,154,1)', 0.24, 1);
+    }
+  }
+  // 顶棚中央金线
+  seg3([0, 9.94, ZF], [0, 9.94, ZB], 'rgba(174,132,56,0.85)', 0.10, 1);
+}
+function drawDais(lit) {
+  // 台体（米白大理石）
+  face([[-4.3, DAIS_Y, DAIS_Z0], [4.3, DAIS_Y, DAIS_Z0], [4.3, DAIS_Y, DAIS_Z1], [-4.3, DAIS_Y, DAIS_Z1]], mul([224, 214, 192], 0.82 + 0.24 * lit, 1), 1);
+  face([[-4.3, 0, DAIS_Z0], [4.3, 0, DAIS_Z0], [4.3, DAIS_Y, DAIS_Z0], [-4.3, DAIS_Y, DAIS_Z0]], mul([198, 188, 166], 0.72 + 0.28 * lit, 1));
+  face([[-4.3, DAIS_Y, DAIS_Z0], [-4.3, DAIS_Y, DAIS_Z1], [-4.3, 0, DAIS_Z1], [-4.3, 0, DAIS_Z0]], mul([176, 166, 144], 0.72 + 0.28 * lit, 1));
+  face([[4.3, DAIS_Y, DAIS_Z0], [4.3, DAIS_Y, DAIS_Z1], [4.3, 0, DAIS_Z1], [4.3, 0, DAIS_Z0]], mul([176, 166, 144], 0.72 + 0.28 * lit, 1));
+  // 台缘金线
+  seg3([-4.3, DAIS_Y + 0.01, DAIS_Z0], [4.3, DAIS_Y + 0.01, DAIS_Z0], mul([196, 152, 66], 0.5 + 0.5 * lit, 1), 0.075, 1);
+  // 三级台阶
+  const st = [[0.80, 11.30], [0.55, 10.75], [0.30, 10.20]];
+  for (const [y, z] of st) {
+    const z2 = z + 0.55;
+    face([[-4.3, y, z], [4.3, y, z], [4.3, y, z2], [-4.3, y, z2]], mul([216, 206, 184], 0.80 + 0.26 * lit, 1), 1);
+    face([[-4.3, y - 0.26, z], [4.3, y - 0.26, z], [4.3, y, z], [-4.3, y, z]], mul([186, 176, 156], 0.72 + 0.28 * lit, 1));
+  }
+}
+function box(x0, x1, y0, y1, z0, z1, col, lit) {
+  face([[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]], mul(col, 1.05 * lit, 1), 1);       // 顶
+  face([[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0]], mul(col, 0.62 * lit, 1), 1);       // 前
+  face([[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]], mul(col, 0.40 * lit, 1), 1);       // 左
+  face([[x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]], mul(col, 0.78 * lit, 1), 1);       // 右
+  face([[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]], mul(col, 0.52 * lit, 1), 1);       // 后
+}
+function drawThrone(lit) {
+  const x0 = THR.x - THR.w / 2, x1 = THR.x + THR.w / 2;
+  box(x0, x1, 1.85, THR.seat, THR.z - 0.62, THR.z + 0.62, [222, 208, 180], lit);                   // 座
+  box(x0, x1, THR.seat, THR.back, THR.z + 0.34, THR.z + 0.70, [210, 196, 168], lit);               // 靠背
+  box(x0 - 0.16, x0, 1.85, THR.back - 0.9, THR.z - 0.62, THR.z + 0.70, [198, 184, 158], lit);      // 左扶
+  box(x1, x1 + 0.16, 1.85, THR.back - 0.9, THR.z - 0.62, THR.z + 0.70, [198, 184, 158], lit);      // 右扶
+  box(x0, x1, THR.back, THR.back + 0.22, THR.z + 0.34, THR.z + 0.74, [200, 156, 64], 0.5 + 0.6 * lit);  // 顶饰
+  // 座垫（深红）
+  box(x0 + 0.10, x1 - 0.10, THR.seat, THR.seat + 0.10, THR.z - 0.52, THR.z + 0.30, [124, 30, 26], 0.8 + 0.2 * lit);
+  seg3([x0, 1.87, THR.z - 0.62], [x1, 1.87, THR.z - 0.62], mul([196, 152, 66], 0.5 + 0.5 * lit, 1), 0.07, 1);
+  // 靠背金纹尖顶
+  for (let i = 0; i < 3; i++) {
+    const cx = THR.x - 0.42 + i * 0.42;
+    face([[cx - 0.10, THR.back, THR.z + 0.72], [cx + 0.10, THR.back, THR.z + 0.72], [cx, THR.back + 0.72, THR.z + 0.72]],
+      mul([198, 154, 64], 0.5 + 0.5 * lit, 0.95), 1);
+  }
+}
+function drawBrazier(x, z, lit, fuel) {
+  if (fuel <= 0.01) { prism(x, z, 0.20, 0.18, 0, 0.78, 6, [74, 60, 46], lit); return; }
+  prism(x, z, 0.22, 0.18, 0.0, 0.78, 6, [84, 68, 52], lit);
+  prism(x, z, 0.86, 0.66, 0.78, 1.16, 10, [104, 84, 62], 0.42 + 0.58 * lit);
+  prism(x, z, 0.62, 0.54, 1.16, 1.30, 10, [66, 50, 38], 0.42 + 0.58 * lit);
+  // 地面反光
+  const base = proj(x, 0.02, z);
+  if (base) band(base.x, base.y, base.s * 1.25, base.s * 0.46, 'rgba(255,140,52,A)', 0.30 * fuel, 'lighter');
+  // 盆内炭火
+  const bowl = proj(x, 1.30, z);
+  if (bowl) {
+    glowAt(bowl.x, bowl.y, bowl.s * 0.62, bowl.s * 0.30, glow('rgba(255,120,40,A)'), 0.70 * fuel, 'lighter');
+    fxFlame(bowl.x, bowl.y - bowl.s * 0.01, bowl.s * 0.30, bowl.s * 1.02, z * 3.7, 1.0, fuel);
+    fxEmbers(bowl.x, bowl.y, bowl.s * 0.7, bowl.s * 1.9, 8, z * 2.3, 0.70 * fuel);
+    band(bowl.x, bowl.y, bowl.s * 2.0, bowl.s * 2.0, 'rgba(255,116,36,A)', 0.11 * fuel, 'lighter');
+    // 柱身上的火光
+    band(bowl.x, bowl.y - bowl.s * 1.3, bowl.s * 2.6, bowl.s * 3.4, 'rgba(255,132,44,A)', 0.10 * fuel, 'lighter');
+  }
+}
+function drawRoyalDetails(f, lit) {
+  // 地面石材分缝、地毯两侧的小型金色徽记与拱顶肋线，补足近中远景层次。
+  for (let z = -8; z <= 22; z += 3.2) {
+    seg3([-7.7, 0.012, z], [7.7, 0.012, z], 'rgba(116,96,72,0.28)', 0.025, 1);
+  }
+  for (const x of [-6.2, -4.1, 4.1, 6.2]) {
+    seg3([x, 0.014, -9], [x, 0.014, 23], 'rgba(142,116,76,0.20)', 0.020, 1);
+  }
+  for (let z = -1; z < 11; z += 2.7) {
+    for (const x of [-3.25, 3.25]) {
+      face([[x - 0.18, 0.018, z], [x, 0.018, z + 0.30], [x + 0.18, 0.018, z], [x, 0.018, z - 0.30]],
+        'rgba(188,142,62,0.44)', 1);
+    }
+  }
+  for (const z of [4.2, 10.0, 15.8, 21.6]) {
+    seg3([-5.5, CEIL - 0.04, z], [0, CEIL + 1.15, z], 'rgba(176,146,92,0.24)', 0.055, 1);
+    seg3([0, CEIL + 1.15, z], [5.5, CEIL - 0.04, z], 'rgba(176,146,92,0.24)', 0.055, 1);
+  }
+  // 靠火盆可见的金尘，速度很慢，不抢对白。
+  S.save(); S.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 34; i++) {
+    const x = srnd(i * 4.1) * W, y = H * (0.20 + srnd(i * 7.3) * 0.58);
+    const a = (0.05 + 0.10 * srnd(i * 2.9)) * lit * (0.72 + 0.28 * Math.sin(f / 36 + i));
+    S.globalAlpha = a; S.fillStyle = 'rgba(255,214,144,1)'; S.fillRect(x, y, 2, 2);
+  }
+  S.restore();
+}
+function drawWarriors(f, lit) {
+  // 0–80 跪 / 80–84 起身 / 84–88 转身 / 86–108 走出去
+  for (let i = 0; i < 4; i++) {
+    const w = WLK[i];
+    const rise = smoothstep(80 + i * 1.2, 84 + i * 1.2, f);
+    const turn = smoothstep(84 + i * 1.2, 88 + i * 1.2, f);
+    const walk = smoothstep(86 + i * 1.6, 108, f);
+    const wph = (f - 86 - i * 1.6) / 15 + i * 0.23;
+    // 位置：跪位 → 出门（左墙门洞）
+    const x = lerp(w.x, -XL - 0.9, walk);
+    const z = lerp(w.z, DOOR.z - 0.15 + i * 0.30, walk);
+    const gone = smoothstep(104, 108, f);
+    const a = (1 - gone) * (0.55 + 0.45 * lit);
+    const rim = w.rim;
+    const o = { fill: w.fill, rim, rimA: 0.58 * (0.5 + 0.5 * lit), rimDX: -0.022, rimDY: -0.008,
+      variant: w.variant, detail: w.detail, metal: w.metal };
+    // 跪姿（渐隐）
+    if (rise < 0.999) silhouette(x, 0, z, 1.80, POSE.kneelBack(), Object.assign({ alpha: a * (1 - rise) }, o));
+    // 背影站立 / 转身（渐隐）
+    if (rise > 0.01 && turn < 0.999) silhouette(x, 0, z, 1.80, POSE.standBack(), Object.assign({ alpha: a * rise * (1 - turn) }, o));
+    // 侧面行走（镜像：向左）
+    if (turn > 0.01) silhouette(x, 0, z, 1.80, POSE.walkSide(wph), Object.assign({ alpha: a * turn, mir: true }, o));
+  }
+}
+function drawKing(f, lit) {
+  const u = smoothstep(34, 56, f);                        // 抬手
+  const p = silhouette(THR.x, THR.seat, THR.z, KING_H, POSE.king(u), {
+    fill: '#0d0a12', rim: 'rgba(255,214,132,A)', rimA: 0.62 * (0.5 + 0.5 * lit), rimDX: -0.024, rimDY: -0.009,
+  });
+  // 王冠 / 手部金芒
+  const hand = proj(THR.x - 0.20 * KING_H, THR.seat + 1.04 * KING_H, THR.z);
+  if (hand) {
+    glowAt(hand.x, hand.y, 70 + 50 * u, 70 + 50 * u, glow('rgba(255,226,168,A)'), 0.30 + 0.45 * u, 'lighter');
+    DK.fxSparks(hand.x, hand.y, 12, 30 + 34 * u, 7.3, 0.5 * u, 'rgba(255,238,190,1)');
+  }
+  // 王冠金芒（头顶）
+  const crown = proj(THR.x - 0.02 * KING_H, THR.seat + 1.09 * KING_H, THR.z);
+  if (crown) glowAt(crown.x, crown.y, 54, 40, glow('rgba(255,200,96,A)'), 0.36, 'lighter');
+}
+/* 白光射向远方（62–80）：顺镜头方向射出 + 横向白光带扫过 */
+function drawBeam(f) {
+  const k = subA(f, 61, 67, 76, 80);
+  if (k <= 0.01) return;
+  const hx = THR.x - 0.20 * KING_H, hy = THR.seat + 1.04 * KING_H, hz = THR.z;
+  const tgt = [-34.0, 12.4, 30.0];                       // 斜贯殿堂射向远方（出画）
+  const tipT = smoothstep(61, 72, f);
+  const head = proj(hx, hy, hz);
+  S.save(); S.globalCompositeOperation = 'lighter';
+  if (head) {
+    glowAt(head.x, head.y, 300, 300, glow('rgba(255,186,86,A)'), 0.42 * k, 'lighter');
+    glowAt(head.x, head.y, 120, 120, glow('rgba(255,250,226,A)'), 0.90 * k, 'lighter');
+  }
+  const N = 34;
+  for (let i = 0; i < N; i++) {
+    const u0 = i / N, u1 = (i + 1) / N;
+    if (u1 > tipT) break;
+    const A = [lerp(hx, tgt[0], u0), lerp(hy, tgt[1], u0), lerp(hz, tgt[2], u0)];
+    const B = [lerp(hx, tgt[0], u1), lerp(hy, tgt[1], u1), lerp(hz, tgt[2], u1)];
+    const a = proj(A[0], A[1], A[2]), b = proj(B[0], B[1], B[2]);
+    if (!a || !b) continue;
+    const w = (9 + 60 * u0) * ((a.s + b.s) / 2) / 90;
+    S.globalAlpha = k * (0.24 + 0.30 * u0);
+    S.strokeStyle = 'rgba(255,196,104,0.95)'; S.lineWidth = Math.max(3, w * 6.0); S.lineCap = 'round';
+    S.beginPath(); S.moveTo(a.x, a.y); S.lineTo(b.x, b.y); S.stroke();
+    S.globalAlpha = k * (0.40 + 0.46 * u0);
+    S.strokeStyle = 'rgba(255,244,208,0.95)'; S.lineWidth = Math.max(2, w * 2.6);
+    S.beginPath(); S.moveTo(a.x, a.y); S.lineTo(b.x, b.y); S.stroke();
+    S.globalAlpha = k; S.strokeStyle = 'rgba(255,255,255,1)'; S.lineWidth = Math.max(1.4, w);
+    S.beginPath(); S.moveTo(a.x, a.y); S.lineTo(b.x, b.y); S.stroke();
+  }
+  S.restore();
+  // 横向白光带扫过（整屏）
+  const sweep = smoothstep(68, 78, f);
+  if (sweep > 0.001 && sweep < 0.999) {
+    const y = lerp(-260, H + 260, sweep);
+    const a = 0.34 * Math.sin(sweep * Math.PI);
+    band(W / 2, y, W * 1.3, 190, 'rgba(255,250,236,A)', a, 'lighter');
+    band(W / 2, y, W * 1.3, 62, 'rgba(255,255,255,A)', a * 1.3, 'lighter');
+  }
+}
+
+/* ---------------- 一帧 ---------------- */
+function draw(f) {
+  S = DK.ctx;
+  const lit = 0.55 + 0.45 * smoothstep(0, 34, f);           // 火盆亮起 → 整体变亮
+  drawShell(lit);
+  drawRoyalDetails(f, lit);
+  drawDais(lit);
+  drawThrone(lit);
+  drawKing(f, lit);
+  drawColonnade(lit);
+  for (let i = 0; i < BRZ.length; i++) {                    // 远先画
+    const z = BRZ[BRZ.length - 1 - i], fu = fuelOf(BRZ.length - 1 - i, f);
+    drawBrazier(-5.0, z, lit, fu);
+    drawBrazier(5.0, z, lit, fu);
+  }
+  drawWarriors(f, lit);
+
+  // 殿堂暖光（米白墙被火盆映成暖金）
+  S.save(); S.globalCompositeOperation = 'lighter';
+  band(W * 0.5, H * 0.56, W * 0.86, H * 0.46, 'rgba(255,168,84,A)', 0.10 * lit, 'lighter');
+  band(W * 0.5, H * 0.82, W * 0.7, H * 0.24, 'rgba(255,150,70,A)', 0.07 * lit, 'lighter');
+  S.restore();
+
+  // 白光时刻：米白底上白光要先压暗殿堂才读得出（也正好是这一拍的戏剧性）
+  const dim = subA(f, 60, 66, 74, 80) * 0.46;
+  screenFlash('rgba(34,22,14,1)', dim);
+  drawBeam(f);
+  // 白光全屏过曝
+  screenFlash('rgba(255,252,244,1)', 0.34 * subA(f, 68, 71, 74, 79), 'lighter');
+  // 建立期火盆初亮的金色闪
+  screenFlash('rgba(255,206,130,1)', 0.07 * (1 - smoothstep(6, 30, f)), 'lighter');
+
+  checkerOverlay(0.042);
+  // --- 2D 覆盖层（一律最后） ---
+  chapterLabel('① 王国 · 宝座', smoothstep(2, 14, f) * (1 - smoothstep(96, 110, f)), true);
+  dialog('国王下令：讨伐恶龙。', 26, { alpha: 1 - smoothstep(78, 88, f), label: 'KINGS ORDER', labelCol: 'rgba(120,84,32,0.95)' });
+}
+
+DK.boot({
+  total: 788,
+  seg: [SEG_START, SEG_LEN],
+  cam: { x: 0, y: 1.88, z: -8.0, focal: 1000, pitch: -0.062, yaw: 0 },
+  bg: '#07050a',
+  scene: draw,
+  setCam: setCam,
+  post: f => ({ scan: 0.40, grain: 0.042, chroma: 0.045, grade: 0.06, vig: 0.26, glitch: 0.012 }),
+  clamp: c => { c.x = clamp(c.x, -7.0, 7.0); c.y = clamp(c.y, 0.6, 8.6); c.z = clamp(c.z, -18, 22); },
+  hud: () => '殿堂 16 × 10 × 39 · 柱 x=±5.6 · 火盆 x=±4.0 · 王座 z=14 · 门 x=-8 z=10.2',
+});
+</script>
+</body>
+</html>

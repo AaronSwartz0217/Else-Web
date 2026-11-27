@@ -1,0 +1,8 @@
+{
+  "name": "webgl3d-pipeline",
+  "version": "1.0.0",
+  "renderer": "WebGL2",
+  "requiredFiles": ["webgl3d_pipeline.js", "orbit_controls.js"],
+  "referenceFiles": ["template_scene.html", "verify_pipeline.js", "README.md"],
+  "features": ["depth-test", "depth-write", "back-face-culling", "opaque-queue", "transparent-queue", "normal-lighting", "texture-billboard", "post-process", "debug-normal", "debug-depth"]
+}

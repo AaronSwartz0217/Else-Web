@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07070c">
+  <title>达克效应 · 场景漫游</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #07070c;
+      --panel: rgba(12, 12, 20, .88);
+      --line: rgba(236, 199, 126, .24);
+      --gold: #e9c47b;
+      --muted: #aaa6b2;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--ink); }
+    body { font-family: Inter, "Microsoft YaHei", system-ui, sans-serif; color: #f6f0e5; }
+    #world { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #030306; }
+    .veil {
+      position: fixed; inset: 0; z-index: 4; pointer-events: none;
+      background: radial-gradient(circle at 64% 40%, transparent 34%, rgba(0,0,0,.42) 100%);
+      opacity: .6;
+    }
+    .loading {
+      position: fixed; inset: 0; z-index: 8; display: grid; place-items: center;
+      background: #07070c; color: var(--gold); letter-spacing: .24em;
+      transition: opacity .35s ease, visibility .35s ease;
+    }
+    .loading.done { opacity: 0; visibility: hidden; }
+    .menu {
+      position: fixed; z-index: 10; left: 18px; top: 18px; width: min(390px, calc(100vw - 36px));
+      padding: 19px; border: 1px solid var(--line); border-radius: 18px;
+      background: linear-gradient(145deg, rgba(22,19,25,.93), var(--panel));
+      box-shadow: 0 24px 80px rgba(0,0,0,.48); backdrop-filter: blur(18px);
+      transition: transform .28s ease, opacity .28s ease;
+    }
+    .menu.hidden { transform: translateX(calc(-100% - 30px)); opacity: 0; pointer-events: none; }
+    .kicker { color: var(--gold); font: 700 11px/1.2 ui-monospace, monospace; letter-spacing: .24em; }
+    h1 { margin: 8px 0 5px; font-family: Georgia, "STSong", serif; font-size: 28px; font-weight: 600; }
+    .intro { margin: 0 0 15px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+    .scene-list { display: grid; gap: 8px; }
+    .scene {
+      width: 100%; display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 10px;
+      padding: 10px 11px; border: 1px solid rgba(255,255,255,.08); border-radius: 11px;
+      color: #e9e5e0; background: rgba(255,255,255,.035); text-align: left; cursor: pointer;
+      transition: border-color .2s, background .2s, transform .2s;
+    }
+    .scene:hover { transform: translateX(3px); border-color: rgba(233,196,123,.42); }
+    .scene.active { border-color: var(--gold); background: rgba(233,196,123,.10); }
+    .num { color: var(--gold); font: 700 12px/1 ui-monospace, monospace; }
+    .scene strong { display: block; font-size: 14px; font-weight: 650; }
+    .scene small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .arrow { color: rgba(233,196,123,.65); }
+    .controls {
+      margin-top: 14px; padding-top: 13px; border-top: 1px solid rgba(255,255,255,.08);
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px 12px;
+      color: var(--muted); font-size: 11px; line-height: 1.45;
+    }
+    kbd { color: #fff4d5; font: 600 10px ui-monospace, monospace; }
+    .actions { display: flex; gap: 8px; margin-top: 14px; }
+    .action {
+      flex: 1; padding: 9px 10px; border: 1px solid rgba(255,255,255,.10); border-radius: 9px;
+      color: #ddd7ce; background: rgba(255,255,255,.045); cursor: pointer;
+    }
+    .action:hover { border-color: rgba(233,196,123,.5); color: #fff6df; }
+    .menu-toggle {
+      position: fixed; z-index: 11; left: 18px; bottom: 18px; width: 46px; height: 46px;
+      border: 1px solid var(--line); border-radius: 50%; color: var(--gold); background: var(--panel);
+      box-shadow: 0 8px 32px rgba(0,0,0,.35); cursor: pointer; font-size: 18px;
+    }
+    .scene-label {
+      position: fixed; z-index: 6; right: 18px; top: 18px; padding: 9px 12px;
+      border: 1px solid rgba(255,255,255,.10); border-radius: 999px;
+      background: rgba(7,7,12,.58); color: rgba(255,255,255,.7); backdrop-filter: blur(10px);
+      font-size: 11px; letter-spacing: .08em; pointer-events: none;
+    }
+    @media (max-width: 640px) {
+      .menu { left: 10px; top: 10px; width: calc(100vw - 20px); padding: 15px; }
+      .scene-label { display: none; }
+      .controls { grid-template-columns: 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <iframe id="world" title="达克效应漫游场景" allow="fullscreen"></iframe>
+  <div class="veil" aria-hidden="true"></div>
+  <div id="loading" class="loading">正在进入场景…</div>
+
+  <aside id="menu" class="menu" aria-label="场景选择">
+    <div class="kicker">DUNNING–KRUGER · ROAM</div>
+    <h1>达克效应 · 场景漫游</h1>
+    <p id="intro" class="intro">选择场景后，在画面中拖拽观察空间，并用键盘移动镜头。</p>
+    <nav id="sceneList" class="scene-list"></nav>
+    <div class="controls">
+      <span><kbd>W A S D</kbd> 前后左右</span><span><kbd>Q / E</kbd> 下降 / 上升</span>
+      <span><kbd>拖拽</kbd> 转动视角</span><span><kbd>Shift</kbd> 加速移动</span>
+      <span><kbd>空格</kbd> 暂停动作</span><span><kbd>[ / ]</kbd> 逐帧查看</span>
+      <span><kbd>R</kbd> 复位场景</span><span><kbd>M</kbd> 显示菜单</span>
+    </div>
+    <div class="actions">
+      <button id="newWindow" class="action" type="button">单独打开</button>
+      <button id="fullscreen" class="action" type="button">进入全屏</button>
+    </div>
+  </aside>
+
+  <button id="menuToggle" class="menu-toggle" type="button" aria-label="显示或隐藏菜单" title="菜单（M）">☰</button>
+  <div id="sceneLabel" class="scene-label"></div>
+
+  <script>
+    'use strict';
+    const scenes = [
+      { id: 'throne', key: '01', name: '王国与宝座', note: '金红王城 · 预言揭幕', src: 'scenes/A_throne.html?roam=1' },
+      { id: 'march', key: '02', name: '勇士行军', note: '雪山 · 森林 · 荒漠', src: 'scenes/B_march.html?roam=1' },
+      { id: 'castle', key: '03', name: '魔王城堡', note: '巨龙 · 四位勇士', src: 'scenes/C_castle.html?roam=1' },
+      { id: 'ruins', key: '04', name: '大殿废墟', note: '断柱 · 尸山 · 余晖', src: 'scenes/D_ruins.html?roam=1' }
+    ];
+    const world = document.getElementById('world');
+    const list = document.getElementById('sceneList');
+    const menu = document.getElementById('menu');
+    const loading = document.getElementById('loading');
+    const label = document.getElementById('sceneLabel');
+    let current = scenes[0];
+
+    for (const scene of scenes) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'scene';
+      button.dataset.scene = scene.id;
+      button.innerHTML = '<span class="num">' + scene.key + '</span><span><strong>' + scene.name
+        + '</strong><small>' + scene.note + '</small></span><span class="arrow">↗</span>';
+      button.addEventListener('click', () => selectScene(scene.id));
+      list.appendChild(button);
+    }
+
+    function selectScene(id) {
+      current = scenes.find(s => s.id === id) || scenes[0];
+      loading.classList.remove('done');
+      world.src = current.src;
+      label.textContent = current.key + ' · ' + current.name;
+      document.title = '达克效应 · ' + current.name;
+      for (const button of list.querySelectorAll('.scene')) {
+        button.classList.toggle('active', button.dataset.scene === current.id);
+      }
+      try {
+        localStorage.setItem('dk-roam-scene', current.id);
+        const url = new URL(location.href); url.searchParams.set('scene', current.id);
+        history.replaceState(null, '', url.href);
+      } catch (_) {}
+    }
+
+    world.addEventListener('load', () => {
+      loading.classList.add('done');
+      setTimeout(() => { try { world.focus(); } catch (_) {} }, 40);
+    });
+    document.getElementById('menuToggle').addEventListener('click', () => menu.classList.toggle('hidden'));
+    document.getElementById('newWindow').addEventListener('click', () => window.open(current.src, '_blank', 'noopener'));
+    document.getElementById('fullscreen').addEventListener('click', () => {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    });
+    window.addEventListener('keydown', event => {
+      if (event.code === 'KeyM') menu.classList.toggle('hidden');
+      if (/^Digit[1-4]$/.test(event.code)) selectScene(scenes[Number(event.code.slice(-1)) - 1].id);
+    });
+
+    let initial = new URLSearchParams(location.search).get('scene');
+    try { initial = initial || localStorage.getItem('dk-roam-scene'); } catch (_) {}
+    selectScene(initial || 'throne');
+  </script>
+</body>
+</html>

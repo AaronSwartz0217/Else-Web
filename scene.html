@@ -1197,8 +1197,14 @@ body::after{
 .map-spot small{font-size:.38rem;color:#b6abd8;font-family:"Courier New",monospace;letter-spacing:.04em;}
 .spot-arcade{left:30%;top:58%;box-shadow:0 0 22px rgba(34,230,255,.55);}
 .spot-cafe{left:70%;top:38%;border-color:#ffca3a;box-shadow:0 0 24px rgba(255,202,58,.5);}
+.spot-home{left:20%;top:24%;border-color:#8affc1;box-shadow:0 0 22px rgba(138,255,193,.42);}
+.spot-hz{left:52%;top:20%;border-color:#ff4fd8;box-shadow:0 0 22px rgba(255,79,216,.45);}
+.spot-cinema{left:80%;top:72%;border-color:#ff8a5c;box-shadow:0 0 22px rgba(255,138,92,.48);}
 .map-spot:hover{transform:translate(-50%,-50%) scale(1.07);}
 .spot-cafe:hover{box-shadow:0 0 34px rgba(255,202,58,.85);}
+.spot-home:hover{box-shadow:0 0 34px rgba(138,255,193,.75);}
+.spot-hz:hover{box-shadow:0 0 34px rgba(255,79,216,.8);}
+.spot-cinema:hover{box-shadow:0 0 34px rgba(255,138,92,.85);}
 .city-tip{
     margin-top:12px;text-align:center;font-family:var(--pixel);
     font-size:.42rem;letter-spacing:.1em;color:#7f76a4;
@@ -1207,6 +1213,9 @@ body::after{
     .city-map{aspect-ratio:4/5;min-height:0;}
     .spot-arcade{left:32%;top:62%;}
     .spot-cafe{left:68%;top:34%;}
+    .spot-home{left:20%;top:22%;}
+    .spot-hz{left:52%;top:18%;}
+    .spot-cinema{left:80%;top:74%;}
 }
 
 /* ===== 咖啡厅 ===== */
@@ -1672,9 +1681,6 @@ body::after{
                     <path d="M570 0 V450"/>
                     <path d="M0 400 H800"/>
                 </g>
-                <path d="M80 430 C 220 320, 360 300, 520 150" stroke="#ff4fd8" stroke-width="3" stroke-dasharray="7 9" fill="none" opacity=".7"/>
-                <circle cx="520" cy="150" r="5" fill="#ff4fd8"/>
-                <circle cx="80" cy="430" r="5" fill="#22e6ff"/>
             </svg>
             <button class="map-spot spot-arcade" type="button" data-spot="arcade">
                 <span class="spot-dot">▶</span>
@@ -1685,6 +1691,21 @@ body::after{
                 <span class="spot-dot">☕</span>
                 <strong>CAFÉ</strong>
                 <small>PSYCHOLOGY TALKS</small>
+            </button>
+            <button class="map-spot spot-home" type="button" data-spot="home">
+                <span class="spot-dot">⌂</span>
+                <strong>HOME</strong>
+                <small>PORTFOLIO</small>
+            </button>
+            <button class="map-spot spot-hz" type="button" data-spot="hangzhou">
+                <span class="spot-dot">◈</span>
+                <strong>HANGZHOU</strong>
+                <small>TEN YEARS · ONE MILLION</small>
+            </button>
+            <button class="map-spot spot-cinema" type="button" data-spot="cinema">
+                <span class="spot-dot">▶</span>
+                <strong>CINEMA</strong>
+                <small>3 ROAM SCENES</small>
             </button>
         </div>
         <p class="city-tip">CLICK A PIN TO TRAVEL · ESC TO CLOSE</p>
@@ -1862,25 +1883,29 @@ body::after{
     function rand(a, b){ return a + Math.random() * (b - a); }
 
     /* ---------- 结束提示 ---------- */
-    function finish(win, title, sub){
+    function finish(win, title, sub, prize){
         if(!current || current.ended) return;
         current.ended = true;
         current.won = win;
+        if(prize) current.prizeDetail = prize;
         if(win){
             [784, 988, 1175, 1568].forEach(function(f, i){
                 setTimeout(function(){ beep(f, 0.14, 'square', 0.05); }, i * 100);
             });
-            unlockProject(currentId);
+            var prizeDetail = current.prizeDetail || { id: currentId, source: 'arcade' };
+            var wonId = prizeDetail.id || currentId;
+            var machinePrize = prizeDetail.source === 'claw' || prizeDetail.source === 'gacha';
+            unlockProject(wonId);
             burstConfetti();
-            var wonId = currentId;
             setTimeout(function(){
                 if(!wonId || !modal.classList.contains('open')) return;
                 document.dispatchEvent(new CustomEvent('arcade:prize', {
-                    detail: { id: wonId, source: 'arcade' }
+                    detail: prizeDetail
                 }));
             }, 900);
-            stageMsg.innerHTML = '<strong>' + title + '</strong><span>' + (sub || '') + '</span><small>点击查看项目档案 · 或「重新投币」再玩一次</small>';
-            stageMsg.dataset.action = 'view';
+            stageMsg.innerHTML = '<strong>' + title + '</strong><span>' + (sub || '') + '</span><small>' +
+                (machinePrize ? '点击或「重新投币」再玩一次' : '点击查看项目档案 · 或「重新投币」再玩一次') + '</small>';
+            stageMsg.dataset.action = machinePrize ? 'restart' : 'view';
         }else{
             beep(196, 0.18, 'sawtooth', 0.05);
             setTimeout(function(){ beep(130, 0.3, 'sawtooth', 0.05); }, 160);
@@ -1895,6 +1920,11 @@ body::after{
 
     function applyProjectState(id){
         var def = GAMES[id];
+        var noInfo = !!(def && def.noInfo);
+        $('modalInfo').style.display = noInfo ? 'none' : '';
+        $('projectLock').style.display = noInfo ? 'none' : '';
+        $('viewProjectBtn').style.display = noInfo ? 'none' : '';
+        if(noInfo) return true;
         var unlocked = !!(def && (def.unlock === 'always' || unlockedProjects[id]));
         var info = $('modalInfo');
         info.classList.toggle('locked', !unlocked);
@@ -2641,8 +2671,457 @@ body::after{
         };
     }
 
+    /* ---------- 抓娃娃机 & 扭蛋机：2D 抽奖界面 ---------- */
+    var MACHINE_PROJECTS = ['hpwy', 'wupo', 'finch', 'robot', 'universal', 'hz10m'];
+    var MACHINE_PALETTE = ['#ff7bd5', '#6be3ff', '#ffca3a', '#8affc1', '#b56bff', '#ff8a8a'];
+
+    function rollMachinePrize(type){
+        if(Math.random() < 0.01) return { id: 'resume', rarity: 'gold', source: type };
+        if(Math.random() < 0.01) return { id: 'ember', rarity: 'gold', source: type };
+        return {
+            id: MACHINE_PROJECTS[Math.floor(Math.random() * MACHINE_PROJECTS.length)],
+            rarity: null,
+            source: type
+        };
+    }
+
+    function createClaw(){
+        var clawX = CW / 2, targetX = CW / 2, clawY = 108;
+        var state = 'aim';
+        var grabbed = null, dropY = 0;
+        var misses = 0, timer = 0, t = 0;
+        var keys = { left: false, right: false };
+        var chuteX = 112;
+        var ended = false;
+
+        var prizes = [];
+        for(var i = 0; i < 7; i++){
+            prizes.push({
+                x: 196 + i * 106 + rand(-14, 14),
+                y: 474 + rand(-12, 12),
+                r: rand(30, 39),
+                color: MACHINE_PALETTE[i % MACHINE_PALETTE.length],
+                ear: i % 3,
+                taken: false
+            });
+        }
+
+        function nearest(){
+            var best = null, bd = 1e9;
+            prizes.forEach(function(p){
+                if(p.taken) return;
+                var d = Math.abs(p.x - clawX);
+                if(d < p.r + 24 && d < bd){ bd = d; best = p; }
+            });
+            return best;
+        }
+        function drop(){
+            if(state !== 'aim' || ended) return;
+            state = 'down';
+            beep(520, 0.06, 'square', 0.04);
+        }
+        function drawPlush(c, p, x, y, scale){
+            c.save();
+            c.translate(x, y);
+            c.scale(scale, scale);
+            c.fillStyle = p.color;
+            c.beginPath(); c.arc(0, 6, p.r, 0, TAU); c.fill();
+            if(p.ear === 0){
+                c.beginPath();
+                c.moveTo(-p.r * 0.78, -p.r * 0.5); c.lineTo(-p.r * 0.24, -p.r * 1.06); c.lineTo(-p.r * 0.02, -p.r * 0.48);
+                c.closePath(); c.fill();
+                c.beginPath();
+                c.moveTo(p.r * 0.78, -p.r * 0.5); c.lineTo(p.r * 0.24, -p.r * 1.06); c.lineTo(p.r * 0.02, -p.r * 0.48);
+                c.closePath(); c.fill();
+            }else if(p.ear === 1){
+                c.beginPath(); c.arc(-p.r * 0.62, -p.r * 0.62, p.r * 0.34, 0, TAU); c.fill();
+                c.beginPath(); c.arc(p.r * 0.62, -p.r * 0.62, p.r * 0.34, 0, TAU); c.fill();
+            }
+            c.fillStyle = 'rgba(8,6,16,.78)';
+            c.beginPath(); c.arc(-p.r * 0.3, 2, p.r * 0.11, 0, TAU); c.fill();
+            c.beginPath(); c.arc(p.r * 0.3, 2, p.r * 0.11, 0, TAU); c.fill();
+            c.strokeStyle = 'rgba(8,6,16,.55)';
+            c.lineWidth = 2;
+            c.beginPath(); c.arc(0, p.r * 0.26, p.r * 0.2, 0.15 * Math.PI, 0.85 * Math.PI); c.stroke();
+            c.restore();
+        }
+        function drawClaw(c){
+            c.strokeStyle = 'rgba(255,255,255,.5)';
+            c.lineWidth = 3;
+            c.beginPath(); c.moveTo(clawX, 84); c.lineTo(clawX, clawY); c.stroke();
+
+            c.fillStyle = '#e6eaf6';
+            roundRect(c, clawX - 17, clawY - 16, 34, 24, 7); c.fill();
+            c.fillStyle = '#ff4fd8';
+            roundRect(c, clawX - 10, clawY - 11, 20, 8, 4); c.fill();
+
+            var closed = state === 'grab' || state === 'up' || state === 'carry' || state === 'drop';
+            var spread = closed ? 0.32 : 1;
+            c.strokeStyle = '#f2f5ff';
+            c.lineWidth = 5;
+            c.lineCap = 'round';
+            [-1, 1].forEach(function(s){
+                c.beginPath();
+                c.moveTo(clawX + s * 10, clawY + 4);
+                c.quadraticCurveTo(clawX + s * 42 * spread, clawY + 34, clawX + s * 20 * spread, clawY + 56);
+                c.stroke();
+            });
+        }
+
+        return {
+            ended: false,
+            update: function(dt){
+                t += dt;
+                timer += dt;
+                if(state === 'aim'){
+                    var dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+                    if(dir) targetX = Math.max(98, Math.min(CW - 98, targetX + dir * 430 * dt));
+                    clawX += (targetX - clawX) * Math.min(1, dt * 9);
+                    clawY = 108;
+                }else if(state === 'down'){
+                    clawY += 640 * dt;
+                    if(clawY >= 446){
+                        clawY = 446;
+                        var p = nearest();
+                        if(p){
+                            p.taken = true;
+                            grabbed = p;
+                            state = 'grab';
+                            timer = 0;
+                            beep(880, 0.07, 'square', 0.05);
+                        }else{
+                            state = 'up';
+                            beep(190, 0.14, 'sawtooth', 0.045);
+                        }
+                    }
+                }else if(state === 'grab'){
+                    if(timer > 0.32){ state = 'up'; timer = 0; }
+                }else if(state === 'up'){
+                    clawY -= 560 * dt;
+                    if(clawY <= 108){
+                        clawY = 108;
+                        if(grabbed){ state = 'carry'; beep(700, 0.08, 'square', 0.045); }
+                        else{
+                            state = 'aim';
+                            misses++;
+                            timer = 0;
+                            toast('抓空了 · 位置再准一点');
+                        }
+                    }
+                }else if(state === 'carry'){
+                    clawX += (chuteX - clawX) * Math.min(1, dt * 5);
+                    if(Math.abs(clawX - chuteX) < 6){
+                        clawX = chuteX;
+                        state = 'drop';
+                        timer = 0;
+                        beep(460, 0.1, 'square', 0.045);
+                    }
+                }else if(state === 'drop'){
+                    dropY = Math.min(90, dropY + dt * 300);
+                    if(timer > 0.75 && !ended){
+                        ended = true;
+                        finish(true, '抓到奖品！', 'CLAW MACHINE · PRIZE', rollMachinePrize('claw'));
+                    }
+                }
+            },
+            draw: function(c){
+                paintBg(c, '#1a0b24', '#08030e');
+
+                /* 玻璃反光 */
+                var sheen = c.createLinearGradient(0, 0, CW, CH);
+                sheen.addColorStop(0, 'rgba(255,255,255,.07)');
+                sheen.addColorStop(.45, 'rgba(255,255,255,0)');
+                sheen.addColorStop(1, 'rgba(120,240,255,.06)');
+                c.fillStyle = sheen;
+                c.fillRect(0, 0, CW, CH);
+
+                c.strokeStyle = '#ff2f8e';
+                c.lineWidth = 6;
+                roundRect(c, 26, 22, CW - 52, CH - 64, 18); c.stroke();
+                c.strokeStyle = 'rgba(255,255,255,.55)';
+                c.lineWidth = 2;
+                roundRect(c, 40, 36, CW - 80, CH - 92, 14); c.stroke();
+
+                /* 顶部灯带 */
+                for(var b = 0; b < 24; b++){
+                    var on = Math.sin(t * 3 + b * 0.6) > -0.2;
+                    c.fillStyle = on ? '#ffca3a' : 'rgba(255,202,58,.22)';
+                    c.beginPath(); c.arc(70 + b * 36, 50, 4, 0, TAU); c.fill();
+                }
+
+                /* 出货口 */
+                c.fillStyle = '#05030a';
+                roundRect(c, 54, 420, 116, 96, 10); c.fill();
+                c.strokeStyle = '#ffca3a';
+                c.lineWidth = 3;
+                roundRect(c, 54, 420, 116, 96, 10); c.stroke();
+                c.fillStyle = 'rgba(255,202,58,.5)';
+                c.font = 'bold 13px "Courier New",monospace';
+                c.textAlign = 'center';
+                c.fillText('PRIZE', 112, 408);
+
+                /* 奖品堆 */
+                prizes.forEach(function(p){
+                    if(p.taken) return;
+                    drawPlush(c, p, p.x, p.y, 1);
+                });
+
+                /* 地面 */
+                c.fillStyle = 'rgba(255,255,255,.05)';
+                c.fillRect(40, 516, CW - 80, 34);
+
+                /* 滑轨 */
+                c.fillStyle = '#cfd6e8';
+                roundRect(c, 60, 76, CW - 120, 12, 6); c.fill();
+                c.fillStyle = '#ff4fd8';
+                roundRect(c, clawX - 30, 68, 60, 28, 8); c.fill();
+
+                drawClaw(c);
+
+                if(grabbed){
+                    if(state === 'drop'){
+                        drawPlush(c, grabbed, clawX, 470 + dropY, 0.86);
+                    }else{
+                        drawPlush(c, grabbed, clawX, clawY + 64, 0.8);
+                    }
+                }
+
+                c.fillStyle = 'rgba(255,255,255,.42)';
+                c.font = '14px "PingFang SC","Microsoft YaHei",sans-serif';
+                c.textAlign = 'center';
+                c.fillText('← → 移动爪子 · 空格 / 点击下爪 · 抓空可以再来', CW / 2, CH - 20);
+            },
+            pointer: function(){ drop(); },
+            move: function(x){ if(state === 'aim') targetX = Math.max(98, Math.min(CW - 98, x)); },
+            onDir: function(dir){
+                if(state !== 'aim') return;
+                if(dir === 'left') targetX = Math.max(98, targetX - 56);
+                if(dir === 'right') targetX = Math.min(CW - 98, targetX + 56);
+            },
+            onKey: function(e){
+                if(e.key === 'ArrowLeft') keys.left = true;
+                else if(e.key === 'ArrowRight') keys.right = true;
+                else if(e.key === ' ' || e.key === 'Enter') drop();
+            },
+            onKeyUp: function(e){
+                if(e.key === 'ArrowLeft') keys.left = false;
+                else if(e.key === 'ArrowRight') keys.right = false;
+            },
+            hud: function(){ return ['抓取中 · 空爪 ' + misses, 'CLAW · PROJECT PRIZE']; }
+        };
+    }
+
+    function createGacha(){
+        var turn = 0;
+        var phase = 'idle';
+        var timer = 0, t = 0, knob = 0, capsuleDrop = 0, glow = 0;
+        var prizeColor = MACHINE_PALETTE[Math.floor(Math.random() * MACHINE_PALETTE.length)];
+        var ended = false;
+
+        var balls = [];
+        for(var i = 0; i < 13; i++){
+            var a = rand(0, TAU), rr = rand(16, 92);
+            balls.push({
+                x: 480 + Math.cos(a) * rr,
+                y: 236 + Math.sin(a) * rr * 0.72,
+                r: rand(9, 14),
+                color: MACHINE_PALETTE[i % MACHINE_PALETTE.length]
+            });
+        }
+
+        function crank(){
+            if(phase !== 'idle' || ended) return;
+            turn++;
+            phase = 'crank';
+            timer = 0;
+            beep(400 + turn * 100, 0.09, 'square', 0.05);
+        }
+
+        return {
+            ended: false,
+            update: function(dt){
+                t += dt;
+                timer += dt;
+                if(phase === 'crank'){
+                    knob += dt * 10;
+                    if(timer > 0.4){
+                        knob = 0;
+                        timer = 0;
+                        phase = turn >= 3 ? 'roll' : 'idle';
+                        if(turn >= 3) beep(880, 0.12, 'square', 0.05);
+                    }
+                }else if(phase === 'roll'){
+                    capsuleDrop = Math.min(120, capsuleDrop + dt * 320);
+                    if(capsuleDrop >= 120){
+                        phase = 'open';
+                        timer = 0;
+                        beep(1046, 0.12, 'square', 0.05);
+                    }
+                }else if(phase === 'open'){
+                    glow = Math.min(1, glow + dt * 2.6);
+                    if(timer > 1.25 && !ended){
+                        ended = true;
+                        finish(true, '扭蛋开出！', 'CAPSULE MACHINE · PRIZE', rollMachinePrize('gacha'));
+                    }
+                }
+            },
+            draw: function(c){
+                paintBg(c, '#101a34', '#05070f');
+
+                /* 光晕 */
+                var rg = c.createRadialGradient(480, 240, 20, 480, 260, 400);
+                rg.addColorStop(0, 'rgba(34,230,255,.16)');
+                rg.addColorStop(1, 'rgba(0,0,0,0)');
+                c.fillStyle = rg;
+                c.fillRect(0, 0, CW, CH);
+
+                /* 机身 */
+                c.fillStyle = '#0d1526';
+                roundRect(c, 300, 76, 360, 448, 26); c.fill();
+                c.strokeStyle = '#22e6ff';
+                c.lineWidth = 4;
+                roundRect(c, 300, 76, 360, 448, 26); c.stroke();
+                c.strokeStyle = 'rgba(255,255,255,.5)';
+                c.lineWidth = 2;
+                roundRect(c, 312, 88, 336, 424, 20); c.stroke();
+
+                /* 灯带 */
+                for(var b = 0; b < 14; b++){
+                    var on = Math.sin(t * 4 + b * 0.7) > -0.3;
+                    c.fillStyle = on ? '#ffca3a' : 'rgba(255,202,58,.2)';
+                    c.beginPath(); c.arc(324 + b * 24, 100, 3, 0, TAU); c.fill();
+                }
+
+                /* 标题 */
+                c.fillStyle = '#fff';
+                c.font = 'bold 20px "Press Start 2P","Courier New",monospace';
+                c.textAlign = 'center';
+                c.fillText('GACHA', 480, 138);
+                c.fillStyle = '#9fe9ff';
+                c.font = '11px "Courier New",monospace';
+                c.fillText('1 PLAY · 1 PRIZE', 480, 158);
+
+                /* 玻璃球仓 */
+                c.fillStyle = 'rgba(34,230,255,.08)';
+                c.beginPath(); c.arc(480, 240, 104, 0, TAU); c.fill();
+                c.strokeStyle = 'rgba(255,255,255,.65)';
+                c.lineWidth = 3;
+                c.beginPath(); c.arc(480, 240, 104, 0, TAU); c.stroke();
+                c.strokeStyle = 'rgba(255,255,255,.18)';
+                c.lineWidth = 2;
+                c.beginPath(); c.arc(452, 212, 62, Math.PI * 1.05, Math.PI * 1.75); c.stroke();
+
+                balls.forEach(function(b){
+                    var wob = Math.sin(t * 1.6 + b.x) * 1.4;
+                    c.fillStyle = b.color;
+                    c.beginPath(); c.arc(b.x, b.y + wob, b.r, 0, TAU); c.fill();
+                    c.fillStyle = 'rgba(255,255,255,.55)';
+                    c.beginPath(); c.arc(b.x - b.r * 0.3, b.y + wob - b.r * 0.35, b.r * 0.3, 0, TAU); c.fill();
+                });
+
+                /* 出货口 */
+                c.fillStyle = '#05030a';
+                roundRect(c, 420, 372, 120, 66, 10); c.fill();
+                c.strokeStyle = 'rgba(255,255,255,.5)';
+                c.lineWidth = 2;
+                roundRect(c, 420, 372, 120, 66, 10); c.stroke();
+
+                /* 摇柄 */
+                c.strokeStyle = '#cfd6e8';
+                c.lineWidth = 5;
+                c.beginPath(); c.arc(686, 430, 30, 0, TAU); c.stroke();
+                c.save();
+                c.translate(686, 430);
+                c.rotate(turn * 1.1 + knob);
+                c.strokeStyle = '#ff4fd8';
+                c.lineWidth = 7;
+                c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -30); c.stroke();
+                c.fillStyle = '#ff4fd8';
+                c.beginPath(); c.arc(0, -30, 6, 0, TAU); c.fill();
+                c.restore();
+
+                /* 胶囊 */
+                var capX = 480, capY = 400 + capsuleDrop;
+                if(phase === 'roll' || phase === 'open' || phase === 'crank'){
+                    var half = phase === 'open' ? Math.min(30, timer * 60) : 0;
+                    c.fillStyle = '#f6f1e6';
+                    c.beginPath(); c.arc(capX, capY, 22, Math.PI, TAU); c.fill();
+                    c.fillStyle = prizeColor;
+                    c.beginPath(); c.arc(capX, capY, 22, 0, Math.PI); c.fill();
+                    c.strokeStyle = 'rgba(0,0,0,.35)';
+                    c.lineWidth = 2;
+                    c.beginPath(); c.moveTo(capX - 22, capY); c.lineTo(capX + 22, capY); c.stroke();
+                    if(half > 0){
+                        c.fillStyle = 'rgba(5,3,10,.55)';
+                        c.fillRect(capX - 22, capY - half, 44, half + 4);
+                    }
+                }
+
+                /* 开蛋光效 + 卡牌 */
+                if(phase === 'open'){
+                    c.save();
+                    c.globalAlpha = glow;
+                    var pg = c.createRadialGradient(480, 300, 4, 480, 300, 150);
+                    pg.addColorStop(0, prizeColor);
+                    pg.addColorStop(1, 'rgba(0,0,0,0)');
+                    c.fillStyle = pg;
+                    c.fillRect(280, 90, 400, 420);
+
+                    var cardW = 74, cardH = 104;
+                    var rise = Math.min(70, timer * 90);
+                    c.translate(480, 320 - rise);
+                    c.rotate(Math.sin(t * 5) * 0.12);
+                    c.fillStyle = '#0b0818';
+                    c.strokeStyle = prizeColor;
+                    c.lineWidth = 3;
+                    roundRect(c, -cardW / 2, -cardH / 2, cardW, cardH, 8); c.fill(); c.stroke();
+                    c.fillStyle = prizeColor;
+                    c.font = 'bold 30px "Courier New",monospace';
+                    c.textAlign = 'center';
+                    c.textBaseline = 'middle';
+                    c.fillText('?', 0, 2);
+                    c.restore();
+                }
+
+                c.fillStyle = 'rgba(255,255,255,.42)';
+                c.font = '14px "PingFang SC","Microsoft YaHei",sans-serif';
+                c.textAlign = 'center';
+                c.textBaseline = 'alphabetic';
+                c.fillText('空格 / 点击 转动机柄 · 连转三圈出蛋', CW / 2, CH - 20);
+            },
+            pointer: function(){ crank(); },
+            onKey: function(e){
+                if(e.key === ' ' || e.key === 'Enter') crank();
+            },
+            hud: function(){
+                return ['转柄 ' + Math.min(turn, 3) + '/3', phase === 'open' ? 'PRIZE!' : 'CAPSULE'];
+            }
+        };
+    }
+
     /* ---------- 项目数据 ---------- */
     var GAMES = {
+        claw: {
+            title: '抓娃娃机 · Claw Machine',
+            tags: ['CLAW', 'PROJECT CARD', '60FPS'],
+            desc: '左右移动爪子，对准想要的娃娃下爪，再送进出货口。抓到什么就抽到对应的项目卡，另有极小概率掉出简历金卡与隐藏金卡。',
+            links: [],
+            hint: '← → 移动爪子 · 空格 / 点击下爪 · 抓空可以再来',
+            dpad: true,
+            noInfo: true,
+            unlock: 'always',
+            create: createClaw
+        },
+        gacha: {
+            title: '扭蛋机 · Capsule Machine',
+            tags: ['GACHA', 'PROJECT CARD', '60FPS'],
+            desc: '转动机柄三圈，胶囊滚出来。打开后随机得到项目卡，同样包含 1% 简历金卡与 1% 隐藏金卡。',
+            links: [],
+            hint: '空格 / 点击 转动机柄 · 连转三圈出蛋',
+            noInfo: true,
+            unlock: 'always',
+            create: createGacha
+        },
         hpwy: {
             title: '幻魄物语 · Phantom Soul of the Manor',
             tags: ['UE5.6', 'C++', '程序化生成', 'Roguelite'],
@@ -3239,7 +3718,7 @@ body::after{
 })();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="arcade3d.js?v=14"></script>
+<script src="arcade3d.js?v=15"></script>
 <script>
 (function(){
     'use strict';
@@ -3263,11 +3742,12 @@ body::after{
 
     city.querySelectorAll('[data-spot]').forEach(function(el){
         el.addEventListener('click', function(){
-            if(el.getAttribute('data-spot') === 'cafe'){
-                window.location.href = 'cafe.html';
-            } else {
-                closeCity();
-            }
+            var spot = el.getAttribute('data-spot');
+            if(spot === 'cafe') window.location.href = 'cafe.html';
+            else if(spot === 'home') window.location.href = 'introduction.html';
+            else if(spot === 'hangzhou') window.open('https://aaronswartz0217.github.io/-/', '_blank', 'noopener');
+            else if(spot === 'cinema') window.location.href = 'cinema.html';
+            else closeCity();
         });
     });
 

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ELSE CINEMA · 框架效应</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600;700&display=swap');
+
+:root{
+    --bg:#050409;
+    --ink:#f6f1e8;
+    --muted:#9a9188;
+    --amber:#ffcf4a;
+    --amber-soft:rgba(255,207,74,.16);
+    --red:#ff5a4f;
+    --pixel:'Press Start 2P','Courier New',monospace;
+    --ui:'Chakra Petch','PingFang SC','Microsoft YaHei',sans-serif;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+html,body{height:100%;}
+body{
+    min-height:100vh;
+    background:
+        radial-gradient(ellipse at 50% -10%, rgba(255,160,60,.10), transparent 55%),
+        radial-gradient(ellipse at 50% 120%, rgba(120,60,255,.12), transparent 60%),
+        var(--bg);
+    color:var(--ink);
+    font-family:var(--ui);
+    overflow-x:hidden;
+    display:flex;
+    flex-direction:column;
+}
+
+/* 放映厅灯带 */
+body::before{
+    content:'';
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:0;
+    background:
+        linear-gradient(90deg, rgba(255,60,40,.10), transparent 12%, transparent 88%, rgba(255,60,40,.10)),
+        radial-gradient(ellipse at 50% 42%, rgba(255,207,74,.07), transparent 60%);
+}
+
+/* 观众席剪影 */
+.seats{
+    position:fixed;
+    left:0;right:0;bottom:0;
+    height:22vh;
+    pointer-events:none;
+    z-index:1;
+    background:
+        radial-gradient(ellipse 40px 26px at 8% 100%, #010102 70%, transparent 72%),
+        radial-gradient(ellipse 40px 26px at 22% 100%, #010102 70%, transparent 72%),
+        radial-gradient(ellipse 40px 26px at 36% 100%, #010102 70%, transparent 72%),
+        radial-gradient(ellipse 40px 26px at 50% 100%, #010102 70%, transparent 72%),
+        radial-gradient(ellipse 40px 26px at 64% 100%, #010102 70%, transparent 72%),
+        radial-gradient(ellipse 40px 26px at 78% 100%, #010102 70%, transparent 72%),
+        radial-gradient(ellipse 40px 26px at 92% 100%, #010102 70%, transparent 72%),
+        linear-gradient(to top, rgba(2,2,4,.95), transparent);
+    opacity:.9;
+}
+
+/* 顶部 */
+.cine-top{
+    position:relative;
+    z-index:3;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:20px clamp(16px,4vw,44px);
+}
+.ghost{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:9px 15px;
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:6px;
+    background:rgba(255,255,255,.03);
+    color:var(--muted);
+    font-family:var(--pixel);
+    font-size:.52rem;
+    letter-spacing:.08em;
+    text-decoration:none;
+    transition:all .2s ease;
+}
+.ghost:hover{color:#fff;border-color:var(--amber);box-shadow:0 0 16px rgba(255,207,74,.35);}
+.brand{
+    font-family:var(--pixel);
+    font-size:.66rem;
+    letter-spacing:.22em;
+    color:var(--amber);
+    text-shadow:0 0 12px rgba(255,207,74,.7);
+}
+
+/* 主体 */
+.cine-main{
+    position:relative;
+    z-index:2;
+    flex:1;
+    width:min(1180px,94vw);
+    margin:0 auto;
+    padding:10px 0 40px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+}
+
+.cine-meta{text-align:center;}
+.cine-kicker{
+    font-family:var(--pixel);
+    font-size:.5rem;
+    letter-spacing:.26em;
+    color:var(--red);
+    text-shadow:0 0 12px rgba(255,90,79,.65);
+    animation:blink 2.1s steps(2) infinite;
+}
+@keyframes blink{50%{opacity:.35;}}
+
+.cine-meta h1{
+    margin:12px 0 6px;
+    font-family:Georgia,'Songti SC',serif;
+    font-weight:700;
+    font-size:clamp(1.6rem,4.4vw,2.7rem);
+    letter-spacing:.08em;
+    text-shadow:0 0 30px rgba(255,207,74,.35);
+}
+.cine-meta h1 em{
+    display:inline-block;
+    margin-left:12px;
+    font-family:var(--pixel);
+    font-style:normal;
+    font-size:.5rem;
+    letter-spacing:.2em;
+    color:var(--muted);
+    vertical-align:middle;
+}
+.cine-meta p{
+    color:var(--muted);
+    font-size:.88rem;
+    letter-spacing:.04em;
+}
+
+/* 银幕 */
+.screen-wrap{
+    position:relative;
+    width:100%;
+    aspect-ratio:16/9;
+    margin:0 auto;
+    border-radius:10px;
+    overflow:hidden;
+    background:#000;
+    border:1px solid rgba(255,255,255,.16);
+    box-shadow:
+        0 0 0 8px rgba(12,10,16,.9),
+        0 0 60px -6px rgba(255,160,60,.35),
+        0 40px 100px rgba(0,0,0,.85);
+}
+.screen-wrap::after{
+    content:'';
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background:linear-gradient(115deg, rgba(255,255,255,.07), transparent 34%, transparent 68%, rgba(255,255,255,.04));
+    mix-blend-mode:screen;
+}
+.film-grain{
+    position:absolute;
+    inset:-40%;
+    pointer-events:none;
+    opacity:.15;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+    animation:grain .6s steps(3) infinite;
+}
+@keyframes grain{
+    0%{transform:translate(0,0);}
+    33%{transform:translate(-2%,1%);}
+    66%{transform:translate(1%,-2%);}
+    100%{transform:translate(0,0);}
+}
+.scanlines{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background:repeating-linear-gradient(to bottom, rgba(0,0,0,.22) 0 1px, transparent 1px 3px);
+    opacity:.5;
+}
+.room-poster{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    z-index:2;
+}
+
+/* 漫游场景房间 */
+.room{
+    position:fixed;
+    inset:0;
+    z-index:200;
+    background:#000;
+    opacity:0;
+    visibility:hidden;
+    transition:opacity .35s ease, visibility .35s ease;
+}
+.room.open{opacity:1;visibility:visible;}
+.room iframe{
+    width:100%;
+    height:100%;
+    border:0;
+    display:block;
+    background:#000;
+}
+.room-exit{
+    position:fixed;
+    top:16px;
+    right:16px;
+    z-index:210;
+    padding:10px 14px;
+    border-radius:6px;
+    border:1px solid rgba(255,255,255,.3);
+    background:rgba(8,6,14,.78);
+    color:#ffe6b8;
+    font-family:var(--pixel);
+    font-size:.5rem;
+    letter-spacing:.1em;
+    cursor:pointer;
+    transition:all .2s ease;
+}
+.room-exit:hover{border-color:var(--amber);box-shadow:0 0 18px rgba(255,207,74,.4);}
+
+/* 播放遮罩 */
+.play-layer{
+    position:absolute;
+    inset:0;
+    z-index:4;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    border:0;
+    background:
+        radial-gradient(ellipse at center, rgba(4,3,8,.30), rgba(4,3,8,.86) 78%);
+    color:var(--ink);
+    cursor:pointer;
+    transition:opacity .3s ease, visibility .3s ease;
+}
+.play-ring{
+    width:82px;height:82px;
+    display:grid;place-items:center;
+    border-radius:50%;
+    border:2px solid var(--amber);
+    background:rgba(255,207,74,.08);
+    box-shadow:0 0 34px rgba(255,207,74,.45), inset 0 0 22px rgba(255,207,74,.18);
+    font-size:1.5rem;
+    color:var(--amber);
+    padding-left:6px;
+    transition:transform .25s ease;
+}
+.play-layer:hover .play-ring{transform:scale(1.08);}
+.play-label{
+    font-family:var(--pixel);
+    font-size:.56rem;
+    letter-spacing:.2em;
+    color:#fff;
+    text-shadow:0 0 14px rgba(255,207,74,.6);
+}
+
+/* 影片列表 */
+.film-strip{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+}
+.film-card{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:8px;
+    border-radius:9px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.02);
+    color:var(--ink);
+    text-align:left;
+    cursor:pointer;
+    font-family:var(--ui);
+    transition:border-color .2s ease, background .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+.film-card:hover{border-color:rgba(255,207,74,.6);transform:translateY(-2px);}
+.film-card.on{
+    border-color:var(--amber);
+    background:rgba(255,207,74,.07);
+    box-shadow:0 0 22px rgba(255,207,74,.16);
+}
+.film-card img{
+    width:74px;height:42px;
+    object-fit:cover;
+    border-radius:4px;
+    opacity:.85;
+    flex:0 0 auto;
+}
+.film-card.on img{opacity:1;}
+.film-card .fx{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.film-card .no{
+    font-family:var(--pixel);
+    font-size:.4rem;
+    letter-spacing:.14em;
+    color:var(--amber);
+}
+.film-card strong{
+    font-size:.86rem;
+    font-weight:600;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+.film-card small{
+    color:var(--muted);
+    font-size:.62rem;
+    letter-spacing:.08em;
+    font-family:'Courier New',monospace;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+/* 底部信息 */
+.cine-foot{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    font-family:var(--pixel);
+    font-size:.46rem;
+    letter-spacing:.14em;
+    color:#7d756c;
+}
+.cine-foot span b{color:var(--amber);font-weight:400;}
+.cine-note{
+    text-align:center;
+    color:var(--muted);
+    font-size:.82rem;
+    line-height:1.9;
+}
+.cine-note b{color:var(--ink);font-weight:600;}
+
+@media (max-width:640px){
+    .cine-main{padding-bottom:26px;gap:14px;}
+    .cine-meta h1 em{display:block;margin:8px 0 0;}
+    .cine-foot{justify-content:center;text-align:center;}
+    .play-ring{width:64px;height:64px;}
+    .film-strip{grid-template-columns:1fr;}
+    .film-card img{width:64px;height:36px;}
+}
+</style>
+</head>
+<body>
+<div class="seats" aria-hidden="true"></div>
+
+<header class="cine-top">
+    <a class="ghost" href="scene.html">← ARCADE</a>
+    <div class="brand">ELSE CINEMA</div>
+    <a class="ghost" href="introduction.html">HOME ↗</a>
+</header>
+
+<main class="cine-main">
+    <div class="cine-meta">
+        <p class="cine-kicker" id="filmTag">NOW SHOWING · COGNITIVE BIAS NO.06</p>
+        <h1><span id="filmTitle">框架效应</span><em id="filmEn">FRAMING EFFECT</em></h1>
+        <p id="filmDesc">同一件事，换个说法，人的判断和选择就可能改变。</p>
+    </div>
+
+    <figure class="screen-wrap" id="screenWrap">
+        <img class="room-poster" id="roomPoster" alt="">
+        <div class="scanlines" aria-hidden="true"></div>
+        <div class="film-grain" aria-hidden="true"></div>
+        <button class="play-layer" id="playLayer" type="button" aria-label="进入场景">
+            <span class="play-ring">▶</span>
+            <span class="play-label" id="playLabel">ENTER SCENE</span>
+        </button>
+    </figure>
+
+    <div class="film-strip" id="filmStrip"></div>
+
+    <p class="cine-note" id="filmNote">
+        <b>「你选左还是右？」</b> 你以为自己在选左或右，其实两个选项指向同一个结果。
+    </p>
+
+    <div class="cine-foot">
+        <span>DIRECTED BY <b>ELSE</b></span>
+        <span id="filmSpec">48 SEC · 16:9 · 720P</span>
+        <span>SHOT ON <b>WEBGL</b></span>
+    </div>
+</main>
+
+<div class="room" id="room" aria-hidden="true">
+    <iframe id="roomFrame" title="场景漫游" allow="fullscreen"></iframe>
+    <button class="room-exit" id="roomExit" type="button">← EXIT ROOM</button>
+</div>
+
+<script>
+(function(){
+    'use strict';
+    var FILMS = [
+        {
+            type: 'roam',
+            title: '框架效应',
+            en: 'FRAMING EFFECT',
+            tag: 'SCENE ROOM · COGNITIVE BIAS NO.06',
+            desc: '一间地下研发实验室，一颗一人高的机械眼球在屏幕前等你。',
+            note: '<b>地下实验室 · POV 漫游</b> 进入后拖拽转视角、WASD 移动、Q/E 升降，空格暂停时间。',
+            spec: '1 SCENE · ROAMABLE',
+            poster: 'assets/video/framing-effect-poster.jpg',
+            url: 'cinema/框架效应/index.html?roam=1'
+        },
+        {
+            type: 'roam',
+            title: '日神与酒神',
+            en: 'APOLLO & DIONYSUS',
+            tag: 'SCENE ROOM · NIETZSCHE',
+            desc: '日神是梦与边界，酒神是醉与融化；三段 WebGL 场景，可以走进去。',
+            note: '<b>光明庭院 / 夜的狂欢 / 半圆剧场</b> 进入后拖拽转视角、WASD 移动、Q/E 升降。',
+            spec: '3 SCENES · ROAMABLE',
+            poster: 'assets/video/apollo-dionysus-poster.jpg',
+            url: 'cinema/日神与酒神/index.html'
+        },
+        {
+            type: 'roam',
+            title: '达克效应',
+            en: 'DUNNING-KRUGER EFFECT',
+            tag: 'SCENE ROOM · COGNITIVE BIAS',
+            desc: '越无知越自信，越知道越谨慎；四个复古 RPG 场景，可以走进去。',
+            note: '<b>王座 / 行军 / 城堡 / 废墟</b> 进入后拖拽转视角、WASD 移动、Q/E 升降。',
+            spec: '4 SCENES · ROAMABLE',
+            poster: 'assets/video/dunning-kruger-poster.jpg',
+            url: 'cinema/达克效应/index.html'
+        }
+    ];
+
+    var layer = document.getElementById('playLayer');
+    var strip = document.getElementById('filmStrip');
+    var roomPoster = document.getElementById('roomPoster');
+    var tagEl = document.getElementById('filmTag');
+    var titleEl = document.getElementById('filmTitle');
+    var enEl = document.getElementById('filmEn');
+    var descEl = document.getElementById('filmDesc');
+    var noteEl = document.getElementById('filmNote');
+    var specEl = document.getElementById('filmSpec');
+    var room = document.getElementById('room');
+    var roomFrame = document.getElementById('roomFrame');
+    var roomExit = document.getElementById('roomExit');
+    var current = 0;
+
+    function renderStrip(){
+        strip.innerHTML = FILMS.map(function(f, i){
+            return '<button class="film-card' + (i === current ? ' on' : '') + '" type="button" data-i="' + i + '">' +
+                '<img src="' + f.poster + '" alt="">' +
+                '<span class="fx"><span class="no">0' + (i + 1) + ' · ROAM</span>' +
+                '<strong>' + f.title + '</strong>' +
+                '<small>' + f.en + ' · ' + f.spec + '</small></span>' +
+                '</button>';
+        }).join('');
+    }
+
+    function applyFilm(i){
+        current = i;
+        var f = FILMS[i];
+        tagEl.textContent = f.tag;
+        titleEl.textContent = f.title;
+        enEl.textContent = f.en;
+        descEl.textContent = f.desc;
+        noteEl.innerHTML = f.note;
+        specEl.textContent = f.spec;
+        roomPoster.src = f.poster;
+        Array.prototype.forEach.call(strip.children, function(c, k){
+            c.classList.toggle('on', k === i);
+        });
+    }
+
+    function openRoom(f){
+        roomFrame.src = f.url;
+        room.classList.add('open');
+        room.setAttribute('aria-hidden', 'false');
+    }
+    function closeRoom(){
+        room.classList.remove('open');
+        room.setAttribute('aria-hidden', 'true');
+        setTimeout(function(){
+            if(!room.classList.contains('open')) roomFrame.src = 'about:blank';
+        }, 380);
+    }
+
+    layer.addEventListener('click', function(e){
+        e.preventDefault();
+        openRoom(FILMS[current]);
+    });
+
+    strip.addEventListener('click', function(e){
+        var btn = e.target.closest('.film-card');
+        if(!btn) return;
+        var i = parseInt(btn.dataset.i, 10);
+        applyFilm(i);
+        openRoom(FILMS[i]);
+    });
+
+    roomExit.addEventListener('click', closeRoom);
+    document.addEventListener('keydown', function(e){
+        if(e.key === 'Escape' && room.classList.contains('open')){
+            closeRoom();
+            e.stopPropagation();
+        }
+    }, true);
+
+    renderStrip();
+    applyFilm(0);
+})();
+</script>
+</body>
+</html>

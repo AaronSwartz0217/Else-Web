@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>日神与酒神 · 三个场景漫游</title>
+<style>
+  :root { color-scheme: dark; --ink:#0A0A10; --panel:rgba(16,14,22,.90); --line:rgba(232,194,122,.28); --gold:#E8C27A; --muted:#A8A2AE; }
+  * { box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--ink); }
+  body { font-family: "Microsoft YaHei", Inter, system-ui, sans-serif; color: #F3EDE2; }
+  #world { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #06060A; }
+  .menu { position: fixed; z-index: 10; left: 18px; top: 18px; width: min(400px, calc(100vw - 36px)); padding: 18px;
+          border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(145deg, rgba(26,22,30,.94), var(--panel));
+          box-shadow: 0 22px 70px rgba(0,0,0,.5); }
+  .kicker { color: var(--gold); font: 700 11px/1.2 ui-monospace, monospace; letter-spacing: .22em; }
+  h1 { margin: 8px 0 4px; font-size: 24px; font-weight: 650; }
+  .intro { margin: 0 0 14px; color: var(--muted); font-size: 12.5px; line-height: 1.7; }
+  .scene { width: 100%; display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px;
+           padding: 10px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,.09); border-radius: 10px;
+           color: #E9E5E0; background: rgba(255,255,255,.04); text-align: left; cursor: pointer; }
+  .scene:hover { border-color: rgba(232,194,122,.45); }
+  .scene.active { border-color: var(--gold); background: rgba(232,194,122,.10); }
+  .num { color: var(--gold); font: 700 12px/1 ui-monospace, monospace; }
+  .scene strong { display: block; font-size: 14px; }
+  .scene small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+  .controls { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08);
+              display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 12px; color: var(--muted); font-size: 11px; }
+  kbd { color: #FFF4D5; font: 600 10px ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<iframe id="world" title="日神与酒神 · 场景漫游"></iframe>
+<aside class="menu">
+  <div class="kicker">APOLLO &amp; DIONYSUS · ROAM</div>
+  <h1>日神与酒神 · 场景漫游</h1>
+  <p class="intro">选一段，进空间里走一圈：拖拽转视角、WASD 移动。<br>漫游只用于诊断，出片走的是 <code>renderFrame(f)</code>。</p>
+  <nav id="list"></nav>
+  <div class="controls">
+    <span><kbd>W A S D</kbd> 前后左右</span><span><kbd>Q / E</kbd> 降 / 升</span>
+    <span><kbd>拖拽</kbd> 转视角</span><span><kbd>Shift</kbd> 加速</span>
+    <span><kbd>[ / ]</kbd> 逐帧</span><span><kbd>空格</kbd> 播放 / 暂停</span>
+    <span><kbd>R</kbd> 复位</span><span><kbd>1 2 3</kbd> 切场景</span>
+  </div>
+</aside>
+<script>
+'use strict';
+const scenes = [
+  { key: '01', name: '日神 · 光明庭院', note: '白大理石 · 八柱神庙 · 六座雕像 · 一方水池', src: 'scenes/A_apollo.html?roam=1' },
+  { key: '02', name: '酒神 · 夜里的狂欢', note: '火堆 · 八支火把 · 十四名舞者 · 四个萨提尔', src: 'scenes/B_dionysus.html?roam=1' },
+  { key: '03', name: '悲剧 · 半圆剧场', note: '九级看台 · 歌队十四人 · 台上一个人', src: 'scenes/C_tragedy.html?roam=1' },
+];
+const world = document.getElementById('world'), list = document.getElementById('list');
+let current = scenes[0];
+for (const s of scenes) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'scene'; b.dataset.scene = s.key;
+  b.innerHTML = '<span class="num">' + s.key + '</span><span><strong>' + s.name + '</strong><small>' + s.note + '</small></span><span>↗</span>';
+  b.addEventListener('click', () => select(s.key));
+  list.appendChild(b);
+}
+function select(id) {
+  current = scenes.find(s => s.key === id) || scenes[0];
+  world.src = current.src;
+  for (const b of list.querySelectorAll('.scene')) b.classList.toggle('active', b.dataset.scene === current.key);
+  try { const u = new URL(location.href); u.searchParams.set('scene', current.key); history.replaceState(null, '', u.href); } catch (_) {}
+}
+window.addEventListener('keydown', e => { if (/^Digit[1-3]$/.test(e.code)) select(scenes[Number(e.code.slice(-1)) - 1].key); });
+let initial = new URLSearchParams(location.search).get('scene');
+select(initial || '01');
+</script>
+</body>
+</html>

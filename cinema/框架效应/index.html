@@ -1,0 +1,1962 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>框架效应 · scene1 · 地下实验室</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #05070a; overflow: hidden; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+'use strict';
+/* ============================================================================
+   框架效应 · scene1「一间地下研发实验室」
+   主体：一颗一人高的机械眼球（无脸/无躯干），站在「你」面前，盯着屏幕前的你。
+   空间：灰色地下研发实验室 —— 金属操作台 / 一整面电脑屏幕阵列 / 服务器机柜 /
+         设计蓝图 / 白板公式 / 失败日志 / 日光灯闪烁 / 管道滴水 / 地上零件箱。
+   硬约束：帧纯函数 · 禁 Math.random · 渐变预烘焙 · 禁逐帧 filter
+   管线：2D 离屏打底(sceneC) → WebGL 后处理(glC) → 合成到 #c（render.js 抓 #c）
+   ========================================================================== */
+const W = 1920, H = 1080, TAU = Math.PI * 2;
+const FPS = 30, TOTAL_FRAMES = 1090;         // 源帧（0.75× 播放 ≈ 48.4s）
+const PARAMS = new URLSearchParams(location.search);
+
+/* ---------- 分镜节拍表（源帧，[start, end)） ---------- */
+const BEATS = {
+  intro:       [0,    36],   // 片头：镜头从左侧 30° 缓缓转正（1.5s，人刚忙完才回头看它）
+  eyeLine:     [36,   150],  // ① 机械眼球台词（中间弹出字幕）
+  buttons:     [150,  210],  // ② 左右按钮亮起 · 作用标在按钮上方 · 中央弹出绿字屏「请做出选择」
+  lookHands:   [210,  266],  // ③ 低头看双手
+  blink1:      [266,  322],  // ④ 眨眼换场 + 右屏「他们」
+  pressLeft:   [322,  400],  // ⑤ 按左绿 · 眼球中心开始旋转
+  swapLR:      [400,  450],  // ⑥ 眨眼 绿↔红 + 右屏「是真的」
+  bothYellow:  [450,  500],  // ⑦ 眨眼 双双变黄 + 右屏「不同吗」
+  reveal:      [500,  580],  // ⑧ 眨眼 幻影淡出 · 露中央真按钮
+  laugh:       [580,  670],  // ⑨ 眼球笑声 · 瞳孔放大 · 触手抽搐 · 屏全红
+  thanks:      [670,  750],  // ⑩ 红色褪去 → 眼球说「谢谢」→ 整场化成蓝色发光体只剩眼珠 → 缓慢变暗
+  qSub:        [750,  800],  // ⑪ 字幕「你选左还是右？」
+  black:       [800,  822],  // ⑫ 黑屏 1s
+  explain:     [822,  942],  // ⑭ 点题字幕
+  end:         [942,  1005], // ⑮ 收尾字幕
+  title:       [1005, 1090], // ⑬ 标题卡（含副标题）弹出 → 结束
+};
+const B = BEATS;
+
+/* ---------- 剧情状态（帧的纯函数；全部由节拍表推导，节拍一动这里跟着动） ---------- */
+let curF = 0;
+const K = { press: B.pressLeft[0] + 8, pressEnd: B.thanks[0] + 6,      // 选中的按下 / 松手
+            laughIn: B.laugh[0] + 4, laughOut: B.laugh[1],            // 笑声起 / 骤停
+            redIn: B.laugh[0] + 12, redOut: B.laugh[1],               // 屏全红起 / 褪
+            revealIn: B.reveal[0] + 20,                               // ⑧ 幻影淡出点
+            swap2: B.swapLR[0] + 14, swap3: B.bothYellow[0] + 14,     // 两次眨眼内的换色点
+            thanks: 690, blueIn: 700, blueFull: 742,                  // ⑩ 说谢谢 / 蓝化起 / 蓝满
+            darkIn: 730, darkFull: 754 };                             // ⑩ 连眼珠一起变暗
+function btnPhase(f) {            // 0 左绿右红 / 1 左红右绿 / 2 双黄 / 3 幻影淡出
+  if (f < K.swap2) return 0;
+  if (f < K.swap3) return 1;
+  if (f < K.revealIn) return 2;
+  return 3;
+}
+function phantomA(f) {            // 左右幻影可见度：⑧ 眨眼睁眼后淡出
+  return 1 - smoothstep(K.revealIn, K.revealIn + 38, f);
+}
+function pressK(f) {              // 手指下压量 0..1
+  return smoothstep(K.press, K.press + 20, f) * (1 - smoothstep(K.pressEnd, K.pressEnd + 26, f));
+}
+function laughK(f) {              // ⑨ 笑声强度
+  return smoothstep(K.laughIn, K.laughIn + 34, f) * (1 - smoothstep(K.laughOut, K.laughOut + 18, f));
+}
+function redFlood(f) {            // ⑨ 后墙屏全红（⑩ 起随「平静下来」褪去）
+  return smoothstep(K.redIn, K.redIn + 38, f) * (1 - smoothstep(K.redOut, K.redOut + 30, f));
+}
+function roomLit(f) {             // 房间亮度：⑩ 起随蓝化一起暗下去，末尾全黑
+  if (f < K.thanks) return 1;
+  const dim = smoothstep(K.thanks, K.blueIn, f) * 0.62;
+  return Math.max(0, 1 - dim) * (1 - smoothstep(K.darkIn, K.darkFull, f));
+}
+function blueK(f) {               // ⑩ 整个场景化成蓝色发光体
+  return smoothstep(K.blueIn, K.blueFull, f);
+}
+function darkK(f) {               // ⑩ 连眼珠子一起缓慢变暗到黑
+  return smoothstep(K.darkIn, K.darkFull, f);
+}
+/* 每次眨眼之后，右侧监控屏上依次打出三个词（第四次眨眼不再换，留在「不同吗」） */
+function blinkWord(f) {
+  if (f >= 470) return { t: '不同吗', s: 470, per: 3.0 };
+  if (f >= 418) return { t: '是真的', s: 418, per: 3.0 };
+  if (f >= 296) return { t: '他们', s: 296, per: 3.0 };
+  return null;
+}
+function selectPanel(f) {         // ② 中间弹出的 2D 绿字屏（等按钮作用标注看够、字放完才消失）
+  const t0 = 218;                 // 弹出
+  if (f < t0 || f > B.pressLeft[0] - 20) return 0;
+  if (f < t0 + 8) return smoothstep(t0, t0 + 8, f);
+  return 1 - smoothstep(B.pressLeft[0] - 46, B.pressLeft[0] - 20, f);
+}
+const ROAM = PARAMS.get('roam') === '1';           // 交互漫游预览（?roam=1）
+window.__frame = parseInt(PARAMS.get('frame') ?? '0');
+
+/* ---------- 数学 ---------- */
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+const easeInOut = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const smoothstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+function srnd(seed) { const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+const subA = (f, a, b, c, d) => { if (f < a) return 0; if (f < b) return smoothstep(a, b, f); if (f < c) return 1; if (f < d) return 1 - smoothstep(c, d, f); return 0; };
+
+/* ---------- 画布层 ---------- */
+const disp = document.getElementById('c');
+const dctx = disp.getContext('2d');
+const sceneC = document.createElement('canvas'); sceneC.width = W; sceneC.height = H;
+const sctx = sceneC.getContext('2d');
+const glC = document.createElement('canvas'); glC.width = W; glC.height = H;
+const gl = glC.getContext('webgl', { preserveDrawingBuffer: true, antialias: false, alpha: false, premultipliedAlpha: false });
+
+/* ---------- WebGL 后处理 ---------- */
+const VS = `
+attribute vec2 aPos; varying vec2 vUv;
+void main(){ vUv = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }`;
+const FS = `
+precision mediump float;
+varying vec2 vUv;
+uniform sampler2D uTex;
+uniform vec2 uRes;
+uniform float uFrame;
+uniform float uCurve, uChroma, uScan, uGrain, uGlitch, uGrade, uVig, uWobble, uFade;
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+void main(){
+  vec2 uv = vUv;
+  vec2 cc = uv - 0.5; float r2 = dot(cc, cc);
+  uv += cc * r2 * uCurve;
+  float band = floor(uv.y * 28.0);
+  uv.x += (hash(vec2(band, floor(uFrame * 0.7))) - 0.5) * uWobble;
+  float g = step(1.0 - uGlitch, hash(vec2(band, floor(uFrame))));
+  uv.x += g * (hash(vec2(band, 7.0)) - 0.5) * 0.12 * uGlitch;
+  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
+  float off = uChroma * (0.0018 + r2 * 0.010);
+  vec3 col;
+  col.r = texture2D(uTex, uv + vec2(off, 0.0)).r;
+  col.g = texture2D(uTex, uv).g;
+  col.b = texture2D(uTex, uv - vec2(off, 0.0)).b;
+  float scan = 0.93 + 0.07 * sin(uv.y * uRes.y * 3.14159);
+  col *= mix(1.0, scan, uScan);
+  col.r *= 1.0 + 0.10 * uGrade; col.b *= 1.0 - 0.10 * uGrade;
+  col *= 1.0 - uVig * smoothstep(0.22, 0.85, r2 * 2.0);
+  col += (hash(uv * uRes + uFrame) - 0.5) * uGrain;
+  col *= uFade;
+  gl_FragColor = vec4(col, 1.0);
+}`;
+let prog = null, tex = null; const U = {};
+function initGL() {
+  const vs = gl.createShader(gl.VERTEX_SHADER); gl.shaderSource(vs, VS); gl.compileShader(vs);
+  const fs = gl.createShader(gl.FRAGMENT_SHADER); gl.shaderSource(fs, FS); gl.compileShader(fs);
+  if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) console.error('FS ERR:', gl.getShaderInfoLog(fs));
+  prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) console.error('LINK ERR:', gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, 'aPos'); gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  for (const n of ['uTex', 'uRes', 'uFrame', 'uCurve', 'uChroma', 'uScan', 'uGrain', 'uGlitch', 'uGrade', 'uVig', 'uWobble', 'uFade']) U[n] = gl.getUniformLocation(prog, n);
+  tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.viewport(0, 0, W, H);
+}
+function post(p) {
+  gl.useProgram(prog);
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sceneC);
+  gl.uniform1i(U.uTex, 0);
+  gl.uniform2f(U.uRes, W, H);
+  gl.uniform1f(U.uFrame, p.frame);
+  gl.uniform1f(U.uCurve, p.curve); gl.uniform1f(U.uChroma, p.chroma);
+  gl.uniform1f(U.uScan, p.scan); gl.uniform1f(U.uGrain, p.grain);
+  gl.uniform1f(U.uGlitch, p.glitch); gl.uniform1f(U.uGrade, p.grade);
+  gl.uniform1f(U.uVig, p.vig); gl.uniform1f(U.uWobble, p.wobble);
+  gl.uniform1f(U.uFade, p.fade);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+
+/* ---------- 预烘焙：光斑 / 圆盘（避免逐帧新建渐变） ---------- */
+const glowCache = {};
+function bakeGlow(color) {
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  g.addColorStop(0, color.replace('A', '0.95'));
+  g.addColorStop(0.28, color.replace('A', '0.42'));
+  g.addColorStop(0.62, color.replace('A', '0.12'));
+  g.addColorStop(1, color.replace('A', '0'));
+  x.fillStyle = g; x.fillRect(0, 0, S, S); return c;
+}
+const glow = c => (glowCache[c] || (glowCache[c] = bakeGlow(c)));
+function glowAt(cx, cy, rx, ry, sprite, alpha) {
+  if (alpha <= 0.008 || !isFinite(cx) || !isFinite(cy) || rx <= 0 || ry <= 0) return;
+  sctx.save(); sctx.globalAlpha = alpha; sctx.translate(cx, cy); sctx.scale(rx, ry);
+  sctx.drawImage(sprite, -1, -1, 2, 2); sctx.restore();
+}
+// 离轴高光球体（金属球面明暗），烘焙一次复用
+function bakeSphere() {
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(S * 0.34, S * 0.28, S * 0.03, S * 0.50, S * 0.52, S * 0.56);
+  g.addColorStop(0.00, '#9aa5b1');
+  g.addColorStop(0.30, '#6d7783');
+  g.addColorStop(0.60, '#454e58');
+  g.addColorStop(0.84, '#262c33');
+  g.addColorStop(1.00, '#0e1215');
+  x.fillStyle = g; x.fillRect(0, 0, S, S); return c;
+}
+// 球面明暗叠加（multiply 合成）：中心亮、边缘暗 —— 让眼眶/叶片/虹膜同处一个球面
+function bakeSphereMod() {
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(S * 0.36, S * 0.30, S * 0.02, S * 0.52, S * 0.54, S * 0.52);
+  g.addColorStop(0.00, '#ffffff');
+  g.addColorStop(0.42, '#c6cace');
+  g.addColorStop(0.72, '#787c81');
+  g.addColorStop(0.92, '#2b2d30');
+  g.addColorStop(1.00, '#0d0e10');
+  x.fillStyle = g; x.fillRect(0, 0, S, S); return c;
+}
+// 虹膜：暗红发光同心（中心亮、外缘暗）
+function bakeIris() {
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  g.addColorStop(0.00, '#4a1109');
+  g.addColorStop(0.34, '#95220f');
+  g.addColorStop(0.62, '#a62c17');
+  g.addColorStop(0.86, '#541208');
+  g.addColorStop(1.00, '#200804');
+  x.fillStyle = g; x.fillRect(0, 0, S, S); return c;
+}
+// 墙面陈旧贴图（污渍 / 流痕 / 氧化亮斑），烘焙一次、分段平铺复用
+function bakeGrime() {
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
+  const x = c.getContext('2d');
+  for (let i = 0; i < 90; i++) {                       // 柔和暗斑
+    const gx = srnd(i * 3.11) * S, gy = srnd(i * 7.7) * S, r = 14 + srnd(i * 5.3) * 70;
+    const g = x.createRadialGradient(gx, gy, 0, gx, gy, r);
+    g.addColorStop(0, `rgba(10,12,14,${(0.10 + srnd(i * 2.1) * 0.16).toFixed(3)})`);
+    g.addColorStop(1, 'rgba(10,12,14,0)');
+    x.fillStyle = g; x.beginPath(); x.arc(gx, gy, r, 0, TAU); x.fill();
+  }
+  for (let i = 0; i < 26; i++) {                      // 垂直流痕
+    const gx = srnd(i * 9.1) * S, w = 1.5 + srnd(i * 4.7) * 4;
+    const y0 = srnd(i * 6.3) * S * 0.6, h = S * (0.2 + srnd(i * 8.5) * 0.7);
+    const g = x.createLinearGradient(0, y0, 0, y0 + h);
+    g.addColorStop(0, 'rgba(8,10,12,0.30)'); g.addColorStop(1, 'rgba(8,10,12,0)');
+    x.fillStyle = g; x.fillRect(gx, y0, w, h);
+  }
+  for (let i = 0; i < 40; i++) {                      // 反碱 / 氧化亮斑
+    const gx = srnd(i * 2.9 + 40) * S, gy = srnd(i * 5.1 + 40) * S, r = 6 + srnd(i * 3.3 + 40) * 26;
+    const g = x.createRadialGradient(gx, gy, 0, gx, gy, r);
+    g.addColorStop(0, `rgba(210,218,224,${(0.05 + srnd(i * 7.1 + 40) * 0.09).toFixed(3)})`);
+    g.addColorStop(1, 'rgba(210,218,224,0)');
+    x.fillStyle = g; x.beginPath(); x.arc(gx, gy, r, 0, TAU); x.fill();
+  }
+  return c;
+}
+let SPHERE = null, IRIS = null, SPHERE_MOD = null, GRIME = null;
+
+/* ---------- 伪 3D 相机（手动透视 + pitch + 多边形近平面裁剪） ---------- */
+const CAM = { x: 0, y: 1.32, z: 0.60, focal: 1180, pitch: 0, yaw: 0 };
+const NEAR = 0.30;
+function camSpace(x, y, z) {
+  let cx = x - CAM.x;
+  let cy = y - CAM.y;
+  let cz = z - CAM.z;
+  if (CAM.yaw) {                                  // 漫游模式的水平转向
+    const c = Math.cos(CAM.yaw), s = Math.sin(CAM.yaw);
+    const nx = cx * c - cz * s, nz = cx * s + cz * c;
+    cx = nx; cz = nz;
+  }
+  if (CAM.pitch) {
+    const c = Math.cos(CAM.pitch), s = Math.sin(CAM.pitch);
+    const ny = cy * c + cz * s, nz = -cy * s + cz * c;
+    cy = ny; cz = nz;
+  }
+  return { x: cx, y: cy, z: cz };
+}
+function proj(x, y, z) {
+  const p = camSpace(x, y, z);
+  if (p.z < NEAR) return null;
+  const k = CAM.focal / p.z;
+  return { x: W / 2 + p.x * k, y: H / 2 - p.y * k, s: k, cz: p.z };
+}
+function projPoly(pts) {
+  const cp = pts.map(p => camSpace(p[0], p[1], p[2]));
+  const out = [];
+  for (let i = 0; i < cp.length; i++) {
+    const a = cp[i], b = cp[(i + 1) % cp.length];
+    const ain = a.z >= NEAR, bin = b.z >= NEAR;
+    if (ain) out.push(a);
+    if (ain !== bin) {
+      const t = (NEAR - a.z) / (b.z - a.z);
+      out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: NEAR });
+    }
+  }
+  return out.map(p => { const s = CAM.focal / p.z; return { x: W / 2 + p.x * s, y: H / 2 - p.y * s, s, cz: p.z }; });
+}
+function face(pts, fill, alpha) {
+  const q = projPoly(pts); if (q.length < 3) return;
+  sctx.save(); if (alpha !== undefined) sctx.globalAlpha *= alpha;
+  sctx.beginPath(); sctx.moveTo(q[0].x, q[0].y);
+  for (let i = 1; i < q.length; i++) sctx.lineTo(q[i].x, q[i].y);
+  sctx.closePath(); sctx.fillStyle = fill; sctx.fill(); sctx.restore();
+}
+function seg3(A, B, col, widthWorld, alpha) {
+  const a = proj(A[0], A[1], A[2]), b = proj(B[0], B[1], B[2]); if (!a || !b) return;
+  sctx.save(); sctx.globalAlpha = alpha; sctx.strokeStyle = col; sctx.lineCap = 'round';
+  sctx.lineWidth = Math.max(1.2, widthWorld * ((a.s + b.s) / 2));
+  sctx.beginPath(); sctx.moveTo(a.x, a.y); sctx.lineTo(b.x, b.y); sctx.stroke(); sctx.restore();
+}
+function dot3(x, y, z, rWorld, col, alpha) {
+  const p = proj(x, y, z); if (!p) return;
+  const r = Math.max(0.8, rWorld * p.s);
+  sctx.save(); sctx.globalAlpha = alpha; sctx.fillStyle = col;
+  sctx.beginPath(); sctx.arc(p.x, p.y, r, 0, TAU); sctx.fill(); sctx.restore();
+}
+// 水平面（y 固定）上的圆 / 椭圆多边形 —— 透视压扁自动由投影承担
+function discY(cx, cz, rx, rz, y, n) {
+  const pts = [];
+  for (let i = 0; i < n; i++) { const a = i / n * TAU; pts.push([cx + Math.cos(a) * rx, y, cz + Math.sin(a) * rz]); }
+  return pts;
+}
+// 在指定 3D 平面上以局部坐标 (0..iw, 0..ih) 绘制（角序：TL / TR / BL）
+function localPlane(TL, TR, BL, iw, ih, fn, alpha) {
+  const tl = proj(TL[0], TL[1], TL[2]), tr = proj(TR[0], TR[1], TR[2]), bl = proj(BL[0], BL[1], BL[2]);
+  if (!tl || !tr || !bl) return;
+  sctx.save(); if (alpha !== undefined) sctx.globalAlpha *= alpha;
+  sctx.setTransform((tr.x - tl.x) / iw, (tr.y - tl.y) / iw, (bl.x - tl.x) / ih, (bl.y - tl.y) / ih, tl.x, tl.y);
+  fn(iw, ih); sctx.restore();
+}
+function clearScene(col) {
+  sctx.setTransform(1, 0, 0, 1, 0, 0);
+  sctx.globalCompositeOperation = 'source-over';
+  sctx.globalAlpha = 1;
+  sctx.fillStyle = col || '#05070a'; sctx.fillRect(0, 0, W, H);
+}
+function drawHUD(text, alpha, x, y, col) {
+  if (alpha <= 0.02) return;
+  sctx.save(); sctx.globalAlpha = alpha;
+  sctx.font = '500 26px "Consolas","Courier New",monospace';
+  sctx.fillStyle = col || 'rgba(150,196,214,0.85)'; sctx.textAlign = 'left'; sctx.textBaseline = 'top';
+  sctx.fillText(text, x, y); sctx.restore();
+}
+function flicker(f, i) {                        // 日光灯确定性闪烁（偶尔熄一下）
+  const base = 0.82 + 0.18 * srnd(i * 3.1 + 0.5);
+  const g = srnd(Math.floor(f / 2) * 1.7 + i * 0.9) < 0.09 ? 0.10 : 1.0;
+  return base * g;
+}
+
+/* ============================================================================
+   空间常量
+   ========================================================================== */
+const RW = 3.8, RH = 3.30, FAR = 9.2;          // 房间半宽 / 高 / 进深
+const EYE = { x: 0, y: 1.58, z: 4.05, R: 0.78 }; // 机械眼球（直径≈1.56m，约一人高）
+const CT = 1.00;                                // 操作台台面高度
+
+/* 眼球中心自转：⑤ 选中之后开始稳定旋转，⑨ 笑声段加速 */
+function irisSpin(f) {
+  const t = Math.min(f, K.pressEnd);
+  return 0.010 * f + 0.035 * Math.max(0, t - K.press) + 0.055 * Math.max(0, Math.min(f, K.laughOut) - K.laughIn);
+}
+
+/* 视角抖动：呼吸起伏（≈13 次/分）+ 微转向（头部不稳）+ 视差微抖 */
+function jitter(f) {
+  const breath = Math.sin(f * 0.0196) * 0.7 + Math.sin(f * 0.0327 + 1.1) * 0.3;
+  const turn = Math.sin(f * 0.0064 + 0.4) * 0.8 + Math.sin(f * 0.0141 + 2.2) * 0.2;
+  return {
+    x: turn * 0.030,          // 头部横向微漂
+    y: breath * 0.016,        // 呼吸起伏
+    pitch: Math.sin(f * 0.0278 + 0.9) * 0.004,   // 视线微颤
+    yaw: Math.sin(f * 0.0117 + 1.7) * 0.006,
+  };
+}
+/* 节拍驱动相机：一间地下实验室内的第一人称 POV（镜头 = 「你」的眼睛）
+   · 片头：镜头先在左侧 30°，1.5s 内缓缓转正 —— 装作人刚忙完别的才回头看它
+   · 注意本工程约定：CAM.pitch 为正 = 视线向下（画面内容上移）；yaw 为负 = 视线偏左
+   · ②③ 起「前倾俯视」：机位抬高并前移，俯视角由 ~12° 提到 ~30° */
+function camBeat(f) {
+  let pt = -0.03, y = 1.34, z = 0.62, yaw = 0;
+  if (f < B.intro[1]) {                                    // 片头转头（1.5s = 34 源帧）
+    const t = easeInOut(clamp(f / 34, 0, 1));
+    yaw = lerp(-0.5236, 0, t) + Math.sin(t * Math.PI) * 0.010;   // 左侧 30° → 正前（带一点过冲）
+    z = lerp(0.72, 0.62, easeOutCubic(clamp(f / 34, 0, 1)));     // 顺手往前靠
+    y = lerp(1.365, 1.340, t);
+    pt = lerp(-0.075, -0.055, t);
+  } else if (f < B.buttons[0]) {                            // ① 直视机械眼球
+    pt = lerp(-0.055, -0.030, smoothstep(B.eyeLine[0] + 8, B.eyeLine[1], f));
+  } else if (f < B.lookHands[0]) {                          // ② 前倾，看按钮亮起
+    const t = smoothstep(154, 208, f);
+    pt = lerp(-0.030, 0.130, t); y = lerp(1.34, 1.44, t); z = lerp(0.62, 0.78, t);
+  } else if (f < B.blink1[0]) {                             // ③ 俯视双手
+    const t = smoothstep(212, 252, f);
+    pt = lerp(0.130, 0.235, t); y = lerp(1.44, 1.49, t); z = lerp(0.78, 0.84, t);
+  } else if (f < B.pressLeft[0]) {                          // ④ 眨眼：稳在俯视位
+    pt = 0.232; y = 1.49; z = 0.84;
+  } else if (f < B.reveal[1]) {                             // ⑤–⑧ 盯手与按钮
+    pt = 0.226; y = 1.49; z = 0.84;
+    yaw = lerp(0, -0.045, smoothstep(324, 368, f)) * (1 - smoothstep(402, 442, f));
+  } else if (f < B.thanks[0]) {                             // ⑨ 笑声：后仰抬头直视眼球
+    const t = smoothstep(B.laugh[0] + 2, B.laugh[0] + 74, f);
+    pt = lerp(0.226, -0.050, t); y = lerp(1.49, 1.34, t); z = lerp(0.84, 0.62, t);
+  } else if (f < B.thanks[1]) {                             // ⑩ 蓝化：视线定在眼球上，缓缓后收
+    const t = smoothstep(B.thanks[0], B.thanks[0] + 46, f);
+    pt = lerp(-0.050, -0.062, t); y = lerp(1.34, 1.332, t); z = lerp(0.62, 0.72, t);
+  } else {                                                  // ⑪ 之后：黑屏，机位冻结
+    pt = -0.062; y = 1.332; z = 0.72;
+  }
+  CAM.focal = lerp(1180, 1470, laughK(f));                  // ⑨ 镜头被「吸」向眼球
+  const j = jitter(f);
+  const sh = laughK(f) * 0.010;                             // 笑声段叠加高频失控颤
+  CAM.x = j.x + Math.sin(f * 0.9) * sh;
+  CAM.y = y + j.y + Math.sin(f * 1.13 + 0.6) * sh * 0.8;
+  CAM.z = z;
+  CAM.pitch = pt + j.pitch + Math.sin(f * 1.7) * sh * 0.5;
+  CAM.yaw = yaw + j.yaw;
+}
+
+/* ============================================================================
+   房间
+   ========================================================================== */
+function drawFloor(f) {
+  face([[-RW, 0, -1.5], [RW, 0, -1.5], [RW, 0, FAR], [-RW, 0, FAR]], '#30363d');
+  sctx.save(); sctx.strokeStyle = 'rgba(96,106,116,0.55)'; sctx.lineWidth = 1.1;
+  for (let z = -1; z < FAR; z += 1.25) {
+    const a = proj(-RW, 0.002, z), b = proj(RW, 0.002, z);
+    if (a && b) { sctx.beginPath(); sctx.moveTo(a.x, a.y); sctx.lineTo(b.x, b.y); sctx.stroke(); }
+  }
+  for (let x = -RW; x <= RW + 0.01; x += 1.25) {
+    const a = proj(x, 0.002, 0.2), b = proj(x, 0.002, FAR);
+    if (a && b) { sctx.beginPath(); sctx.moveTo(a.x, a.y); sctx.lineTo(b.x, b.y); sctx.stroke(); }
+  }
+  sctx.restore();
+  // 水渍 / 油污（确定性斑块）
+  for (let i = 0; i < 22; i++) {
+    const x = (srnd(i * 3.7) - 0.5) * 2 * (RW - 0.5);
+    const z = 0.6 + srnd(i * 5.1) * (FAR - 1.5);
+    const p = proj(x, 0.003, z); if (!p) continue;
+    const r = (0.10 + srnd(i * 7.3) * 0.34) * p.s;
+    sctx.save(); sctx.globalAlpha = 0.10 + srnd(i * 2.9) * 0.10;
+    sctx.fillStyle = 'rgba(20,23,27,1)';
+    sctx.beginPath(); sctx.ellipse(p.x, p.y, r, r * 0.30, 0, 0, TAU); sctx.fill(); sctx.restore();
+  }
+  // 地面警示黄线（危险区边界）
+  face([[-RW, 0.004, 2.86], [RW, 0.004, 2.86], [RW, 0.004, 2.99], [-RW, 0.004, 2.99]], 'rgba(188,148,40,0.40)');
+  face([[-1.62, 0.004, 2.86], [1.62, 0.004, 2.99], [1.62, 0.004, 3.03], [-1.62, 0.004, 2.90]], 'rgba(188,148,40,0.24)');
+  // 地面电缆线槽（贴右墙走）
+  face([[RW - 0.64, 0.005, -1.5], [RW - 0.42, 0.005, -1.5], [RW - 0.42, 0.005, FAR], [RW - 0.64, 0.005, FAR]], '#20262c');
+  sctx.save(); sctx.strokeStyle = 'rgba(96,106,116,0.5)'; sctx.lineWidth = 1.2;
+  for (let z = -1.0; z < FAR; z += 1.15) {
+    const a = proj(RW - 0.64, 0.007, z), b = proj(RW - 0.42, 0.007, z);
+    if (a && b) { sctx.beginPath(); sctx.moveTo(a.x, a.y); sctx.lineTo(b.x, b.y); sctx.stroke(); }
+  }
+  sctx.restore();
+}
+function drawCeiling(f) {
+  face([[-RW, RH, -1.5], [RW, RH, -1.5], [RW, RH, FAR], [-RW, RH, FAR]], '#252b32');
+  sctx.save(); sctx.strokeStyle = 'rgba(66,74,82,0.7)'; sctx.lineWidth = 1.2;
+  for (let x = -RW + 1.2; x < RW; x += 1.9) {
+    const a = proj(x, RH - 0.006, 0.2), b = proj(x, RH - 0.006, FAR);
+    if (a && b) { sctx.beginPath(); sctx.moveTo(a.x, a.y); sctx.lineTo(b.x, b.y); sctx.stroke(); }
+  }
+  sctx.restore();
+  // 日光灯管（两排 × 三组，偶尔闪烁）
+  const XS = [-1.9, 1.9], ZS = [2.6, 5.2, 7.8];
+  XS.forEach((x, i) => ZS.forEach((z, j) => {
+    const k = i * 3 + j, fl = flicker(f, k);
+    if (fl <= 0.12) return;
+    const y = RH - 0.14;
+    sctx.save(); sctx.globalAlpha = 0.92;
+    face([[x - 0.075, y, z - 1.35], [x + 0.075, y, z - 1.35], [x + 0.075, y, z + 1.35], [x - 0.075, y, z + 1.35]],
+      `rgba(${Math.round(196 * fl)},${Math.round(220 * fl)},${Math.round(228 * fl)},1)`);
+    // 灯槽
+    face([[x - 0.14, y + 0.06, z - 1.45], [x + 0.14, y + 0.06, z - 1.45], [x + 0.14, y + 0.06, z + 1.45], [x - 0.14, y + 0.06, z + 1.45]], '#0c0f13');
+    sctx.restore();
+    const c = proj(x, y - 0.05, z);
+    if (c) {
+      const gp = proj(x, 0.02, z);
+      sctx.save(); sctx.globalCompositeOperation = 'lighter';
+      glowAt(c.x, c.y, 1.25 * c.s * fl, 1.7 * c.s * fl, glow('rgba(196,226,236,A)'), 0.22 * fl);
+      // 灯管到地面的体积光柱（粉尘感）
+      if (gp) glowAt((c.x + gp.x) / 2, (c.y + gp.y) / 2, 1.10 * c.s, Math.abs(gp.y - c.y) * 0.64,
+        glow('rgba(178,212,228,A)'), 0.10 * fl);
+      sctx.restore();
+    }
+  }));
+  // 右顶管道 + 滴水
+  face([[2.55, RH - 0.22, 0.4], [2.75, RH - 0.22, 0.4], [2.75, RH - 0.22, FAR], [2.55, RH - 0.22, FAR]], '#242a31');
+  face([[2.55, RH - 0.30, 0.4], [2.75, RH - 0.30, 0.4], [2.75, RH - 0.30, FAR], [2.55, RH - 0.30, FAR]], '#1a1f25');
+  const phase = (f * 0.11) % 1.0, dz = 4.6;
+  const dy = lerp(RH - 0.30, 0.02, phase);
+  dot3(2.65, dy, dz, 0.016, 'rgba(150,190,205,0.75)', 0.9);
+  if (phase > 0.9) {                              // 落地水花
+    const gp = proj(2.65, 0.004, dz);
+    if (gp) { sctx.save(); sctx.globalAlpha = (phase - 0.9) * 3;
+      sctx.strokeStyle = 'rgba(160,196,210,0.6)'; sctx.lineWidth = 1.4;
+      sctx.beginPath(); sctx.ellipse(gp.x, gp.y, 0.10 * gp.s * 3, 0.10 * gp.s, 0, 0, TAU); sctx.stroke(); sctx.restore(); }
+  }
+}
+// 一面墙上的图（蓝图 / 白板），localPlane 内画线
+function drawSchematics(iw, ih) {
+  const x = sctx;
+  x.strokeStyle = 'rgba(150,190,215,0.55)'; x.lineWidth = 1.6;
+  // 大圆 = 眼球剖面
+  x.beginPath(); x.arc(iw * 0.42, ih * 0.46, Math.min(iw, ih) * 0.30, 0, TAU); x.stroke();
+  x.beginPath(); x.arc(iw * 0.42, ih * 0.46, Math.min(iw, ih) * 0.20, 0, TAU); x.stroke();
+  x.beginPath(); x.arc(iw * 0.42, ih * 0.46, Math.min(iw, ih) * 0.09, 0, TAU); x.stroke();
+  // 中心线 / 尺寸线
+  x.setLineDash([6, 5]);
+  x.beginPath(); x.moveTo(iw * 0.06, ih * 0.46); x.lineTo(iw * 0.92, ih * 0.46); x.stroke();
+  x.beginPath(); x.moveTo(iw * 0.42, ih * 0.08); x.lineTo(iw * 0.42, ih * 0.92); x.stroke();
+  x.setLineDash([]);
+  // 齿轮边
+  x.strokeStyle = 'rgba(170,205,225,0.42)';
+  for (let k = 0; k < 24; k++) {
+    const a = k / 24 * TAU;
+    x.beginPath();
+    x.moveTo(iw * 0.42 + Math.cos(a) * Math.min(iw, ih) * 0.31, ih * 0.46 + Math.sin(a) * Math.min(iw, ih) * 0.31);
+    x.lineTo(iw * 0.42 + Math.cos(a) * Math.min(iw, ih) * 0.35, ih * 0.46 + Math.sin(a) * Math.min(iw, ih) * 0.35);
+    x.stroke();
+  }
+}
+function drawWalls(f) {
+  // 侧墙
+  face([[-RW, 0, -1.5], [-RW, 0, FAR], [-RW, RH, FAR], [-RW, RH, -1.5]], '#464e57');
+  face([[RW, 0, -1.5], [RW, 0, FAR], [RW, RH, FAR], [RW, RH, -1.5]], '#404851');
+  // 墙面竖向分缝
+  sctx.save(); sctx.strokeStyle = 'rgba(26,30,35,0.85)'; sctx.lineWidth = 1.6;
+  for (let z = 0; z < FAR; z += 1.6) {
+    for (const sx of [-RW, RW]) {
+      const a = proj(sx, 0.0, z), b = proj(sx, RH, z);
+      if (a && b) { sctx.beginPath(); sctx.moveTo(a.x, a.y); sctx.lineTo(b.x, b.y); sctx.stroke(); }
+    }
+  }
+  sctx.restore();
+
+  // 墙面陈旧质感：分段平铺烘焙污渍（避免长跨度仿射失真）
+  const segW = 1.7;
+  for (let z = -1.4; z < FAR; z += segW) {
+    const z1 = Math.min(z + segW, FAR);
+    for (const sx of [-RW + 0.016, RW - 0.016]) {
+      const sg = sx < 0 ? -1 : 1;
+      const ox = srnd((z + 3.3) * 2.7 + sg * 1.9) * 260, oy = srnd((z + 1.1) * 4.1) * 180;
+      localPlane([sx, RH, z], [sx, RH, z1], [sx, 0, z], 256, 330, (iw, ih) => {
+        sctx.drawImage(GRIME, ox, oy, 252, 332, 0, 0, iw, ih);
+      }, 0.55);
+    }
+  }
+  // 墙面走线槽 + 固定卡箍
+  for (const sx of [-RW, RW]) {
+    const sgn = sx < 0 ? 1 : -1;
+    face([[sx + sgn * 0.018, 2.56, -1.5], [sx + sgn * 0.018, 2.56, FAR],
+          [sx + sgn * 0.018, 2.64, FAR], [sx + sgn * 0.018, 2.64, -1.5]], '#2f363d');
+    for (let z = -1.0; z < FAR; z += 1.5) {
+      face([[sx + sgn * 0.014, 2.51, z - 0.05], [sx + sgn * 0.014, 2.51, z + 0.05],
+            [sx + sgn * 0.014, 2.69, z + 0.05], [sx + sgn * 0.014, 2.69, z - 0.05]], '#3b434b');
+    }
+  }
+  // 墙上残留胶带（旧纸片撕痕）
+  for (let i = 0; i < 6; i++) {
+    const z = 1.2 + srnd(i * 7.3) * 7.0, y = 0.62 + srnd(i * 3.9) * 1.9, dz = 0.22 + srnd(i * 5.5) * 0.16;
+    face([[-RW + 0.02, y, z], [-RW + 0.02, y, z + dz], [-RW + 0.02, y + 0.052, z + dz], [-RW + 0.02, y + 0.052, z]], 'rgba(206,198,176,0.26)');
+  }
+  // 左墙：三张蓝图 + 白板 + 失败日志
+  const sheets = [[2.4, 4.4, 1.55, 0.75], [4.8, 6.8, 1.55, 0.70], [7.2, 9.0, 1.45, 0.60]];
+  sheets.forEach((s, i) => {
+    const [z0, z1, yTop, h] = s, yBot = yTop - h;
+    face([[-RW + 0.02, yBot, z0], [-RW + 0.02, yBot, z1], [-RW + 0.02, yTop, z1], [-RW + 0.02, yTop, z0]],
+      i % 2 ? 'rgba(30,52,74,0.92)' : 'rgba(28,44,62,0.92)');
+    // 蓝图网格 + 图
+    localPlane([-RW + 0.03, yTop, z0], [-RW + 0.03, yTop, z1], [-RW + 0.03, yBot, z0], 640, 320, (iw, ih) => {
+      sctx.strokeStyle = 'rgba(90,150,190,0.30)'; sctx.lineWidth = 1;
+      for (let gx = 0; gx < iw; gx += 32) { sctx.beginPath(); sctx.moveTo(gx, 0); sctx.lineTo(gx, ih); sctx.stroke(); }
+      for (let gy = 0; gy < ih; gy += 32) { sctx.beginPath(); sctx.moveTo(0, gy); sctx.lineTo(iw, gy); sctx.stroke(); }
+      drawSchematics(iw, ih);
+    }, 0.85);
+    // 钉孔
+    dot3(-RW + 0.03, yTop - 0.03, z0 + 0.06, 0.01, 'rgba(200,210,220,0.5)', 0.8);
+  });
+  // 白板（公式）
+  face([[-RW + 0.02, 1.02, 5.35], [-RW + 0.02, 1.02, 5.95], [-RW + 0.02, 2.35, 5.95], [-RW + 0.02, 2.35, 5.35]], 'rgba(198,206,210,0.92)');
+  localPlane([-RW + 0.03, 2.35, 5.35], [-RW + 0.03, 2.35, 5.95], [-RW + 0.03, 1.02, 5.35], 300, 500, (iw, ih) => {
+    sctx.strokeStyle = 'rgba(40,60,80,0.75)';
+    for (let k = 0; k < 6; k++) {
+      sctx.lineWidth = 1.6; sctx.beginPath();
+      sctx.moveTo(iw * 0.10, (k + 1) * ih / 7 + (srnd(k + 2) - 0.5) * 8);
+      sctx.lineTo(iw * (0.45 + srnd(k * 3.1) * 0.40), (k + 1) * ih / 7 + (srnd(k * 5.7) - 0.5) * 10); sctx.stroke();
+    }
+    sctx.fillStyle = 'rgba(30,52,72,0.9)';
+    sctx.font = '600 46px "Consolas",monospace'; sctx.textAlign = 'left'; sctx.textBaseline = 'top';
+    sctx.fillText('GAZE', iw * 0.10, ih * 0.10);
+    sctx.fillText('= 1', iw * 0.10, ih * 0.10 + 62);
+  }, 0.9);
+  // 失败日志（一列小纸片）
+  for (let k = 0; k < 7; k++) {
+    const yT = 2.30 - k * 0.16, zc = 4.05;
+    const col = k % 3 === 0 ? 'rgba(150,60,50,0.92)' : 'rgba(206,198,180,0.90)';
+    face([[-RW + 0.02, yT - 0.13, zc - 0.28], [-RW + 0.02, yT - 0.13, zc + 0.28], [-RW + 0.02, yT, zc + 0.28], [-RW + 0.02, yT, zc - 0.28]], col, 0.92);
+  }
+  localPlane([-RW + 0.03, 2.30, 3.77], [-RW + 0.03, 2.30, 4.33], [-RW + 0.03, 1.34, 3.77], 300, 120, (iw, ih) => {
+    sctx.fillStyle = 'rgba(30,40,55,0.85)'; sctx.font = '600 34px "Consolas",monospace';
+    sctx.textAlign = 'left'; sctx.textBaseline = 'middle';
+    sctx.fillText('FAILURE LOG', 8, ih * 0.5);
+  }, 0.9);
+
+  // 右墙：服务器机柜
+  for (let r = 0; r < 4; r++) {
+    const zc = 2.6 + r * 1.75, z0 = zc - 0.62, z1 = zc + 0.62, y0 = 0.10, y1 = 2.30;
+    face([[RW - 0.34, y0, z0], [RW - 0.34, y0, z1], [RW - 0.34, y1, z1], [RW - 0.34, y1, z0]], '#1b2026');
+    face([[RW - 0.40, y0, z0], [RW - 0.40, y0, z1], [RW - 0.40, y1, z1], [RW - 0.40, y1, z0]], '#2c333b');
+    // LED 阵列
+    for (let c = 0; c < 3; c++) for (let rr = 0; rr < 12; rr++) {
+      const yy = y1 - 0.14 - rr * 0.16, zz = z0 + 0.16 + c * 0.36;
+      const pulse = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(f * 0.16 + (r * 12 + rr * 3 + c) * 1.7));
+      const isRed = srnd(r * 13 + rr * 5.5 + c * 2.1) < 0.5;
+      dot3(RW - 0.42, yy, zz, 0.012, isRed ? 'rgba(255,70,58,1)' : 'rgba(90,235,150,1)', pulse);
+    }
+    const gp = proj(RW - 0.44, 1.2, zc);
+    if (gp) { sctx.save(); sctx.globalCompositeOperation = 'lighter';
+      glowAt(gp.x, gp.y, 0.6 * gp.s, 1.1 * gp.s, glow('rgba(70,180,130,A)'), 0.10); sctx.restore(); }
+  }
+}
+// 后墙整面显示器阵列
+const SCROLL = [];
+(function initMonitors() {
+  const COLS = 7, ROWS = 4;
+  const x0 = -3.30, w = 0.88, y0 = 0.46, hh = 0.56;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    SCROLL.push({
+      x: x0 + c * (w + 0.05), y: y0 + r * (hh + 0.06), w: w, h: hh,
+      type: Math.floor(srnd(r * 7.1 + c * 3.3) * 3.999),
+      seed: r * 17.3 + c * 5.9,
+    });
+  }
+})();
+// 少数屏幕给出可读内容 —— 把"它在看你"写成画面里的字
+const SPECIAL = { 0: 'monitor', 10: 'subject', 12: 'gaze', 15: 'schematic', 27: 'vitals' };
+function drawSpecialScreen(sp, rx, ry, rw, rh, f, seed) {
+  const x = sctx;
+  if (sp === 'subject') {                             // 主对象档案
+    x.fillStyle = '#04100c'; x.fillRect(rx, ry, rw, rh);
+    x.font = `700 ${Math.round(rh * 0.26)}px "Consolas",monospace`;
+    x.textAlign = 'left'; x.textBaseline = 'top';
+    x.fillStyle = 'rgba(120,230,190,0.95)';
+    x.fillText('SUBJECT', rx + rw * 0.07, ry + rh * 0.10);
+    const bl = 0.5 + 0.5 * Math.sin(f * 0.18);
+    x.fillStyle = `rgba(255,${Math.round(168 + 45 * bl)},${Math.round(118 + 34 * bl)},1)`;
+    x.fillText('YOU', rx + rw * 0.07, ry + rh * 0.46);
+    x.font = `600 ${Math.round(rh * 0.15)}px "Consolas",monospace`;
+    x.fillStyle = 'rgba(150,215,195,0.72)';
+    x.fillText('HR 72 BPM', rx + rw * 0.52, ry + rh * 0.16);
+    x.fillText('GAZE 1.00', rx + rw * 0.52, ry + rh * 0.38);
+    x.fillText('TRUST 0.86', rx + rw * 0.52, ry + rh * 0.60);
+  } else if (sp === 'gaze') {                         // 公式界面
+    x.fillStyle = '#0a1016'; x.fillRect(rx, ry, rw, rh);
+    x.strokeStyle = 'rgba(110,170,205,0.22)'; x.lineWidth = 1;
+    for (let gx = rx; gx < rx + rw; gx += 14) { x.beginPath(); x.moveTo(gx, ry); x.lineTo(gx, ry + rh); x.stroke(); }
+    x.fillStyle = 'rgba(190,225,245,0.95)';
+    x.font = `700 ${Math.round(rh * 0.22)}px "Consolas",monospace`;
+    x.textAlign = 'left'; x.textBaseline = 'top';
+    x.fillText('GAZE = 1', rx + rw * 0.10, ry + rh * 0.16);
+    x.fillStyle = 'rgba(120,200,235,0.70)';
+    x.fillRect(rx + rw * 0.10, ry + rh * 0.56, rw * 0.60, rh * 0.10);
+    x.fillStyle = 'rgba(120,200,235,0.45)';
+    x.fillRect(rx + rw * 0.10, ry + rh * 0.74, rw * 0.36, rh * 0.10);
+  } else if (sp === 'schematic') {                    // 眼球剖面图
+    x.fillStyle = '#040c14'; x.fillRect(rx, ry, rw, rh);
+    const ccx = rx + rw * 0.42, ccy = ry + rh * 0.52, rr0 = Math.min(rw, rh) * 0.34;
+    x.strokeStyle = 'rgba(120,190,225,0.72)'; x.lineWidth = 1.2;
+    x.beginPath(); x.arc(ccx, ccy, rr0, 0, TAU); x.stroke();
+    x.beginPath(); x.arc(ccx, ccy, rr0 * 0.62, 0, TAU); x.stroke();
+    x.beginPath(); x.arc(ccx, ccy, rr0 * 0.26, 0, TAU); x.stroke();
+    x.setLineDash([4, 3]);
+    x.beginPath(); x.moveTo(rx + rw * 0.06, ccy); x.lineTo(rx + rw * 0.94, ccy); x.stroke();
+    x.setLineDash([]);
+    for (let k = 0; k < 20; k++) {
+      const a = k / 20 * TAU;
+      x.beginPath(); x.moveTo(ccx + Math.cos(a) * rr0, ccy + Math.sin(a) * rr0);
+      x.lineTo(ccx + Math.cos(a) * rr0 * 1.14, ccy + Math.sin(a) * rr0 * 1.14); x.stroke();
+    }
+  } else if (sp === 'monitor') {                      // 监控画面：拍到操作台与"你"
+    x.fillStyle = '#070c10'; x.fillRect(rx, ry, rw, rh);
+    const vx = rx + rw * 0.5, vy = ry + rh * 0.44;
+    x.strokeStyle = 'rgba(120,150,170,0.40)'; x.lineWidth = 1;
+    x.beginPath(); x.moveTo(rx + rw * 0.10, ry + rh * 0.20); x.lineTo(rx + rw * 0.90, ry + rh * 0.20);
+    x.lineTo(rx + rw * 0.90, ry + rh * 0.94); x.lineTo(rx + rw * 0.10, ry + rh * 0.94); x.closePath(); x.stroke();
+    [[rx + rw * 0.10, ry + rh * 0.20], [rx + rw * 0.90, ry + rh * 0.20],
+     [rx + rw * 0.90, ry + rh * 0.94], [rx + rw * 0.10, ry + rh * 0.94]].forEach(q => {
+      x.beginPath(); x.moveTo(q[0], q[1]); x.lineTo(vx, vy); x.stroke();
+    });
+    x.fillStyle = 'rgba(200,215,225,0.85)';
+    x.beginPath(); x.arc(vx, vy - rh * 0.04, rh * 0.20, 0, TAU); x.fill();
+    x.fillStyle = '#c02010';
+    x.beginPath(); x.arc(vx, vy - rh * 0.04, rh * 0.06, 0, TAU); x.fill();
+    x.fillStyle = 'rgba(120,140,155,0.70)';           // 操作台
+    x.fillRect(rx + rw * 0.22, ry + rh * 0.80, rw * 0.56, rh * 0.06);
+    x.fillStyle = 'rgba(26,34,44,0.95)';              // 台前的"你"（人形暗影）
+    x.beginPath(); x.arc(vx - rw * 0.08, ry + rh * 0.74, rh * 0.085, 0, TAU); x.fill();
+    x.fillStyle = 'rgba(170,200,215,0.85)';
+    x.font = `600 ${Math.round(rh * 0.15)}px "Consolas",monospace`;
+    x.textAlign = 'left'; x.textBaseline = 'top';
+    x.fillText('CAM 03', rx + rw * 0.08, ry + rh * 0.06);
+    if (0.5 + 0.5 * Math.sin(f * 0.22) > 0.4) {
+      x.fillStyle = 'rgba(255,70,58,0.95)';
+      x.beginPath(); x.arc(rx + rw * 0.88, ry + rh * 0.11, rh * 0.05, 0, TAU); x.fill();
+    }
+  } else if (sp === 'vitals') {                       // 生理数据波形 + 数值
+    x.fillStyle = '#040d0b'; x.fillRect(rx, ry, rw, rh);
+    x.strokeStyle = 'rgba(70,150,120,0.25)'; x.lineWidth = 1;
+    for (let gy = ry; gy < ry + rh; gy += 13) { x.beginPath(); x.moveTo(rx, gy); x.lineTo(rx + rw, gy); x.stroke(); }
+    x.strokeStyle = 'rgba(90,230,170,0.85)'; x.lineWidth = 1.6;
+    x.beginPath();
+    for (let k = 0; k <= 48; k++) {
+      const u = k / 48, xx = rx + u * rw;
+      const spike = Math.exp(-Math.pow((u * 48 - ((f * 0.5 + seed * 6) % 48)) / 2.0, 2));
+      const yy = ry + rh * 0.62 - spike * rh * 0.34 + Math.sin(u * 30 + seed) * rh * 0.05;
+      if (k === 0) x.moveTo(xx, yy); else x.lineTo(xx, yy);
+    }
+    x.stroke();
+    x.fillStyle = 'rgba(180,235,210,0.90)';
+    x.font = `700 ${Math.round(rh * 0.16)}px "Consolas",monospace`;
+    x.textAlign = 'right'; x.textBaseline = 'top';
+    x.fillText('BPM 72', rx + rw * 0.94, ry + rh * 0.08);
+  }
+  x.textAlign = 'left'; x.textBaseline = 'top';
+}
+function drawScreenWall(f) {
+  const rf = redFlood(f), lit = roomLit(f);       // ⑨ 全红 / ⑩ 熄灭
+  face([[-RW, 0, FAR], [RW, 0, FAR], [RW, RH, FAR], [-RW, RH, FAR]], '#161b22');
+  for (let i = 0; i < SCROLL.length; i++) {
+    const m = SCROLL[i];
+    const tl = proj(m.x, m.y + m.h, FAR), br = proj(m.x + m.w, m.y, FAR);
+    if (!tl || !br) continue;
+    const rx = tl.x, ry = tl.y, rw = br.x - tl.x, rh = br.y - tl.y;
+    if (rw < 4 || rh < 4) continue;
+    // 边框
+    sctx.save(); sctx.fillStyle = '#05070a'; sctx.fillRect(rx - 3, ry - 3, rw + 6, rh + 6); sctx.restore();
+    // 屏底
+    sctx.save();
+    sctx.beginPath(); sctx.rect(rx, ry, rw, rh); sctx.clip();
+    sctx.fillStyle = m.type === 0 ? '#04120c' : m.type === 1 ? '#050b14' : '#070a12';
+    sctx.fillRect(rx, ry, rw, rh);
+    const scroll = (scr(f) + m.seed * 6.0) % 1.0;
+    const sp = SPECIAL[i];
+    if (sp) {                                             // 少数屏给出可读内容
+      drawSpecialScreen(sp, rx, ry, rw, rh, f, m.seed);
+    } else if (m.type === 0) {                                   // 代码
+      const rows = 12, rowH = rh / rows;
+      for (let k = 0; k < rows; k++) {
+        const yy = ry + ((k + scroll) % rows) / rows * rh;
+        const ww = rw * (0.25 + srnd(m.seed + k * 2.7) * 0.6);
+        sctx.fillStyle = (k % 5 === 0) ? 'rgba(120,235,170,0.85)' : 'rgba(80,190,140,0.55)';
+        sctx.fillRect(rx + rw * 0.06, yy, ww, Math.max(1.4, rowH * 0.34));
+      }
+    } else if (m.type === 1) {                            // 日志
+      const rows = 9, rowH = rh / rows;
+      for (let k = 0; k < rows; k++) {
+        const yy = ry + ((k + scroll) % rows) / rows * rh;
+        const ww = rw * (0.35 + srnd(m.seed + k * 4.1) * 0.5);
+        sctx.fillStyle = (k % 3 === 0) ? 'rgba(235,205,110,0.72)' : 'rgba(150,175,195,0.50)';
+        sctx.fillRect(rx + rw * 0.08, yy, ww, Math.max(1.2, rowH * 0.28));
+      }
+    } else {                                              // 生理数据波形 / 监控
+      sctx.strokeStyle = 'rgba(90,220,180,0.72)'; sctx.lineWidth = 1.6;
+      sctx.beginPath();
+      for (let k = 0; k <= 40; k++) {
+        const u = k / 40, xx = rx + u * rw;
+        const spike = Math.exp(-Math.pow(((u * 40 - (scroll * 40 + m.seed * 3)) % 40) / 2.2, 2));
+        const yy = ry + rh * 0.62 - spike * rh * 0.42 + Math.sin(u * 26 + m.seed) * rh * 0.05;
+        if (k === 0) sctx.moveTo(xx, yy); else sctx.lineTo(xx, yy);
+      }
+      sctx.stroke();
+    }
+    // ⑨ 屏面全红（灯红）—— 从屏幕内部叠色，保住机壳黑边
+    if (rf > 0.002) {
+      sctx.fillStyle = `rgba(206,30,20,${(0.78 * rf).toFixed(3)})`;
+      sctx.fillRect(rx, ry, rw, rh);
+      sctx.fillStyle = `rgba(255,120,90,${(0.30 * rf * (0.5 + 0.5 * Math.sin(f * 0.4 + i))).toFixed(3)})`;
+      sctx.fillRect(rx, ry, rw, rh * 0.18);
+    }
+    sctx.restore();
+    // 屏面反光（原「偶发故障条」噪波已按要求去掉）
+    sctx.save(); sctx.globalAlpha = 0.10; sctx.fillStyle = '#a8ccd8';
+    sctx.fillRect(rx, ry, rw, rh * 0.12); sctx.restore();
+  }
+  // 后墙整体光溢出（冷光 → ⑨ 红溢 → ⑩ 熄灭）
+  const c = proj(0, 1.55, FAR);
+  if (c && lit > 0.02) {
+    sctx.save(); sctx.globalCompositeOperation = 'lighter';
+    if (rf > 0.002) glowAt(c.x, c.y, 4.6 * c.s, 2.2 * c.s, glow('rgba(200,40,26,A)'), 0.16 * rf * lit);
+    glowAt(c.x, c.y, 4.6 * c.s, 2.2 * c.s, glow('rgba(60,120,150,A)'), 0.10 * lit * (1 - rf));
+    sctx.restore();
+  }
+  if (rf > 0.002 && c) {                            // 整面屏阵的红雾
+    sctx.save(); sctx.globalCompositeOperation = 'lighter';
+    glowAt(c.x, c.y, 6.2 * c.s, 3.0 * c.s, glow('rgba(220,50,32,A)'), 0.13 * rf); sctx.restore();
+  }
+  if (lit < 0.995) {                                // ⑩ 熄灭：把后墙压黑
+    face([[-RW, 0, FAR], [RW, 0, FAR], [RW, RH, FAR], [-RW, RH, FAR]], `rgba(2,3,5,${(1 - lit).toFixed(3)})`);
+  }
+}
+
+/* ============================================================================
+   机械眼球
+   ========================================================================== */
+function drawEyeball(f) {
+  const c = proj(EYE.x, EYE.y, EYE.z); if (!c) return;
+  const cx = c.x, cy = c.y, R = EYE.R * c.s;
+  const breathe = Math.sin(f * 0.028);
+  const laugh = laughK(f);                              // ⑨ 笑声：瞳孔放大 / 红点变亮
+  const openK = 0.40 + 0.022 * breathe + 0.10 * laugh;  // 光圈随笑声张开
+  const dilate = 1 + 0.95 * laugh;                      // 瞳孔放大倍数
+  const spin = irisSpin(f);                             // ⑤ 选中后眼球中心自转
+
+  // 接地投影（把眼球钉在地面上）
+  const fp = proj(EYE.x, 0.004, EYE.z);
+  if (fp) {
+    sctx.save(); sctx.globalAlpha = 0.50; sctx.fillStyle = '#0b0e11';
+    sctx.beginPath(); sctx.ellipse(fp.x, fp.y, 1.00 * fp.s, 0.30 * fp.s, 0, 0, TAU); sctx.fill(); sctx.restore();
+  }
+  // 背后暗晕：把主体从亮屏阵上剥出来
+  sctx.save();
+  glowAt(cx, cy, R * 2.05, R * 2.05, glow('rgba(1,2,4,A)'), 0.62); sctx.restore();
+
+  sctx.save();
+  // 外壳球体（暗金属，球面明暗）
+  sctx.beginPath(); sctx.arc(cx, cy, R * 1.06, 0, TAU); sctx.clip();
+  sctx.drawImage(SPHERE, cx - R * 1.06, cy - R * 1.06, R * 2.12, R * 2.12);
+  sctx.restore();
+
+  // 上缘金属反光（rim light）
+  sctx.save(); sctx.globalCompositeOperation = 'lighter';
+  sctx.strokeStyle = 'rgba(150,178,196,0.55)'; sctx.lineWidth = R * 0.05;
+  sctx.beginPath(); sctx.arc(cx, cy, R * 1.00, Math.PI * 1.08, Math.PI * 1.92); sctx.stroke(); sctx.restore();
+
+  // 金属眼眶（socket ring）
+  sctx.save();
+  sctx.beginPath(); sctx.arc(cx, cy, R * 1.02, 0, TAU); sctx.arc(cx, cy, R * 0.80, 0, TAU, true);
+  sctx.fillStyle = '#4d565f'; sctx.fill();
+  sctx.lineWidth = R * 0.02; sctx.strokeStyle = 'rgba(20,24,28,0.9)'; sctx.stroke();
+  sctx.restore();
+  // 齿轮环
+  for (let k = 0; k < 40; k++) {
+    const a = k / 40 * TAU, r0 = R * 1.00, r1 = R * 1.075;
+    sctx.save(); sctx.strokeStyle = k % 2 ? 'rgba(178,192,205,0.80)' : 'rgba(74,84,95,0.95)';
+    sctx.lineWidth = R * 0.035;
+    sctx.beginPath(); sctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
+    sctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); sctx.stroke(); sctx.restore();
+  }
+  // 螺丝
+  for (let k = 0; k < 8; k++) {
+    const a = k / 8 * TAU + 0.3, rr = R * 0.90;
+    const px = cx + Math.cos(a) * rr, py = cy + Math.sin(a) * rr;
+    sctx.save(); sctx.fillStyle = '#8792a0';
+    sctx.beginPath(); sctx.arc(px, py, R * 0.028, 0, TAU); sctx.fill();
+    sctx.fillStyle = '#2b3138'; sctx.fillRect(px - R * 0.026, py - R * 0.006, R * 0.052, R * 0.012); sctx.restore();
+  }
+  // 液压杆（从眼眶外侧伸向壳体）
+  for (let k = 0; k < 4; k++) {
+    const a = k / 4 * TAU + Math.PI / 4;
+    const px = cx + Math.cos(a) * R * 1.02, py = cy + Math.sin(a) * R * 1.02;
+    const qx = cx + Math.cos(a) * R * 1.16, qy = cy + Math.sin(a) * R * 1.16;
+    sctx.save(); sctx.strokeStyle = '#5c6671'; sctx.lineCap = 'round';
+    sctx.lineWidth = R * 0.05; sctx.beginPath(); sctx.moveTo(px, py); sctx.lineTo(qx, qy); sctx.stroke();
+    sctx.strokeStyle = 'rgba(190,208,222,0.55)'; sctx.lineWidth = R * 0.014;
+    sctx.beginPath(); sctx.moveTo(px, py); sctx.lineTo(qx, qy); sctx.stroke(); sctx.restore();
+  }
+
+  // 光圈叶片层（0.40–0.80R 暗金属，12 道叶缝，随开口微动）
+  sctx.save();
+  const inR = openK * R, outR = R * 0.80;
+  sctx.beginPath(); sctx.arc(cx, cy, outR, 0, TAU); sctx.arc(cx, cy, inR, 0, TAU, true);
+  sctx.fillStyle = '#2c333b'; sctx.fill();
+  sctx.restore();
+  for (let k = 0; k < 12; k++) {
+    const a = k / 12 * TAU + f * 0.0035 + spin * 0.35;
+    sctx.save(); sctx.strokeStyle = k % 2 ? 'rgba(96,106,117,0.85)' : 'rgba(12,15,18,0.95)';
+    sctx.lineWidth = R * 0.02;
+    sctx.beginPath(); sctx.moveTo(cx + Math.cos(a) * inR, cy + Math.sin(a) * inR);
+    sctx.lineTo(cx + Math.cos(a) * outR, cy + Math.sin(a) * outR); sctx.stroke(); sctx.restore();
+  }
+
+  // 虹膜（0.13–0.40R，暗红发光；笑声时外扩）
+  const irisIn = R * 0.13 * dilate, irisOut = R * 0.40 * (1 + 0.10 * laugh);
+  sctx.save();
+  sctx.beginPath(); sctx.arc(cx, cy, irisOut, 0, TAU); sctx.arc(cx, cy, irisIn, 0, TAU, true); sctx.clip();
+  sctx.drawImage(IRIS, cx - irisOut, cy - irisOut, irisOut * 2, irisOut * 2);
+  // 同心圆刻度
+  sctx.strokeStyle = 'rgba(255,140,100,0.30)'; sctx.lineWidth = Math.max(0.8, R * 0.006);
+  for (let rr = irisIn + R * 0.03; rr < irisOut; rr += R * 0.035) {
+    sctx.beginPath(); sctx.arc(cx, cy, rr, 0, TAU); sctx.stroke();
+  }
+  // 径向刻度环（随 spin 一起转 —— 旋转的可见证据）
+  sctx.strokeStyle = 'rgba(255,168,128,0.50)'; sctx.lineWidth = Math.max(1.0, R * 0.009);
+  for (let k = 0; k < 24; k++) {
+    const a = k / 24 * TAU + 0.2 + spin;
+    sctx.beginPath();
+    sctx.moveTo(cx + Math.cos(a) * (irisIn + R * 0.02), cy + Math.sin(a) * (irisIn + R * 0.02));
+    sctx.lineTo(cx + Math.cos(a) * (irisOut - R * 0.012), cy + Math.sin(a) * (irisOut - R * 0.012));
+    sctx.stroke();
+  }
+  // 选中后的旋转扫掠楔（像雷达扫过虹膜）
+  if (spin > 0.04) {
+    sctx.save(); sctx.globalCompositeOperation = 'lighter';
+    const sw = spin * 3.0, wd = 0.62;
+    sctx.beginPath();
+    sctx.arc(cx, cy, irisOut, sw, sw + wd);
+    sctx.arc(cx, cy, irisIn * 0.5, sw + wd, sw, true);
+    sctx.closePath();
+    sctx.fillStyle = `rgba(255,120,78,${(0.20 + 0.16 * laugh).toFixed(3)})`; sctx.fill();
+    sctx.restore();
+  }
+  // 电路纹路（折线 + 节点，随 spin 转）
+  sctx.strokeStyle = 'rgba(255,164,124,0.46)'; sctx.lineWidth = Math.max(0.9, R * 0.008);
+  for (let k = 0; k < 8; k++) {
+    const a = k / 8 * TAU + 0.2 + spin, rr = (irisIn + irisOut) / 2;
+    const px0 = cx + Math.cos(a) * irisIn, py0 = cy + Math.sin(a) * irisIn;
+    const px1 = cx + Math.cos(a + 0.12) * rr, py1 = cy + Math.sin(a + 0.12) * rr;
+    const px2 = cx + Math.cos(a) * irisOut, py2 = cy + Math.sin(a) * irisOut;
+    sctx.beginPath(); sctx.moveTo(px0, py0); sctx.lineTo(px1, py1); sctx.lineTo(px2, py2); sctx.stroke();
+    sctx.fillStyle = 'rgba(255,180,140,0.6)'; sctx.fillRect(px1 - R * 0.01, py1 - R * 0.01, R * 0.02, R * 0.02);
+  }
+  sctx.restore();
+
+  // 球面明暗叠加（multiply）：眼眶 / 叶片 / 虹膜统一到同一球面
+  sctx.save();
+  sctx.beginPath(); sctx.arc(cx, cy, R * 1.06, 0, TAU); sctx.clip();
+  sctx.globalCompositeOperation = 'multiply'; sctx.globalAlpha = 0.60;
+  sctx.drawImage(SPHERE_MOD, cx - R * 1.06, cy - R * 1.06, R * 2.12, R * 2.12);
+  sctx.restore();
+
+  // 金属轮廓光（叠加在明暗之后，不被压暗）
+  sctx.save(); sctx.globalCompositeOperation = 'lighter';
+  sctx.strokeStyle = 'rgba(196,220,238,0.85)'; sctx.lineWidth = R * 0.06;
+  sctx.beginPath(); sctx.arc(cx, cy, R * 1.005, Math.PI * 1.02, Math.PI * 1.98); sctx.stroke();
+  sctx.strokeStyle = 'rgba(140,168,190,0.34)'; sctx.lineWidth = R * 0.045;
+  sctx.beginPath(); sctx.arc(cx, cy, R * 1.005, Math.PI * 0.08, Math.PI * 0.92); sctx.stroke();
+  sctx.restore();
+
+  // 虹膜辉光（暗红；笑声时亮度飙升）
+  sctx.save(); sctx.globalCompositeOperation = 'lighter';
+  glowAt(cx, cy, irisOut * 1.7, irisOut * 1.9, glow('rgba(215,55,38,A)'), 0.42 + 0.42 * laugh); sctx.restore();
+  // 光点沿圈流动
+  sctx.save(); sctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 12; i++) {
+    const a = srnd(i * 7.1) * TAU + f * 0.02 * (0.5 + srnd(i * 2.3)) + spin;
+    const rr = irisIn + R * 0.03 + srnd(i * 5.5) * (irisOut - irisIn - R * 0.05);
+    glowAt(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, R * 0.045, R * 0.045, glow('rgba(255,90,60,A)'), 0.75);
+  }
+  sctx.restore();
+
+  // 瞳孔（黑圆 + 中心红点，始终对准镜头）
+  sctx.save();
+  sctx.beginPath(); sctx.arc(cx, cy, irisIn, 0, TAU); sctx.fillStyle = '#050507'; sctx.fill();
+  sctx.restore();
+  sctx.save(); sctx.globalCompositeOperation = 'lighter';
+  glowAt(cx, cy, R * 0.10 * dilate, R * 0.10 * dilate, glow('rgba(255,64,48,A)'), 1.0 + 0.55 * laugh); sctx.restore();
+  sctx.save(); sctx.fillStyle = 'rgba(255,190,170,0.9)';
+  sctx.beginPath(); sctx.arc(cx - R * 0.03, cy - R * 0.035, R * 0.014, 0, TAU); sctx.fill(); sctx.restore();
+
+  // （旧的眼睑合拢已移除：全片眨眼统一由全屏金属快门 overlay 承担）
+
+  // （原「眼球表面扫描线 / 噪点 / 偶发故障条」已按要求去掉：不再有屏幕噪波）
+}
+
+/* ============================================================================
+   触手
+   ========================================================================== */
+function bez(A, C, B, t) {
+  const u = 1 - t;
+  return [u * u * A[0] + 2 * u * t * C[0] + t * t * B[0],
+          u * u * A[1] + 2 * u * t * C[1] + t * t * B[1],
+          u * u * A[2] + 2 * u * t * C[2] + t * t * B[2]];
+}
+// 粗壮主触手：液压节段 + 关节 + 爪。足印退到眼球正下方（z≈4.3–4.7），
+// 免得爪子落在操作台上空、和按钮区挤成一团
+const LEGS = [
+  { ox: -0.50, oy: -0.58, oz: 0.40, fx: -1.25, fz: 4.55 },
+  { ox: -0.18, oy: -0.70, oz: 0.24, fx: -0.45, fz: 4.35 },
+  { ox: 0.20, oy: -0.68, oz: 0.28, fx: 0.55, fz: 4.40 },
+  { ox: 0.52, oy: -0.56, oz: 0.42, fx: 1.32, fz: 4.65 },
+];
+function drawLegs(f) {
+  LEGS.forEach((L, i) => {
+    const A = [EYE.x + L.ox, EYE.y + L.oy, EYE.z + L.oz];
+    const B = [L.fx, 0.02, L.fz];
+    const lk = laughK(f);                       // ⑨ 触手剧烈抽搐
+    const sway = Math.sin(f * 0.010 + i * 1.3) * 0.05
+               + Math.sin(f * (0.29 + i * 0.07) + i * 2.1) * 0.20 * lk;
+    const C = [(A[0] + B[0]) / 2 + L.ox * 0.9 + sway,
+               1.05 + 0.10 * Math.sin(f * 0.012 + i) + Math.sin(f * (0.33 + i * 0.09) + i) * 0.17 * lk,
+               (A[2] + B[2]) / 2 - 0.35];
+    const N = 9;
+    for (let k = 0; k < N; k++) {
+      const t0 = k / N, t1 = (k + 1) / N;
+      const p0 = bez(A, C, B, t0), p1 = bez(A, C, B, t1);
+      const rad0 = lerp(0.115, 0.055, t0);
+      // 液压节段
+      seg3([p0[0], p0[1], p0[2]], [p1[0], p1[1], p1[2]], k % 2 ? '#48515b' : '#39424b', rad0 * 2, 1);
+      // 高光条
+      const hl = i % 2 ? 'rgba(200,216,230,0.40)' : 'rgba(176,196,212,0.34)';
+      const mid0 = proj(p0[0], p0[1], p0[2]), mid1 = proj(p1[0], p1[1], p1[2]);
+      if (mid0 && mid1) {
+        sctx.save(); sctx.globalAlpha = 0.5; sctx.strokeStyle = hl; sctx.lineCap = 'round';
+        sctx.lineWidth = Math.max(1, rad0 * 0.5 * mid0.s);
+        sctx.beginPath(); sctx.moveTo(mid0.x, mid0.y - rad0 * 0.35 * mid0.s); sctx.lineTo(mid1.x, mid1.y - rad0 * 0.35 * mid1.s);
+        sctx.stroke(); sctx.restore();
+        // 液压活塞杆：油缸套（粗短暗）+ 活塞杆（细长亮银），读得出"液压节段"
+        if (k % 2 === 0) {
+          const dx = mid1.x - mid0.x, dy = mid1.y - mid0.y, L = Math.hypot(dx, dy) || 1;
+          const nx = -dy / L, ny = dx / L, off = rad0 * 0.52 * mid0.s, rodW = Math.max(1.2, rad0 * 0.20 * mid0.s);
+          sctx.save(); sctx.lineCap = 'round';
+          sctx.strokeStyle = '#232931'; sctx.lineWidth = rodW * 2.6;
+          sctx.beginPath();
+          sctx.moveTo(mid0.x + nx * off, mid0.y + ny * off);
+          sctx.lineTo(mid0.x + dx * 0.34 + nx * off, mid0.y + dy * 0.34 + ny * off); sctx.stroke();
+          sctx.strokeStyle = 'rgba(198,214,228,0.92)'; sctx.lineWidth = rodW;
+          sctx.beginPath();
+          sctx.moveTo(mid0.x + dx * 0.32 + nx * off, mid0.y + dy * 0.32 + ny * off);
+          sctx.lineTo(mid1.x + nx * off, mid1.y + ny * off); sctx.stroke();
+          sctx.restore();
+        }
+      }
+      // 关节法兰盘（每 3 节一处，双圈 + 螺栓）
+      if (k % 3 === 0) {
+        const jp = proj(p0[0], p0[1], p0[2]);
+        if (jp) {
+          const jr = rad0 * 0.92 * jp.s;
+          sctx.save();
+          sctx.fillStyle = '#20262c'; sctx.beginPath(); sctx.arc(jp.x, jp.y, jr, 0, TAU); sctx.fill();
+          sctx.strokeStyle = 'rgba(150,168,184,0.45)'; sctx.lineWidth = Math.max(1, jr * 0.24);
+          sctx.beginPath(); sctx.arc(jp.x, jp.y, jr * 0.62, 0, TAU); sctx.stroke();
+          sctx.fillStyle = 'rgba(184,200,214,0.50)';
+          for (let b = 0; b < 4; b++) {
+            const ba = b / 4 * TAU + k * 0.5;
+            sctx.beginPath(); sctx.arc(jp.x + Math.cos(ba) * jr * 0.80, jp.y + Math.sin(ba) * jr * 0.80, Math.max(0.7, jr * 0.14), 0, TAU); sctx.fill();
+          }
+          sctx.restore();
+        }
+      }
+      // 关节指示灯
+      if (k % 3 === 1) {
+        const pulse = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(f * 0.14 + i * 2 + t0 * 5));
+        const red = srnd(i * 4.1 + k) < 0.5;
+        dot3(p0[0], p0[1], p0[2], 0.016, red ? 'rgba(255,64,52,1)' : 'rgba(90,235,150,1)', pulse);
+      }
+    }
+    // 末端爪：三瓣，指根 + 指节（带关节），外撇抓地
+    for (let k = 0; k < 3; k++) {
+      const a = k / 3 * TAU + f * 0.002;
+      const mx = B[0] + Math.cos(a) * 0.15, mz = B[2] + Math.sin(a) * 0.15;
+      const ex = B[0] + Math.cos(a) * 0.31, ez = B[2] + Math.sin(a) * 0.31;
+      seg3([B[0], 0.15, B[2]], [mx, 0.075, mz], '#646e79', 0.055, 1);
+      seg3([mx, 0.075, mz], [ex, 0.012, ez], '#4b545e', 0.034, 1);
+      dot3(mx, 0.075, mz, 0.030, '#2a3037', 1);
+    }
+    dot3(B[0], 0.03, B[2], 0.105, '#3a424b', 1);
+  });
+}
+// 次级细触手：神经索 / 数据线，接服务器 / 屏阵 / 操作台 / 地面
+const CABLES = [
+  [0.42, 0.20, 0.66, 3.30, 2.15, 5.40, 0.30], [0.28, -0.16, 0.72, 3.30, 1.30, 7.00, 0.25],
+  [0.48, 0.40, 0.60, 3.30, 2.55, 3.95, 0.30], [0.16, 0.56, 0.54, 2.20, 3.00, 6.20, 0.20],
+  [-0.28, 0.58, 0.52, -1.10, 2.85, 8.60, 0.22], [-0.48, 0.28, 0.60, 1.40, 2.60, 8.80, 0.24],
+  [-0.16, -0.60, 0.56, -2.60, 1.05, 8.40, 0.20], [0.54, -0.44, 0.56, 2.90, 0.90, 8.60, 0.22],
+  [-0.40, -0.50, 0.52, 1.45, 1.02, 2.10, 0.24], [0.38, -0.54, 0.50, -1.35, 1.00, 2.05, 0.24],
+  [0.22, -0.68, 0.46, 2.10, 0.12, 3.60, 0.20], [-0.32, -0.66, 0.48, -2.30, 0.12, 4.60, 0.20],
+  [0.50, 0.46, 0.52, 1.95, 3.05, 4.60, 0.18], [-0.50, 0.16, 0.60, -3.10, 1.80, 5.60, 0.18],
+];
+function drawCables(f) {
+  CABLES.forEach((K, i) => {
+    const [ox, oy, oz, tx, ty, tz, ob] = K;
+    const A = [EYE.x + ox, EYE.y + oy, EYE.z + oz];
+    const B = [tx, ty, tz];
+    const sag = 0.35 + srnd(i * 3.1) * 0.5;
+    const C = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2 - sag * 0.5, (A[2] + B[2]) / 2];
+    const N = 8;
+    const pts = [];
+    for (let k = 0; k <= N; k++) pts.push(bez(A, C, B, k / N));
+    sctx.save(); sctx.lineCap = 'round';
+    for (let k = 0; k < N; k++) {
+      const a = proj(pts[k][0], pts[k][1], pts[k][2]), b = proj(pts[k + 1][0], pts[k + 1][1], pts[k + 1][2]);
+      if (!a || !b) continue;
+      sctx.globalAlpha = 0.9; sctx.strokeStyle = i % 3 === 0 ? '#39424c' : '#2d363f';
+      sctx.lineWidth = Math.max(1.4, 0.024 * ((a.s + b.s) / 2)); 
+      sctx.beginPath(); sctx.moveTo(a.x, a.y); sctx.lineTo(b.x, b.y); sctx.stroke();
+    }
+    sctx.restore();
+    // 末端接口插头（沿末端切线方向，真实"插入"机柜 / 屏阵 / 台面）
+    const e0 = proj(pts[N - 1][0], pts[N - 1][1], pts[N - 1][2]), e1 = proj(B[0], B[1], B[2]);
+    if (e0 && e1) {
+      const dx = e1.x - e0.x, dy = e1.y - e0.y, L = Math.hypot(dx, dy) || 1;
+      const ux = dx / L, uy = dy / L, px = -uy, py = ux;
+      const w = Math.max(2.2, 0.038 * e1.s), h = Math.max(2, 0.026 * e1.s);
+      sctx.save(); sctx.fillStyle = i % 2 ? '#20262c' : '#282f36';
+      sctx.beginPath();
+      sctx.moveTo(e1.x - px * w, e1.y - py * w);
+      sctx.lineTo(e1.x + px * w, e1.y + py * w);
+      sctx.lineTo(e1.x + px * w + ux * h, e1.y + py * w + uy * h);
+      sctx.lineTo(e1.x - px * w + ux * h, e1.y - py * w + uy * h);
+      sctx.closePath(); sctx.fill();
+      sctx.strokeStyle = 'rgba(168,186,202,0.45)'; sctx.lineWidth = 1; sctx.stroke(); sctx.restore();
+    }
+    // 脉冲式流动指示灯（沿触手逐节流动，红 / 绿交替）
+    for (let k = 0; k <= N; k++) {
+      const t = k / N;
+      const p = proj(pts[k][0], pts[k][1], pts[k][2]); if (!p) continue;
+      const pulse = 0.5 + 0.5 * Math.sin(scr(f) * 0.26 - t * 6.2 + i);
+      const red = ((i + k) % 2) === 0;
+      sctx.save(); sctx.globalAlpha = 0.18 + 0.82 * pulse;
+      sctx.fillStyle = red ? 'rgba(255,70,58,1)' : 'rgba(95,235,150,1)';
+      sctx.beginPath(); sctx.arc(p.x, p.y, Math.max(1, 0.011 * p.s), 0, TAU); sctx.fill(); sctx.restore();
+    }
+  });
+}
+
+/* ============================================================================
+   前景：金属操作台 + 地面杂物
+   ========================================================================== */
+function drawConsole(f) {
+  const x0 = -2.35, x1 = 2.35, z0 = 1.10, z1 = 2.35;
+  face([[x0, 0, z0], [x1, 0, z0], [x1, CT, z0], [x0, CT, z0]], '#252c33');       // 前脸
+  face([[x0, CT, z0], [x1, CT, z0], [x1, CT, z1], [x0, CT, z1]], '#3d454e');     // 台面
+  sctx.save(); sctx.strokeStyle = 'rgba(176,196,212,0.20)'; sctx.lineWidth = 1.6;
+  const a = proj(x0 + 0.14, CT + 0.002, z0 + 0.10), b = proj(x1 - 0.14, CT + 0.002, z0 + 0.10);
+  if (a && b) { sctx.beginPath(); sctx.moveTo(a.x, a.y); sctx.lineTo(b.x, b.y); sctx.stroke(); }
+  sctx.restore();
+  // 你的显示器（背面）：只露右下角、出画边，不切主体
+  face([[-2.70, CT, 2.30], [-0.95, CT, 2.30], [-0.95, CT + 0.52, 2.30], [-2.70, CT + 0.52, 2.30]], '#1d232a');
+  face([[-2.62, CT + 0.06, 2.315], [-1.03, CT + 0.06, 2.315], [-1.03, CT + 0.46, 2.315], [-2.62, CT + 0.46, 2.315]], '#2a313a');
+  dot3(-1.30, CT + 0.26, 2.325, 0.02, 'rgba(130,150,168,0.7)', 0.9);
+  // 「你」的在场 ①：台前影子（顶灯在你身后上方 → 影子投向前方台面）
+  face(discY(0.10, 1.52, 0.54, 0.21, CT + 0.003, 18), 'rgba(5,7,10,0.55)');
+  face(discY(0.10, 1.87, 0.20, 0.13, CT + 0.003, 14), 'rgba(5,7,10,0.44)');
+  face(discY(-0.46, 1.40, 0.11, 0.30, CT + 0.003, 10), 'rgba(5,7,10,0.34)');   // 左前臂
+  face(discY(0.66, 1.40, 0.11, 0.30, CT + 0.003, 10), 'rgba(5,7,10,0.34)');    // 右前臂
+  // 「你」的在场 ②：台面金属反射出上半身暗轮廓（低对比 + 冷色高光边）
+  const rf = proj(0.16, CT + 0.003, 2.12);
+  if (rf) {
+    face(discY(0.16, 2.12, 0.27, 0.10, CT + 0.003, 14), 'rgba(8,13,18,0.22)');
+    sctx.save(); sctx.globalCompositeOperation = 'lighter'; sctx.globalAlpha = 0.13;
+    sctx.strokeStyle = 'rgba(152,188,208,1)'; sctx.lineWidth = 1.6;
+    sctx.beginPath(); sctx.ellipse(rf.x, rf.y, 0.27 * rf.s, 0.27 * rf.s * 0.32, 0, Math.PI * 1.05, Math.PI * 1.95); sctx.stroke();
+    sctx.restore();
+  }
+  // 键盘（左移，让出中央按钮面板位；POV 下台面可视宽度约 ±1.2m）
+  face([[-1.16, CT + 0.006, 1.98], [-0.40, CT + 0.006, 1.98], [-0.40, CT + 0.006, 2.26], [-1.16, CT + 0.006, 2.26]], '#161b21');
+  for (let r = 0; r < 4; r++) for (let cc = 0; cc < 13; cc++) {
+    const kx = -1.12 + cc * 0.056, kz = 2.02 + r * 0.058;
+    const p = proj(kx, CT + 0.008, kz); if (!p) continue;
+    sctx.save(); sctx.globalAlpha = 0.75; sctx.fillStyle = '#3b444d';
+    sctx.fillRect(p.x, p.y, Math.max(2, 0.05 * p.s), Math.max(2, 0.04 * p.s)); sctx.restore();
+  }
+  // 备用瞳孔模块（挪出台面可视区，避免与按钮面板打架）
+  for (let k = 0; k < 2; k++) {
+    const mx = -2.02 + k * 0.26, mz = 2.20;
+    const p = proj(mx, CT + 0.02, mz); if (!p) continue;
+    const r = 0.10 * p.s;
+    sctx.save(); sctx.fillStyle = '#31383f'; sctx.beginPath(); sctx.ellipse(p.x, p.y, r, r * 0.5, 0, 0, TAU); sctx.fill();
+    sctx.fillStyle = '#7a1a12'; sctx.beginPath(); sctx.ellipse(p.x, p.y, r * 0.5, r * 0.25, 0, 0, TAU); sctx.fill();
+    sctx.globalCompositeOperation = 'lighter';
+    glowAt(p.x, p.y, r * 1.5, r * 0.75, glow('rgba(215,65,48,A)'), 0.30); sctx.restore();
+  }
+  // 马克杯（右后角）
+  face([[1.92, CT + 0.10, 2.06], [2.08, CT + 0.10, 2.06], [2.08, CT + 0.10, 2.22], [1.92, CT + 0.10, 2.22]], '#454e57');
+  // 散落纸张（左前角，避开中央按钮面板）
+  face([[-2.26, CT + 0.006, 1.34], [-1.86, CT + 0.006, 1.30], [-1.82, CT + 0.006, 1.56], [-2.22, CT + 0.006, 1.60]], 'rgba(198,202,200,0.85)');
+  // 示波器（挪到左后角深处，避开中央面板）
+  const ox0 = -2.30, ox1 = -1.90, oz0 = 2.05, oz1 = 2.32, oyT = CT + 0.26;
+  face([[ox0, CT, oz0], [ox1, CT, oz0], [ox1, oyT, oz0], [ox0, oyT, oz0]], '#313941');
+  face([[ox1, CT, oz0], [ox1, CT, oz1], [ox1, oyT, oz1], [ox1, oyT, oz0]], '#262d34');
+  face([[ox0, oyT, oz0], [ox1, oyT, oz0], [ox1, oyT, oz1], [ox0, oyT, oz1]], '#414a53');
+  const sc0 = proj(ox0 + 0.07, oyT - 0.05, oz0 - 0.006), sc1 = proj(ox1 - 0.08, CT + 0.08, oz0 - 0.006);
+  if (sc0 && sc1) {
+    sctx.save();
+    sctx.fillStyle = '#08130f'; sctx.fillRect(sc0.x, sc0.y, sc1.x - sc0.x, sc1.y - sc0.y);
+    sctx.strokeStyle = 'rgba(80,200,150,0.20)'; sctx.lineWidth = 1;
+    for (let gx = sc0.x; gx < sc1.x; gx += 12) { sctx.beginPath(); sctx.moveTo(gx, sc0.y); sctx.lineTo(gx, sc1.y); sctx.stroke(); }
+    sctx.strokeStyle = 'rgba(110,240,180,0.85)'; sctx.lineWidth = 1.6; sctx.beginPath();
+    for (let k = 0; k <= 40; k++) {
+      const u = k / 40, xx = sc0.x + u * (sc1.x - sc0.x);
+      const ph = (u * 6 + f * 0.06) % 2;
+      const yy = sc0.y + (sc1.y - sc0.y) * (ph < 1 ? 0.35 : 0.62);
+      if (k === 0) sctx.moveTo(xx, yy); else sctx.lineTo(xx, yy);
+    }
+    sctx.stroke(); sctx.restore();
+  }
+  dot3(-2.10, oyT + 0.006, 2.16, 0.012, 'rgba(255,120,90,0.9)', 0.9);
+  // 摇杆（右后角，避开后方监控屏）
+  const jp = proj(1.34, CT + 0.02, 2.12);
+  if (jp) {
+    sctx.save(); sctx.fillStyle = '#2e343b';
+    sctx.beginPath(); sctx.ellipse(jp.x, jp.y, 0.085 * jp.s, 0.085 * jp.s * 0.34, 0, 0, TAU); sctx.fill();
+    sctx.fillStyle = 'rgba(150,166,182,0.35)';
+    sctx.beginPath(); sctx.ellipse(jp.x, jp.y - 0.085 * jp.s * 0.28, 0.085 * jp.s, 0.085 * jp.s * 0.34, 0, 0, TAU); sctx.fill();
+    sctx.restore();
+  }
+  seg3([1.34, CT + 0.02, 2.12], [1.39, CT + 0.17, 2.10], '#6b7580', 0.016, 1);
+  dot3(1.39, CT + 0.18, 2.10, 0.034, '#8d98a4', 1);
+  // 台面便签（挪到右侧，避开中央按钮与手）
+  for (let i = 0; i < 3; i++) {
+    const nx = 0.62 + i * 0.28, nz = 1.42 + (i % 2) * 0.08;
+    face([[nx, CT + 0.004, nz], [nx + 0.21, CT + 0.004, nz - 0.01], [nx + 0.22, CT + 0.004, nz + 0.14], [nx + 0.01, CT + 0.004, nz + 0.15]], 'rgba(228,208,122,0.88)');
+  }
+  // 杯口蒸汽
+  for (let i = 0; i < 3; i++) {
+    const t = ((f * 0.005 + i * 0.34) % 1);
+    const sp = proj(2.00 + Math.sin(t * 6.2 + i * 2) * 0.05, CT + 0.10 + t * 0.60, 2.14);
+    if (sp) glowAt(sp.x, sp.y, 0.10 * sp.s, 0.17 * sp.s, glow('rgba(202,218,228,A)'), (1 - t) * 0.20);
+  }
+}
+function drawDebris(f) {
+  // 零件箱
+  const boxes = [[-2.55, 3.30, 0.42, 0.34], [-2.95, 4.60, 0.36, 0.30], [2.70, 4.05, 0.40, 0.32],
+                 [-2.30, 6.10, 0.38, 0.30], [2.95, 6.60, 0.44, 0.34], [1.60, 7.60, 0.34, 0.28]];
+  boxes.forEach((b, i) => {
+    const [x, z, w, h] = b;
+    face([[x - w, 0, z - w], [x + w, 0, z - w], [x + w, h, z - w], [x - w, h, z - w]], i % 2 ? '#454334' : '#414850');
+    // 半开箱口：顶面外圈 + 内凹深腔
+    face([[x - w, h, z - w], [x + w, h, z - w], [x + w, h, z + w], [x - w, h, z + w]], i % 2 ? '#565244' : '#4d555d');
+    face([[x - w + 0.06, h + 0.001, z - w + 0.06], [x + w - 0.06, h + 0.001, z - w + 0.06],
+          [x + w - 0.06, h + 0.001, z + w - 0.06], [x - w + 0.06, h + 0.001, z + w - 0.06]], '#12161a');
+    // 箱内零件（备瞳模块 / 镜头环）
+    for (let k = 0; k < 3; k++) {
+      const px = x - w * 0.42 + k * w * 0.42, pz = z + (srnd(i * 7.1 + k * 3.3) - 0.5) * w * 0.7;
+      const pp = proj(px, h + 0.02, pz); if (!pp) continue;
+      const rr = (0.05 + srnd(i * 2.7 + k) * 0.05) * pp.s;
+      if ((i + k) % 3 === 0) {
+        sctx.save(); sctx.fillStyle = '#5c120c';
+        sctx.beginPath(); sctx.ellipse(pp.x, pp.y, rr, rr * 0.4, 0, 0, TAU); sctx.fill(); sctx.restore();
+      } else {
+        sctx.save(); sctx.strokeStyle = 'rgba(126,140,152,0.8)'; sctx.lineWidth = Math.max(1, rr * 0.3);
+        sctx.beginPath(); sctx.ellipse(pp.x, pp.y, rr, rr * 0.4, 0, 0, TAU); sctx.stroke(); sctx.restore();
+      }
+    }
+    // 前壁顶边亮线
+    sctx.save(); sctx.globalAlpha = 0.5; sctx.strokeStyle = 'rgba(180,196,208,0.5)'; sctx.lineWidth = 1.2;
+    const e0 = proj(x - w, h, z - w), e1 = proj(x + w, h, z - w);
+    if (e0 && e1) { sctx.beginPath(); sctx.moveTo(e0.x, e0.y); sctx.lineTo(e1.x, e1.y); sctx.stroke(); }
+    sctx.restore();
+  });
+  // 散落镜头 / 传感器 / 备用瞳孔
+  for (let i = 0; i < 9; i++) {
+    const x = (srnd(i * 4.3) - 0.5) * 2 * (RW - 0.9);
+    const z = 3.2 + srnd(i * 6.1) * (FAR - 4.0);
+    const p = proj(x, 0.03, z); if (!p) continue;
+    const r = (0.06 + srnd(i * 3.7) * 0.10) * p.s;
+    if (i % 3 === 0) {                                  // 备瞳模块（暗红）
+      sctx.save(); sctx.fillStyle = '#5c120c';
+      sctx.beginPath(); sctx.ellipse(p.x, p.y, r, r * 0.36, 0, 0, TAU); sctx.fill(); sctx.restore();
+    } else {                                            // 镜头 / 传感器（金属环）
+      sctx.save(); sctx.strokeStyle = 'rgba(120,134,146,0.7)'; sctx.lineWidth = Math.max(1, r * 0.16);
+      sctx.beginPath(); sctx.ellipse(p.x, p.y, r, r * 0.36, 0, 0, TAU); sctx.stroke(); sctx.restore();
+    }
+  }
+}
+
+/* ============================================================================
+   「眨眼」= 全屏金属快门（上下叶片，造型呼应眼球光圈叶片）
+   ========================================================================== */
+function blinkK(f) {                       // 0 睁 / 1 合；四段各自 闭合-保持-张开
+  const SEGS = [
+    [B.blink1[0], 16, 8, 20],        // ④ 换场
+    [B.swapLR[0], 10, 6, 14],        // ⑥ 绿↔红
+    [B.bothYellow[0], 10, 6, 14],    // ⑦ 双双变黄
+    [B.reveal[0], 12, 12, 26],       // ⑧ 幻影淡出 · 露中央真按钮
+  ];
+  let k = 0;
+  for (const [s, c, h, o] of SEGS) {
+    const t1 = s + c, t2 = t1 + h, t3 = t2 + o;
+    if (f <= s || f >= t3) continue;
+    if (f < t1) k = Math.max(k, smoothstep(s, t1, f));
+    else if (f < t2) k = 1;
+    else k = Math.max(k, 1 - smoothstep(t2, t3, f));
+  }
+  return k;
+}
+let BLADE = null;
+function bakeBlade() {                     // 一次性烘焙金属叶片（拉丝 + 缝 + 铆钉）
+  const h = 640, c = document.createElement('canvas'); c.width = W; c.height = h;
+  const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0.00, '#0f1316'); g.addColorStop(0.42, '#2a3138');
+  g.addColorStop(0.78, '#454e57'); g.addColorStop(1.00, '#828e9b');
+  x.fillStyle = g; x.fillRect(0, 0, W, h);
+  for (let i = 0; i < 300; i++) {          // 拉丝纹理
+    const yy = srnd(i * 3.7) * h;
+    x.strokeStyle = srnd(i * 5.1) < 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.11)';
+    x.lineWidth = 1 + srnd(i * 2.3) * 1.7;
+    x.beginPath(); x.moveTo(0, yy); x.lineTo(W, yy); x.stroke();
+  }
+  x.strokeStyle = 'rgba(6,8,10,0.88)'; x.lineWidth = 3;   // 叶片缝（向中心收敛）
+  for (let k = 0; k <= 8; k++) {
+    const xx = k / 8 * W;
+    x.beginPath(); x.moveTo(xx, 0); x.lineTo(W * 0.5 + (xx - W * 0.5) * 0.12, h); x.stroke();
+  }
+  for (let k = 0; k < 28; k++) {          // 铆钉排（亮边一侧）
+    const px = 16 + k * (W - 32) / 27, py = h - 24;
+    x.fillStyle = '#1d2228'; x.beginPath(); x.arc(px, py, 5.5, 0, TAU); x.fill();
+    x.fillStyle = 'rgba(190,205,220,0.45)'; x.beginPath(); x.arc(px - 1.4, py - 1.4, 2.1, 0, TAU); x.fill();
+  }
+  return c;
+}
+function drawShutter(f) {
+  const k = blinkK(f);
+  if (k <= 0.002) return;
+  sctx.setTransform(1, 0, 0, 1, 0, 0); sctx.globalCompositeOperation = 'source-over'; sctx.globalAlpha = 1;
+  if (k > 0.995) { sctx.fillStyle = '#04060a'; sctx.fillRect(0, 0, W, H); return; }
+  const yTop = lerp(-2, H * 0.5, k), yBot = lerp(H + 2, H * 0.5, k);
+  sctx.save();                                  // 上叶片
+  sctx.drawImage(BLADE, 0, yTop - BLADE.height);
+  sctx.fillStyle = 'rgba(206,226,240,0.9)'; sctx.fillRect(0, yTop - 3, W, 3);
+  sctx.restore();
+  sctx.save();                                  // 下叶片（镜像）
+  sctx.translate(0, yBot + BLADE.height); sctx.scale(1, -1); sctx.drawImage(BLADE, 0, 0);
+  sctx.restore();
+  sctx.save();
+  sctx.fillStyle = 'rgba(206,226,240,0.9)'; sctx.fillRect(0, yBot, W, 3);
+  if (yBot > yTop) {                            // 缝间漏光
+    sctx.globalCompositeOperation = 'lighter';
+    sctx.fillStyle = `rgba(150,190,215,${(0.20 * (1 - k)).toFixed(3)})`;
+    sctx.fillRect(0, yTop, W, yBot - yTop);
+  }
+  sctx.restore();
+}
+
+/* ============================================================================
+   字幕（打字机）：预烘焙 sprite + 按比例裁切，不逐帧排版
+   ========================================================================== */
+const SUBS = {};
+function bakeSub(key, text, fs, color, glowCol, sp) {
+  const pad = 34;
+  const m = document.createElement('canvas').getContext('2d');
+  m.font = `600 ${fs}px "Microsoft YaHei","SimHei",sans-serif`;
+  if (sp) m.letterSpacing = sp;
+  const w = Math.ceil(m.measureText(text).width) + pad * 2, h = Math.ceil(fs * 1.6) + pad * 2;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d');
+  x.font = `600 ${fs}px "Microsoft YaHei","SimHei",sans-serif`;
+  if (sp) x.letterSpacing = sp;
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  if (glowCol) { x.shadowColor = glowCol; x.shadowBlur = Math.round(fs * 0.42); }
+  x.fillStyle = color; x.fillText(text, w / 2, h / 2);
+  SUBS[key] = { c, w, h, chars: text.length };
+}
+function initSubs() {
+  if (SUBS.eye1) return;
+  bakeSub('eye1', '主，左边，剥夺所有选择；', 54, 'rgba(228,240,248,0.96)', 'rgba(120,190,230,0.85)');
+  bakeSub('eye2', '右边，赋予唯一命运。', 54, 'rgba(228,240,248,0.96)', 'rgba(120,190,230,0.85)');
+  bakeSub('q', '你选左还是右？', 62, 'rgba(236,244,250,0.97)', 'rgba(140,200,235,0.6)');
+  bakeSub('thanks', '谢  谢', 78, 'rgba(230,242,252,0.97)', 'rgba(140,200,240,0.8)');   // ⑩ 结尾那句
+  // ② 中间弹屏的绿字
+  bakeSub('select', '请做出选择', 70, 'rgba(126,255,178,1)', 'rgba(60,225,140,0.95)');
+  // ⑬ 标题卡：小标签 + 主标题 + 副标题 + 英文
+  bakeSub('kicker', '认 知 偏 误 · 第 六 支', 30, 'rgba(152,182,204,0.88)', null, '3px');
+  bakeSub('title', '框架效应', 138, 'rgba(240,248,255,1)', 'rgba(140,200,240,0.9)', '10px');
+  bakeSub('sub', '同一件事，换个说法，就是另一个结果', 44, 'rgba(206,224,238,0.94)', 'rgba(120,190,230,0.5)');
+  bakeSub('titleEn', 'T H E   F R A M I N G   E F F E C T', 24, 'rgba(150,180,202,0.72)', null);
+  bakeSub('exp1', '同一件事，换个说法，人的判断和选择就可能改变。', 48, 'rgba(232,242,250,0.95)', null);
+  bakeSub('exp2', '你以为自己在选左或右，其实两个选项指向同一个结果。', 48, 'rgba(232,242,250,0.95)', null);
+  bakeSub('end1', '所以，先别急着选。', 58, 'rgba(240,246,252,1)', 'rgba(150,200,235,0.7)');
+  bakeSub('end2', '看看它们是不是同一个结果。', 58, 'rgba(240,246,252,1)', 'rgba(150,200,235,0.7)');
+}
+function drawSub(key, cx, cy, reveal, alpha) {
+  const s = SUBS[key]; if (!s) return;
+  const n = clamp(reveal, 0, 1);
+  if (n <= 0.002 || alpha <= 0.01) return;
+  const cut = s.w * n, x0 = cx - s.w / 2, y0 = cy - s.h / 2;
+  sctx.save(); sctx.globalAlpha = alpha;
+  sctx.beginPath(); sctx.rect(x0, y0, cut, s.h); sctx.clip();
+  sctx.drawImage(s.c, x0, y0);
+  sctx.restore();
+  if (n < 0.999 && Math.floor(curF / 6) % 2 === 0) {     // 打字光标
+    sctx.save(); sctx.globalAlpha = alpha * 0.8; sctx.fillStyle = 'rgba(226,240,250,0.9)';
+    sctx.fillRect(x0 + cut + 3, y0 + s.h * 0.28, 3, s.h * 0.44); sctx.restore();
+  }
+}
+// 打字机进度：start 帧开始，perChar 帧/字
+function typeK(f, key, start, perChar) {
+  const s = SUBS[key]; if (!s) return 0;
+  const n = clamp(Math.floor((f - start) / perChar), 0, s.chars);
+  return n / s.chars;
+}
+// 淡入 → 停留 → 淡出（总结类字幕用它，停止用打字机，才有足够阅读时间）
+function fadeK(f, inA, inB, outA, outB) {
+  return smoothstep(inA, inB, f) * (f >= outA ? 1 - smoothstep(outA, outB, f) : 1);
+}
+/* ⑬/⑭ 标题块：⑬ 居中大放，⑭ 起缩到上方当总结页的标题头（一直留着） */
+function drawTitleBlock(cx, topY, s, alpha) {
+  if (alpha <= 0.01) return;
+  const at = (key, dy, extra) => {
+    const sp = SUBS[key]; if (!sp) return;
+    const w = sp.w * s * (extra || 1), h = sp.h * s;
+    sctx.save(); sctx.globalAlpha = alpha;
+    sctx.drawImage(sp.c, cx - w / 2, topY + dy * s - h / 2, w, h);
+    sctx.restore();
+  };
+  at('kicker', 26);
+  at('title', 116);
+  sctx.save();                                   // 分隔线
+  sctx.globalAlpha = alpha * 0.55; sctx.fillStyle = 'rgba(150,196,224,1)';
+  const lw = 430 * s;
+  sctx.fillRect(cx - lw / 2, topY + 172 * s, lw, Math.max(1, 1.6 * s));
+  sctx.restore();
+  at('sub', 210);
+  at('titleEn', 254);
+}
+
+/* ============================================================================
+   按钮面板：左右幻影（色）+ 中央真按钮
+   ========================================================================== */
+const PANEL = { x0: -0.36, x1: 0.44, z0: 1.72, z1: 2.04, h: 0.045 };
+const BTN_Y = 1.00 + 0.045;                 // 按钮落座高度（面板顶面）
+const BTN_Z = 1.88, BTN_R = 0.085;
+const BTN_X = { left: -0.28, center: 0.00, right: 0.28 };
+const GLOWC = {};
+function hx(h) {
+  if (!GLOWC[h]) {
+    const n = parseInt(h.slice(1), 16);
+    GLOWC[h] = `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},A)`;
+  }
+  return GLOWC[h];
+}
+const PHASE_COL = [
+  { l: '#2fd98a', r: '#e24034' },            // 0 左绿右红
+  { l: '#e24034', r: '#2fd98a' },            // 1 左红右绿
+  { l: '#e6b340', r: '#e6b340' },            // 2 双双琥珀黄
+  { l: '#3a424b', r: '#3a424b' },            // 3 幻影淡出
+];
+function drawPanel(f) {
+  // 面板底座
+  face([[PANEL.x0, CT, PANEL.z0], [PANEL.x1, CT, PANEL.z0],
+        [PANEL.x1, CT + PANEL.h, PANEL.z1], [PANEL.x0, CT + PANEL.h, PANEL.z1]], '#39414a');
+  face([[PANEL.x0, CT + PANEL.h, PANEL.z0], [PANEL.x1, CT + PANEL.h, PANEL.z0],
+        [PANEL.x1, CT + PANEL.h, PANEL.z1], [PANEL.x0, CT + PANEL.h, PANEL.z1]], '#4d5661');
+  sctx.save(); sctx.strokeStyle = 'rgba(186,204,220,0.22)'; sctx.lineWidth = 1.4;
+  const a = proj(PANEL.x0 + 0.03, CT + PANEL.h + 0.002, PANEL.z0 + 0.03);
+  const b = proj(PANEL.x1 - 0.03, CT + PANEL.h + 0.002, PANEL.z0 + 0.03);
+  if (a && b) { sctx.beginPath(); sctx.moveTo(a.x, a.y); sctx.lineTo(b.x, b.y); sctx.stroke(); }
+  sctx.restore();
+  // 标签（水平面上的字：局部 +y 必须朝镜头方向，否则会上下颠倒）
+  localPlane([PANEL.x0 + 0.06, CT + PANEL.h + 0.003, PANEL.z1 - 0.02],
+             [PANEL.x1 - 0.06, CT + PANEL.h + 0.003, PANEL.z1 - 0.02],
+             [PANEL.x0 + 0.06, CT + PANEL.h + 0.003, PANEL.z0 + 0.085], 320, 70, (iw, ih) => {
+    sctx.fillStyle = 'rgba(150,178,198,0.75)';
+    sctx.font = '600 24px "Consolas",monospace';
+    sctx.textAlign = 'center'; sctx.textBaseline = 'middle';
+    sctx.fillText('CHOICE  UNIT', iw / 2, ih * 0.55);
+  }, 0.9);
+}
+function drawButton(f, x, col, phantom, dip, phase) {
+  const base = proj(x, BTN_Y + 0.002, BTN_Z); if (!base) return;
+  const rr = BTN_R * base.s;
+  // 凹槽
+  sctx.save(); sctx.fillStyle = '#12161a';
+  sctx.beginPath(); sctx.ellipse(base.x, base.y, rr * 1.34, rr * 1.34 * 0.40, 0, 0, TAU); sctx.fill();
+  sctx.restore();
+  const lift = phantom ? 0.045 : 0.0;
+  const p = proj(x, BTN_Y + lift - dip * 0.030, BTN_Z); if (!p) return;
+  const pr = BTN_R * p.s;
+  if (phantom) {
+    // 投影光锥（从台面升到空中的幻影）
+    sctx.save(); sctx.globalAlpha = 0.20; sctx.strokeStyle = col; sctx.lineWidth = 1.4;
+    sctx.beginPath();
+    sctx.moveTo(base.x - rr * 1.3, base.y); sctx.lineTo(p.x - pr, p.y);
+    sctx.moveTo(base.x + rr * 1.3, base.y); sctx.lineTo(p.x + pr, p.y);
+    sctx.stroke(); sctx.restore();
+    // 幻影按钮体（半透明 + 扫描线）
+    sctx.save(); sctx.globalAlpha = 0.90; sctx.fillStyle = col;
+    sctx.beginPath(); sctx.ellipse(p.x, p.y, pr, pr * 0.40, 0, 0, TAU); sctx.fill();
+    sctx.globalAlpha = 0.26; sctx.fillStyle = 'rgba(6,10,14,1)';
+    for (let yy = p.y - pr * 0.40; yy < p.y + pr * 0.40; yy += 4) sctx.fillRect(p.x - pr, yy, pr * 2, 1.3);
+    sctx.globalAlpha = 0.34; sctx.fillStyle = '#ffffff';
+    sctx.beginPath(); sctx.ellipse(p.x - pr * 0.20, p.y - pr * 0.10, pr * 0.40, pr * 0.15, 0, 0, TAU); sctx.fill();
+    sctx.restore();
+    sctx.save(); sctx.globalCompositeOperation = 'lighter';
+    glowAt(p.x, p.y, pr * 3.4, pr * 2.0, glow(hx(col)), 0.46); sctx.restore();
+  } else {
+    // 真按钮：实体金属键帽
+    sctx.save();
+    sctx.fillStyle = '#0b0e11';
+    sctx.beginPath(); sctx.ellipse(p.x, p.y + pr * 0.12, pr * 1.10, pr * 0.46, 0, 0, TAU); sctx.fill();
+    sctx.fillStyle = '#525b65';
+    sctx.beginPath(); sctx.ellipse(p.x, p.y, pr, pr * 0.42, 0, 0, TAU); sctx.fill();
+    sctx.fillStyle = '#3a424b';
+    sctx.beginPath(); sctx.ellipse(p.x, p.y - pr * 0.11, pr * 0.84, pr * 0.34, 0, 0, TAU); sctx.fill();
+    sctx.strokeStyle = 'rgba(196,214,230,0.42)'; sctx.lineWidth = 1.6;
+    sctx.beginPath(); sctx.ellipse(p.x, p.y - pr * 0.03, pr * 0.62, pr * 0.24, 0, 0, TAU); sctx.stroke();
+    sctx.restore();
+    // ⑧ 揭穿：中央真按钮亮起琥珀环
+    if (phase > 0.01) {
+      sctx.save(); sctx.globalCompositeOperation = 'lighter';
+      sctx.strokeStyle = `rgba(255,186,84,${(0.85 * phase).toFixed(3)})`;
+      sctx.lineWidth = Math.max(1.6, pr * 0.10);
+      sctx.beginPath(); sctx.ellipse(p.x, p.y - pr * 0.02, pr * 0.70, pr * 0.27, 0, 0, TAU); sctx.stroke();
+      glowAt(p.x, p.y, pr * 2.6, pr * 1.4, glow('rgba(255,178,70,A)'), 0.34 * phase);
+      sctx.restore();
+    }
+  }
+}
+/* 按钮作用标注：直接贴在按钮正上方（屏幕空间写字 —— 水平面贴字在俯视角下会被压扁到看不清），
+   颜色跟随幻影换色，⑧ 随幻影一起淡出 */
+function drawButtonLabel(f, x, text, col, alpha) {
+  const p = proj(x, BTN_Y + 0.045, BTN_Z);
+  if (!p || alpha <= 0.01) return;
+  const a = alpha * (1 - smoothstep(K.revealIn, K.revealIn + 20, f));
+  if (a <= 0.01) return;
+  sctx.save();
+  sctx.globalAlpha = a;
+  sctx.font = '600 46px "Microsoft YaHei","SimHei",sans-serif';
+  sctx.textAlign = 'center'; sctx.textBaseline = 'middle';
+  sctx.shadowColor = col; sctx.shadowBlur = 20;
+  sctx.fillStyle = col;
+  sctx.fillText(text, p.x, p.y - BTN_R * p.s * 1.45 - 28);
+  sctx.restore();
+}
+function drawButtons(f) {
+  drawPanel(f);
+  const ph = btnPhase(f), a = phantomA(f);
+  const amber = smoothstep(K.revealIn, K.revealIn + 44, f);   // 真按钮点亮进度
+  const press = pressK(f);
+  if (a > 0.01) {
+    const dipL = smoothstep(K.press + 12, K.press + 36, f) * (1 - smoothstep(K.revealIn, K.revealIn + 22, f));
+    drawButton(f, BTN_X.left, PHASE_COL[ph].l, true, dipL, 0);
+    drawButton(f, BTN_X.right, PHASE_COL[ph].r, true, 0, 0);
+    // 作用直接标在按钮正上方：左「剥夺所有选择」/ 右「赋予唯一命运」
+    drawButtonLabel(f, BTN_X.left, '剥夺所有选择', PHASE_COL[ph].l, a * 0.95);
+    drawButtonLabel(f, BTN_X.right, '赋予唯一命运', PHASE_COL[ph].r, a * 0.95);
+  }
+  drawButton(f, BTN_X.center, '#c8862a', false, press, amber);
+}
+/* ② 中间弹出的 2D 绿字屏「请做出选择」—— 等字放完才消失 */
+function drawSelectPanel(f) {
+  const a = selectPanel(f);
+  if (a <= 0.01) return;
+  const pop = easeOutCubic(clamp((f - 218) / 10, 0, 1));
+  const sc = lerp(1.10, 1.0, pop);
+  const w = 820 * sc, h = 280 * sc, cx = W / 2, cy = H * 0.44;
+  const x0 = cx - w / 2, y0 = cy - h / 2, x1 = cx + w / 2, y1 = cy + h / 2;
+  sctx.save();
+  sctx.globalAlpha = a;
+  sctx.fillStyle = 'rgba(3,14,9,0.80)';                        // 屏体
+  sctx.beginPath(); sctx.roundRect(x0, y0, w, h, 12 * sc); sctx.fill();
+  sctx.strokeStyle = 'rgba(74,244,152,0.70)'; sctx.lineWidth = 3 * sc; sctx.stroke();
+  const cw = 58 * sc, ch = 36 * sc;                            // 四角加粗
+  sctx.strokeStyle = 'rgba(150,255,196,0.95)'; sctx.lineWidth = 6 * sc;
+  [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]].forEach(([px, py, sx, sy]) => {
+    sctx.beginPath();
+    sctx.moveTo(px + sx * cw, py); sctx.lineTo(px, py); sctx.lineTo(px, py + sy * ch); sctx.stroke();
+  });
+  sctx.restore();
+  drawSub('select', cx, cy, typeK(f, 'select', 224, 2.6), a);
+}
+
+/* ============================================================================
+   世界空间伪 3D 手（手背朝上，平铺台面）：掌心 + 四指 + 拇指
+   ========================================================================== */
+function faceO(pts, fill, stroke, lw) {
+  const q = projPoly(pts); if (q.length < 3) return;
+  sctx.save();
+  sctx.beginPath(); sctx.moveTo(q[0].x, q[0].y);
+  for (let i = 1; i < q.length; i++) sctx.lineTo(q[i].x, q[i].y);
+  sctx.closePath(); sctx.fillStyle = fill; sctx.fill();
+  if (stroke) { sctx.strokeStyle = stroke; sctx.lineWidth = lw || 1.3; sctx.lineJoin = 'round'; sctx.stroke(); }
+  sctx.restore();
+}
+function limbO(x0, z0, x1, z1, w0, w1, y0, y1, col, hi, thick) {
+  const dx = x1 - x0, dz = z1 - z0, L = Math.hypot(dx, dz) || 1;
+  const nx = -dz / L, nz = dx / L;
+  const A = [x0 + nx * w0, y0, z0 + nz * w0], B = [x0 - nx * w0, y0, z0 - nz * w0];
+  const C = [x1 - nx * w1, y1, z1 - nz * w1], D = [x1 + nx * w1, y1, z1 + nz * w1];
+  if (thick) {      // 侧壁：同轮廓整体下移 thick 的暗面 —— 浅视角下靠这层做出厚度
+    faceO([[A[0], A[1] - thick, A[2]], [B[0], B[1] - thick, B[2]],
+           [C[0], C[1] - thick, C[2]], [D[0], D[1] - thick, D[2]]], '#242a32', 'rgba(4,6,9,0.8)', 1.0);
+  }
+  faceO([A, B, C, D], col, 'rgba(6,8,12,0.92)', 1.4);
+  // 受光边：选朝向镜头的那条长边画一条冷亮线（屏阵在背后打轮光）
+  if (hi) {
+    const near = (z0 + nz * w0) < (z0 - nz * w0);
+    const e0 = near ? A : B, e1 = near ? D : C;
+    sctx.save(); sctx.globalAlpha = 0.55; sctx.strokeStyle = hi; sctx.lineCap = 'round';
+    const p0 = proj(e0[0], e0[1] + 0.004, e0[2]), p1 = proj(e1[0], e1[1] + 0.004, e1[2]);
+    if (p0 && p1) { sctx.lineWidth = Math.max(1, 0.0045 * (p0.s + p1.s) / 2); sctx.beginPath(); sctx.moveTo(p0.x, p0.y); sctx.lineTo(p1.x, p1.y); sctx.stroke(); }
+    sctx.restore();
+  }
+}
+/* 指节：四边形 + 圆指端。圆头是「手」的关键 —— 尖角一律读成纸片 / 机械件 */
+function cap(x0, z0, x1, z1, w, y0, y1, col, hi, thick) {
+  limbO(x0, z0, x1, z1, w, w * 0.88, y0, y1, col, hi, thick);
+  const t0 = discY(x1, z1, w * 0.95, w * 0.95 * 0.62, y1, 12);
+  faceO(t0.map(p => [p[0], p[1] - thick, p[2]]), '#222831', 'rgba(4,6,9,0.8)', 1.0);
+  faceO(t0, col, 'rgba(6,8,12,0.9)', 1.2);
+}
+/* 手：整体剪影 + 圆指端 + 侧壁厚度 + 前臂。
+   掌背朝镜头抬起（不是平摊的一张面片）；四指强扇形张开 —— 浅视角下只有横向分量能撑出手指长度 */
+function drawHand(f, ox, oz, yW, curl, aimX, aimZ) {
+  const tside = ox < 0 ? 1 : -1;                     // 左=+1（拇指与食指朝画面中央）
+  const SKIN = '#454e59', SKIN2 = '#4f5966';
+  const SIDE = '#232a32', HI = 'rgba(178,206,228,0.60)';
+  const yK = yW + 0.032, knuckZ = oz + 0.118;
+  const yT = yW - 0.016 - curl * 0.018;
+  // 前臂（从画面下缘外伸上来，搭在台面上 —— 有手臂，手才不显得漂着）
+  const ax = ox * 1.60, az = oz - 0.40;
+  sctx.save(); sctx.globalAlpha = 0.42;
+  face([[ax - 0.070, CT + 0.004, az - 0.04], [ax + 0.070, CT + 0.004, az - 0.04],
+        [ox + 0.056, CT + 0.004, oz - 0.02], [ox - 0.056, CT + 0.004, oz - 0.02]], 'rgba(3,5,8,1)');
+  sctx.restore();
+  cap(ax, az, ox, oz - 0.040, 0.062, 1.048, yW - 0.012, SKIN, 'rgba(176,204,226,0.28)', 0.030);
+  // 掌：腕 → 指根，两端用圆收角
+  const palm = [[ox - 0.070, yW, oz - 0.02], [ox + 0.070, yW, oz - 0.02],
+                [ox + 0.080, yK, knuckZ], [ox - 0.080, yK, knuckZ]];
+  faceO(palm.map(p => [p[0], p[1] - 0.030, p[2]]), SIDE, 'rgba(4,6,9,0.8)', 1.2);
+  faceO(palm, SKIN, 'rgba(6,8,12,0.92)', 1.5);
+  face(discY(ox + knuckZ * 0, knuckZ - 0.004, 0.079, 0.046, yK, 14), SKIN);      // 指根端圆
+  face(discY(ox, oz - 0.018, 0.069, 0.040, yW, 14), SKIN);                        // 腕端圆
+  face(discY(ox, knuckZ - 0.004, 0.074, 0.042, yK - 0.030, 14), SIDE);           // 指根端圆的侧壁
+  face(discY(ox, oz - 0.018, 0.064, 0.037, yW - 0.030, 14), SIDE);               // 腕端圆的侧壁
+  // 掌背受屏阵冷光
+  sctx.save(); sctx.globalAlpha = 0.20;
+  face([[ox - 0.050, yW + 0.006, oz - 0.005], [ox + 0.050, yW + 0.006, oz - 0.005],
+        [ox + 0.058, yK + 0.006, knuckZ - 0.020], [ox - 0.058, yK + 0.006, knuckZ - 0.020]],
+       'rgba(178,206,228,1)');
+  sctx.restore();
+  // 腕侧亮边
+  sctx.save(); sctx.globalAlpha = 0.38; sctx.strokeStyle = HI; sctx.lineWidth = 2;
+  const w0 = proj(ox - 0.070, yW + 0.004, oz - 0.02), w1 = proj(ox + 0.070, yW + 0.004, oz - 0.02);
+  if (w0 && w1) { sctx.beginPath(); sctx.moveTo(w0.x, w0.y); sctx.lineTo(w1.x, w1.y); sctx.stroke(); }
+  sctx.restore();
+  // （手指已按要求去掉：只留掌 + 拇指的整体剪影）
+  // 拇指（掌内侧，斜向前下）
+  cap(ox + tside * 0.064, oz + 0.052, ox + tside * 0.132, oz + 0.156,
+      0.032, yW + 0.014, yT + 0.006, SKIN, HI, 0.026);
+}
+function drawHands(f) {
+  const press = pressK(f);
+  const lp = smoothstep(K.press + 12, K.press + 36, f) * (1 - smoothstep(K.revealIn, K.revealIn + 22, f)); // 左手「按下」左幻影
+  const rightY = 1.088 - press * 0.034;
+  const leftY = 1.094 - lp * 0.038 - press * 0.014;
+  const rightX = 0.215, leftX = -0.225;
+  const rightZ = 1.70, leftZ = 1.71;
+  drawHand(f, leftX, leftZ, leftY, 0.55, undefined, undefined);
+  drawHand(f, rightX, rightZ, rightY, 0.35, BTN_X.center - 0.004, BTN_Z - 0.008);
+}
+
+/* ============================================================================
+   ⑨ 后置监控屏：把「身后的电脑屏幕」映出的背影与眼球剪影搬到可见处
+   ========================================================================== */
+function drawRearMonitor(f) {
+  const x0 = 0.52, x1 = 1.14;
+  // 机身（含支架）
+  face([[x0 - 0.045, CT, 2.09], [x1 + 0.045, CT, 2.09],
+        [x1 + 0.045, 1.39, 2.33], [x0 - 0.045, 1.39, 2.33]], '#1a1f25');
+  face([[x0 - 0.045, 1.39, 2.33], [x1 + 0.045, 1.39, 2.33],
+        [x1 + 0.020, 1.40, 2.31], [x0 - 0.020, 1.40, 2.31]], '#252c34');
+  const hot = smoothstep(148, 178, f) * (1 - smoothstep(206, 234, f));
+  const bw = blinkWord(f);                                   // 每次眨眼后屏上打出的词
+  localPlane([x0, 1.36, 2.30], [x1, 1.36, 2.30], [x0, 1.09, 2.12], 300, 168, (iw, ih) => {
+    const x = sctx;
+    if (bw) {
+      // 眨眼之后：屏上打出系统给的词（绿字打字机，字放完停在屏上）
+      x.fillStyle = '#03140c'; x.fillRect(0, 0, iw, ih);
+      x.strokeStyle = 'rgba(74,244,152,0.40)'; x.lineWidth = 1.4;
+      x.strokeRect(7, 7, iw - 14, ih - 14);
+      const n = clamp(Math.floor((f - bw.s) / bw.per), 0, bw.t.length);
+      const shown = bw.t.slice(0, n);
+      x.font = '600 64px "Microsoft YaHei","SimHei",sans-serif';
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.shadowColor = 'rgba(60,225,140,0.95)'; x.shadowBlur = 18;
+      x.fillStyle = 'rgba(126,255,178,1)';
+      x.fillText(shown, iw / 2, ih * 0.47);
+      if (n < bw.t.length) {                                 // 打字光标
+        const ww = x.measureText(shown).width;
+        x.shadowBlur = 0; x.fillStyle = 'rgba(126,255,178,0.95)';
+        x.fillRect(iw / 2 + ww / 2 + 4, ih * 0.47 - 26, 3, 52);
+      }
+      x.shadowBlur = 0; x.textAlign = 'left'; x.textBaseline = 'top';
+      x.font = '600 15px "Consolas",monospace';
+      x.fillStyle = 'rgba(120,220,170,0.72)';
+      x.fillText('SYS · MSG', 14, 12);
+    } else {
+      x.fillStyle = '#050f0c'; x.fillRect(0, 0, iw, ih);
+      // 「你」的背影（后视剪影：头 + 肩）
+      const bob = Math.sin(f * 0.028) * 1.6;
+      x.fillStyle = 'rgba(8,20,16,1)';
+      x.beginPath(); x.arc(iw * 0.50, ih * 0.50 + bob, ih * 0.155, 0, TAU); x.fill();
+      x.beginPath(); x.ellipse(iw * 0.50, ih * 0.90 + bob, iw * 0.215, ih * 0.24, 0, 0, TAU); x.fill();
+      // 轮廓冷边
+      x.strokeStyle = `rgba(150,214,196,${(0.55 + 0.35 * hot).toFixed(3)})`; x.lineWidth = 1.6;
+      x.beginPath(); x.arc(iw * 0.50, ih * 0.50 + bob, ih * 0.155, Math.PI * 1.15, Math.PI * 1.85); x.stroke();
+      // 远处机械眼球剪影（在「你」之前方 → 画在背影之前，被背影遮住一部分）
+      x.fillStyle = 'rgba(6,14,20,1)';
+      x.beginPath(); x.arc(iw * 0.50, ih * 0.26, ih * 0.20, 0, TAU); x.fill();
+      x.strokeStyle = 'rgba(214,72,54,0.75)'; x.lineWidth = 2;
+      x.beginPath(); x.arc(iw * 0.50, ih * 0.26, ih * 0.20, 0, TAU); x.stroke();
+      x.fillStyle = 'rgba(226,72,54,0.9)';
+      x.beginPath(); x.arc(iw * 0.50, ih * 0.26, ih * 0.035, 0, TAU); x.fill();
+      // 标签 + 录制点
+      x.fillStyle = 'rgba(150,224,200,0.85)';
+      x.font = '600 17px "Consolas",monospace'; x.textAlign = 'left'; x.textBaseline = 'top';
+      x.fillText('REAR CAM 04', 8, 7);
+      if (Math.floor(f / 8) % 2 === 0) { x.fillStyle = 'rgba(255,70,58,0.95)'; x.beginPath(); x.arc(iw - 14, 14, 5, 0, TAU); x.fill(); }
+    }
+  }, 0.94);
+  // 屏幕冷光溢出（③ 加重，把注意力引过去）
+  const c = proj((x0 + x1) / 2, 1.22, 2.20);
+  if (c) { sctx.save(); sctx.globalCompositeOperation = 'lighter';
+    glowAt(c.x, c.y, 0.62 * c.s, 0.40 * c.s, glow('rgba(90,190,160,A)'), 0.10 + 0.16 * hot); sctx.restore(); }
+}
+
+/* ============================================================================
+   scene1
+   ========================================================================== */
+/* 数据流速度：⑤ 按下后加速（纯函数，分段斜率；⑩ 停手后回落到常速） */
+function scr(f) {
+  const t = Math.min(f, K.pressEnd);
+  return 0.5 * f + 1.4 * Math.max(0, t - K.press);
+}
+
+/* ⑩ 整个场景化成蓝色发光体：先铺深蓝把陈设吃掉，再叠三层蓝辉光 */
+function blueField(f) {
+  const bk = blueK(f); if (bk <= 0.002) return;
+  sctx.save();                                   // 深蓝底
+  sctx.globalAlpha = Math.min(1, bk * 1.10);
+  sctx.fillStyle = '#0d2a5c';
+  sctx.fillRect(0, 0, W, H);
+  sctx.restore();
+  const c = proj(EYE.x, EYE.y, EYE.z);
+  const cx = c ? c.x : W / 2, cy = c ? c.y : H / 2;
+  sctx.save(); sctx.globalCompositeOperation = 'lighter';   // 发光体感
+  glowAt(cx, cy, W * 1.15, H * 1.15, glow('rgba(56,132,255,A)'), 0.62 * bk);
+  glowAt(cx, cy, W * 0.56, H * 0.56, glow('rgba(118,190,255,A)'), 0.56 * bk);
+  glowAt(cx, cy, W * 0.22, H * 0.22, glow('rgba(200,232,255,A)'), 0.42 * bk);
+  sctx.restore();
+}
+
+function scene1(f) {
+  curF = f;
+  const lit = roomLit(f), bk = blueK(f), dk = darkK(f);
+  clearScene('#05070a');
+  if (!ROAM) camBeat(f);
+
+  if (lit > 0.02) {
+    // 空间冷雾光（⑨ 转红）
+    const rf = redFlood(f);
+    sctx.save(); sctx.globalCompositeOperation = 'lighter';
+    glowAt(W * 0.5, H * 0.42, W * 0.9, H * 0.6,
+      glow(rf > 0.002 ? 'rgba(120,30,22,A)' : 'rgba(58,84,106,A)'), (0.18 + 0.10 * rf) * lit);
+    sctx.restore();
+
+    drawCeiling(f);
+    drawWalls(f);
+    drawScreenWall(f);
+    drawFloor(f);
+    drawDebris(f);
+    drawCables(f);          // 次级触手（在眼球后方，先画）
+    if (bk > 0.01) {
+      // ⑩ 整个场景化成蓝色发光体 —— 陈设全被蓝光吞掉，只剩眼珠子还留着
+      blueField(f);
+      drawEyeball(f);
+    } else {
+      drawEyeball(f);         // 主体
+      drawLegs(f);            // 主触手（在眼球前方，后画）
+      drawConsole(f);         // 前景操作台
+      drawRearMonitor(f);     // 后方监控屏（②③ 映背影与眼球剪影 / ④⑥⑦ 打出三个词）
+      drawButtons(f);         // 按钮面板：左右幻影 + 中央真按钮
+      drawHands(f);           // 「你」的手（世界空间伪 3D，压在最前）
+
+      // 前景悬浮尘埃
+      sctx.save();
+      for (let i = 0; i < 70; i++) {
+        const sx = srnd(i * 2.7) * W, sy = ((srnd(i * 5.3) + f * 0.0016 * (0.4 + srnd(i * 3.9))) % 1) * H;
+        sctx.globalAlpha = (0.06 + 0.10 * srnd(i * 8.1)) * lit;
+        sctx.fillStyle = 'rgba(190,205,215,1)'; sctx.fillRect(sx, sy, 1.6, 1.6);
+      }
+      sctx.restore();
+    }
+  }
+  if (lit < 0.995) {        // ⑩ 熄灯后：整间压黑（保证字幕底纯黑）
+    sctx.save(); sctx.globalAlpha = 1 - lit; sctx.fillStyle = '#030406';
+    sctx.fillRect(0, 0, W, H); sctx.restore();
+  }
+  if (dk > 0.002) {         // ⑩ 连眼珠子一起缓慢变暗到全黑
+    sctx.save(); sctx.globalAlpha = dk; sctx.fillStyle = '#02040a';
+    sctx.fillRect(0, 0, W, H); sctx.restore();
+  }
+
+  // HUD（仅幕1–2；漫游时长亮）
+  const a = ROAM ? 0.85 : smoothstep(24, 52, f) * (1 - smoothstep(B.blink1[0], B.blink1[0] + 28, f));
+  drawHUD('LAB · B3', a * 0.80, 150, 60);
+  drawHUD('EYE-UNIT 01 / FRAMING', a * 0.55, 150, 96);
+  drawHUD('LINK: LOCKED', a * 0.80, W - 430, 60, 'rgba(230,120,100,0.9)');
+
+  /* ---------- 字幕 ---------- */
+  // ① 机械眼球台词：从画面中间弹出（淡入 + 上浮 + 打字机），两句严格接力不叠字
+  if (f < B.buttons[1]) {
+    const a1 = fadeK(f, 40, 50, 96, 106);
+    if (a1 > 0.01) drawSub('eye1', W / 2, H * 0.60 + (1 - a1) * 18, typeK(f, 'eye1', 42, 2.2), a1);
+    const a2 = fadeK(f, 106, 116, 148, 160);
+    if (a2 > 0.01) drawSub('eye2', W / 2, H * 0.60 + (1 - a2) * 18, typeK(f, 'eye2', 108, 2.2), a2);
+  }
+  // ⑩ 眼球平静下来说的那句「谢谢」（中间，同一副金属口吻）
+  if (f >= 684 && f < 744) {
+    const at = fadeK(f, 686, 694, 726, 738);
+    if (at > 0.01) drawSub('thanks', W / 2, H * 0.60 + (1 - at) * 16, typeK(f, 'thanks', 690, 4.0), at);
+  }
+  // ⑪ 你选左还是右？
+  if (f >= B.qSub[0] - 4 && f < B.black[1] + 6) {
+    drawSub('q', W / 2, H - 150, typeK(f, 'q', B.qSub[0] + 6, 2.6),
+      fadeK(f, B.qSub[0] + 4, B.qSub[0] + 14, B.qSub[1] - 9, B.qSub[1]));
+  }
+  // ⑭ 点题：两行同屏，淡入 → 停留 ~5s → 淡出
+  if (f >= B.explain[0] - 4) {
+    const aA = fadeK(f, 830, 844, 928, 942);
+    if (aA > 0.01) {
+      drawSub('exp1', W / 2, 470, 1, aA);
+      drawSub('exp2', W / 2, 566, 1, aA);
+    }
+  }
+  // ⑮ 收尾：两行同屏
+  if (f >= B.end[0] - 4) {
+    const aB = fadeK(f, 950, 964, 985, 999);
+    if (aB > 0.01) {
+      drawSub('end1', W / 2, 470, 1, aB);
+      drawSub('end2', W / 2, 566, 1, aB);
+    }
+  }
+  // ⑬ 标题卡（最后才弹）：整块淡入 + 轻微放大落定，一直留到片尾淡出
+  if (f >= B.title[0] + 3) {
+    const pop = easeOutCubic(clamp((f - B.title[0] - 3) / 16, 0, 1));
+    const ts = lerp(0.90, 1.0, pop);
+    drawTitleBlock(W / 2, 540 - 130 * ts, ts, smoothstep(B.title[0] + 3, B.title[0] + 22, f));
+  }
+
+  /* ---------- ② 中间弹出的 2D 绿字屏 ---------- */
+  drawSelectPanel(f);
+
+  /* ---------- 眨眼 = 全屏金属快门（盖在所有内容之上） ---------- */
+  drawShutter(f);
+}
+
+/* ---------- 后处理参数（按幕递增撕裂，幕3 收干净保证字幕清晰） ---------- */
+const POST1 = { curve: 0.05, chroma: 0.09, scan: 0.30, grain: 0.045, glitch: 0.03, grade: -0.10, vig: 0.30, wobble: 0.003, fade: 1 };
+function postParams(f) {
+  const p = Object.assign({ frame: f }, POST1);
+  const act2 = smoothstep(B.pressLeft[0] - 30, B.pressLeft[0] + 30, f) * (1 - smoothstep(B.thanks[1] + 14, B.thanks[1] + 40, f));
+  const wild = laughK(f);                                                 // ⑨ 笑声：失控段
+  const act3 = smoothstep(B.thanks[1] + 14, B.thanks[1] + 40, f);         // 幕3 黑底字幕：收干净
+  const mix = (a, b) => lerp(a, b, act2);
+  p.chroma  = mix(0.09, 0.16) + 0.08 * wild;
+  p.glitch  = mix(0.03, 0.06) + 0.05 * wild;
+  p.grain   = mix(0.045, 0.070);
+  p.scan    = mix(0.30, 0.34);
+  p.grade   = mix(-0.10, -0.14);
+  p.vig     = mix(0.30, 0.36);
+  p.wobble  = mix(0.003, 0.006) + 0.006 * wild;
+  // 幕3：干净
+  p.chroma = lerp(p.chroma, 0.02, act3);
+  p.glitch = lerp(p.glitch, 0.0, act3);
+  p.grain  = lerp(p.grain, 0.016, act3);
+  p.scan   = lerp(p.scan, 0.22, act3);
+  p.grade  = lerp(p.grade, -0.02, act3);
+  p.vig    = lerp(p.vig, 0.26, act3);
+  p.wobble = lerp(p.wobble, 0.0, act3);
+  p.curve  = lerp(0.05, 0.03, act3);
+  p.fade = ROAM ? 1 : subA(f, 0, 8, TOTAL_FRAMES - 14, TOTAL_FRAMES);
+  return p;
+}
+
+/* ---------- 对外接口 ---------- */
+window.renderFrame = function (f) {
+  scene1(f);
+  post(postParams(f));
+  dctx.clearRect(0, 0, W, H);
+  dctx.drawImage(glC, 0, 0);
+};
+
+SPHERE = bakeSphere(); IRIS = bakeIris(); SPHERE_MOD = bakeSphereMod(); GRIME = bakeGrime();
+BLADE = bakeBlade();
+initSubs();
+initGL();
+
+/* ============================================================================
+   交互漫游模式（?roam=1）—— 预览用，不参与出片
+   WASD 移动 / Q E 升降 / Shift 加速 / 鼠标拖拽转视角 / [ ] 逐帧 / Space 播放暂停 / R 复位
+   ========================================================================== */
+let roamF = window.__frame || 0, roamPlay = true, roamLast = 0;
+const keyDown = {};
+function roamReset() { CAM.x = 0; CAM.y = 1.32; CAM.z = 0.60; CAM.pitch = 0.02; CAM.yaw = 0; }
+function initRoam() {
+  roamReset();
+  window.addEventListener('keydown', e => {
+    keyDown[e.code] = true;
+    if (e.code === 'Space') { roamPlay = !roamPlay; e.preventDefault(); }
+    if (e.code === 'KeyR') roamReset();
+    if (e.code === 'BracketLeft') { roamF = (roamF - 4 + TOTAL_FRAMES) % TOTAL_FRAMES; roamPlay = false; }
+    if (e.code === 'BracketRight') { roamF = (roamF + 4) % TOTAL_FRAMES; roamPlay = false; }
+  });
+  window.addEventListener('keyup', e => { keyDown[e.code] = false; });
+  let drag = false, lx = 0, ly = 0;
+  disp.style.cursor = 'crosshair';
+  disp.addEventListener('mousedown', e => { drag = true; lx = e.clientX; ly = e.clientY; });
+  window.addEventListener('mouseup', () => { drag = false; });
+  window.addEventListener('mousemove', e => {
+    if (!drag) return;
+    CAM.yaw += (e.clientX - lx) * 0.0022;
+    CAM.pitch = clamp(CAM.pitch + (e.clientY - ly) * 0.0022, -0.95, 0.95);
+    lx = e.clientX; ly = e.clientY;
+  });
+  requestAnimationFrame(roamTick);
+}
+function roamTick(ts) {
+  const dt = Math.min(0.05, roamLast ? (ts - roamLast) / 1000 : 0.016); roamLast = ts;
+  if (roamPlay) roamF = (roamF + dt * 30) % TOTAL_FRAMES;
+  const sp = 2.6 * dt * ((keyDown['ShiftLeft'] || keyDown['ShiftRight']) ? 2.6 : 1);
+  const yw = CAM.yaw;
+  const F = { x: Math.sin(yw), z: Math.cos(yw) }, Rt = { x: Math.cos(yw), z: -Math.sin(yw) };
+  let mx = 0, mz = 0;
+  if (keyDown['KeyW']) { mx += F.x; mz += F.z; }
+  if (keyDown['KeyS']) { mx -= F.x; mz -= F.z; }
+  if (keyDown['KeyD']) { mx += Rt.x; mz += Rt.z; }
+  if (keyDown['KeyA']) { mx -= Rt.x; mz -= Rt.z; }
+  const len = Math.hypot(mx, mz);
+  if (len > 0.001) { CAM.x += mx / len * sp; CAM.z += mz / len * sp; }
+  if (keyDown['KeyE']) CAM.y += sp;
+  if (keyDown['KeyQ']) CAM.y -= sp;
+  CAM.x = clamp(CAM.x, -RW + 0.25, RW - 0.25);
+  CAM.y = clamp(CAM.y, 0.25, RH - 0.15);
+  CAM.z = clamp(CAM.z, 0.35, FAR - 0.6);
+
+  renderFrame(roamF | 0);
+  dctx.save();
+  dctx.strokeStyle = 'rgba(190,235,255,0.75)'; dctx.lineWidth = 2;
+  dctx.beginPath(); dctx.moveTo(W / 2 - 12, H / 2); dctx.lineTo(W / 2 + 12, H / 2);
+  dctx.moveTo(W / 2, H / 2 - 12); dctx.lineTo(W / 2, H / 2 + 12); dctx.stroke();
+  dctx.font = '500 24px "Consolas",monospace'; dctx.fillStyle = 'rgba(180,235,255,0.92)';
+  dctx.textAlign = 'left'; dctx.textBaseline = 'alphabetic';
+  dctx.fillText('ROAM  WASD 移动 · Q/E 升降 · Shift 加速 · 鼠标拖拽转视角 · [ ] 逐帧 · Space 播放/暂停 · R 复位', 40, H - 92);
+  dctx.fillText(`CAM x=${CAM.x.toFixed(2)} y=${CAM.y.toFixed(2)} z=${CAM.z.toFixed(2)}   pitch=${(CAM.pitch * 57.3).toFixed(1)}°  yaw=${(CAM.yaw * 57.3).toFixed(1)}°`, 40, H - 60);
+  dctx.fillText(`FRAME ${roamF | 0} / ${TOTAL_FRAMES}   ${roamPlay ? 'PLAY' : 'PAUSE'}`, 40, H - 28);
+  dctx.restore();
+  requestAnimationFrame(roamTick);
+}
+
+if (ROAM) initRoam();
+else window.renderFrame(window.__frame);
+window.__renderDone = true;
+</script>
+</body>
+</html>

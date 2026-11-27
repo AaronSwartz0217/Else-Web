@@ -109,6 +109,98 @@
         margin-top:14px;padding-top:12px;border-top:1px dashed rgba(241,223,191,.2);
         color:#8f7a62;font-size:.76rem;line-height:1.7;text-align:center;
     }
+    /* ===== PSYCHE ARCHIVE ===== */
+    .psy-meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+    .psy-chip{
+        font-family:"Courier New",monospace;font-size:.62rem;letter-spacing:.06em;
+        padding:6px 10px;border-radius:999px;color:#d9c3a2;
+        border:1px solid rgba(241,223,191,.22);background:rgba(255,214,160,.05);
+    }
+    .psy-chip b{color:var(--amber);font-size:.72rem;margin-right:4px;}
+    .psy-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+    .psy-tabs button{
+        font-family:"Courier New",monospace;font-size:.66rem;letter-spacing:.1em;
+        padding:8px 16px;border-radius:999px;cursor:pointer;transition:all .2s ease;
+        border:1px solid rgba(241,223,191,.28);background:transparent;color:#d9c3a2;
+    }
+    .psy-tabs button:hover{border-color:var(--amber);color:#fff;}
+    .psy-tabs button.on{background:var(--amber);border-color:var(--amber);color:#24150e;font-weight:700;}
+    .psy-body{min-height:220px;}
+    .psy-loading{padding:44px 0;text-align:center;color:#8f7a62;font-family:"Courier New",monospace;font-size:.76rem;letter-spacing:.12em;}
+    .psy-vol{margin-bottom:18px;}
+    .psy-vol > h3{
+        display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;
+        font-family:Georgia,"Songti SC",serif;font-size:1.02rem;color:#ffe6c2;margin-bottom:8px;
+    }
+    .psy-vol > h3 span{color:var(--amber);font-size:.78rem;letter-spacing:.1em;}
+    .psy-vol > h3 small{color:#9b8168;font-size:.72rem;font-weight:400;}
+    .psy-ch{
+        margin:8px 0;border-radius:10px;border:1px solid rgba(241,223,191,.18);
+        background:rgba(255,214,160,.03);
+    }
+    .psy-ch summary{
+        display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+        padding:11px 12px;cursor:pointer;list-style:none;
+        color:#ffe9c9;font-size:.9rem;font-weight:600;
+    }
+    .psy-ch summary::-webkit-details-marker{display:none;}
+    .psy-ch summary em{margin-left:auto;color:#8f7a62;font-size:.68rem;font-style:normal;font-family:"Courier New",monospace;}
+    .psy-ch summary::after{content:'+';color:var(--amber);font-family:"Courier New",monospace;font-size:.9rem;}
+    .psy-ch[open] summary::after{content:'−';}
+    .psy-ch-body{padding:0 12px 12px;}
+    .psy-status{
+        font-family:"Courier New",monospace;font-size:.56rem;letter-spacing:.08em;
+        padding:2px 7px;border-radius:4px;border:1px solid currentColor;flex:0 0 auto;
+    }
+    .is-working{color:#ffca3a;}
+    .is-settled{color:#8affc1;}
+    .is-open{color:#6be3ff;}
+    .psy-q{
+        margin:4px 0 10px;padding-left:10px;border-left:2px solid var(--amber);
+        color:var(--amber);font-size:.84rem;line-height:1.75;font-style:italic;
+    }
+    .psy-block{margin-top:12px;}
+    .psy-block h4{
+        font-family:"Courier New",monospace;font-size:.62rem;letter-spacing:.14em;
+        color:var(--amber);margin-bottom:6px;
+    }
+    .psy-block p{color:#d4bb9b;font-size:.86rem;line-height:1.9;}
+    .psy-quote{
+        margin:0 0 8px;padding:8px 10px;border-radius:8px;
+        background:rgba(255,214,160,.045);border-left:2px solid rgba(241,223,191,.35);
+        color:#e6d0b0;font-size:.85rem;line-height:1.85;
+    }
+    .psy-quote cite{
+        display:block;margin-top:4px;color:#9b8168;font-size:.68rem;font-style:normal;
+        font-family:"Courier New",monospace;
+    }
+    .psy-time{
+        display:flex;gap:8px;margin:4px 0;color:#d4bb9b;font-size:.84rem;line-height:1.85;
+    }
+    .psy-time b{flex:0 0 58px;color:#ffb56b;font-family:"Courier New",monospace;font-size:.68rem;padding-top:2px;}
+    .psy-points{margin:6px 0 0 16px;color:#d4bb9b;font-size:.84rem;line-height:1.85;}
+    .psy-points li{margin-bottom:3px;}
+    .psy-layer{
+        margin:8px 0;padding:12px 14px;border-radius:10px;
+        border:1px solid rgba(241,223,191,.18);background:rgba(255,214,160,.03);
+    }
+    .psy-layer h4{display:flex;align-items:baseline;gap:8px;color:#ffe9c9;font-size:.92rem;margin-bottom:5px;}
+    .psy-id{font-family:"Courier New",monospace;color:var(--amber);font-size:.7rem;letter-spacing:.1em;}
+    .psy-layer p{color:#c9ad8b;font-size:.83rem;line-height:1.8;}
+    .psy-layer ul{margin:7px 0 0 16px;color:#9b8168;font-size:.76rem;line-height:1.8;}
+    .psy-domains{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;}
+    .psy-domain{
+        padding:12px;border-radius:10px;border:1px solid rgba(241,223,191,.18);
+        background:rgba(255,214,160,.03);
+    }
+    .psy-domain h4{display:flex;align-items:baseline;justify-content:space-between;gap:8px;color:#ffe9c9;font-size:.9rem;}
+    .psy-domain h4 b{color:var(--amber);font-family:"Courier New",monospace;font-size:.7rem;}
+    .psy-domain p{margin-top:5px;color:#9b8168;font-size:.76rem;line-height:1.7;}
+    .psy-topic-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+    .psy-topic-chips span{
+        font-size:.7rem;padding:3px 7px;border-radius:999px;
+        border:1px solid rgba(255,202,58,.28);color:#d9c3a2;background:rgba(255,202,58,.06);
+    }
     @media (max-width:640px){
         .cafe-ui{padding:14px 14px 20px;}
         .cafe-brand{font-size:.6rem;}
@@ -116,6 +208,9 @@
         .talk-panel{padding:15px;border-radius:14px;}
         .talk-head h2{font-size:1.25rem;}
         .talk-topic summary{font-size:.88rem;}
+        .psy-ch summary{font-size:.84rem;}
+        .psy-ch summary em{display:none;}
+        .psy-domains{grid-template-columns:1fr;}
     }
 </style>
 </head>
@@ -128,7 +223,7 @@
         <span class="cafe-brand">CAFÉ SOLAIRE</span>
         <a href="introduction.html">HOME</a>
     </header>
-    <p class="cafe-hint" id="cafeHint">CLICK THE LAPTOP</p>
+    <p class="cafe-hint" id="cafeHint">CLICK THE LAPTOP · PSYCHE ARCHIVE</p>
 </div>
 
 <div class="talk-overlay" id="talkPanel" aria-hidden="true">
@@ -136,44 +231,23 @@
     <section class="talk-panel" role="dialog" aria-modal="true" aria-labelledby="talkTitle">
         <header class="talk-head">
             <div>
-                <p class="talk-kicker">CAFÉ SOLAIRE · DAYLIGHT</p>
-                <h2 id="talkTitle">日光咖啡厅</h2>
-                <p>心理学讨论 · 不是诊断，只是把经验说清楚</p>
+                <p class="talk-kicker">CAFÉ SOLAIRE · PSYCHE ARCHIVE</p>
+                <h2 id="talkTitle">心理学体系 · LifeTrail</h2>
+                <p>自我 / 关系 / 职业 / 身体 · 从日志与笔记整理的体系，不是诊断</p>
             </div>
             <button class="talk-close" id="talkClose" type="button" aria-label="关闭">×</button>
         </header>
 
-        <p class="talk-intro">点一杯，慢慢聊。这里放的是关于自我、关系和长期状态的讨论笔记，不提供诊断或治疗方案。坐下来，把问题说具体一点。</p>
-
-        <details class="talk-topic" open>
-            <summary>防御机制不是敌人</summary>
-            <p>它先于语言出现，负责让你活下来。看清它在保护什么，通常比追问它为什么存在更有用。</p>
-            <span class="talk-q">最近一次你意识到自己在防御，是在什么场景？</span>
-        </details>
-
-        <details class="talk-topic">
-            <summary>把反馈从法官降级为数据</summary>
-            <p>外部评价仍然有用，但它只提供信息，不负责判决你是谁。收回判决权，不等于拒绝反馈，而是不再让单次评价定义整体。</p>
-            <span class="talk-q">哪一条反馈，你其实可以直接丢掉？</span>
-        </details>
-
-        <details class="talk-topic">
-            <summary>焦虑型内核与外部确认</summary>
-            <p>靠外部反馈确认自我，会让人一直等下一次判决。把确认源迁到可持续的系统和行动上，比要求自己立刻不焦虑更现实。</p>
-            <span class="talk-q">你最近一次主动确认自己，是因为什么？</span>
-        </details>
-
-        <details class="talk-topic">
-            <summary>长期主义是恢复能力</summary>
-            <p>不是一直向上，而是波动之后还能恢复，并重新建立秩序。恢复本身就是长期的一部分，不是中断。</p>
-            <span class="talk-q">你现在需要恢复的是秩序、体力，还是判断力？</span>
-        </details>
-
-        <details class="talk-topic">
-            <summary>取悦自己不是反向自恋</summary>
-            <p>价值来源内移，是允许自己成为目的之一，而不是用“只在乎自己”去报复过去的讨好。</p>
-            <span class="talk-q">有什么小事，是你纯粹为自己做的？</span>
-        </details>
+        <div class="psy-meta" id="psyMeta"></div>
+        <nav class="psy-tabs" id="psyTabs">
+            <button type="button" data-tab="book" class="on">体系书</button>
+            <button type="button" data-tab="corpus">篇章</button>
+            <button type="button" data-tab="layers">架构</button>
+            <button type="button" data-tab="domains">主题</button>
+        </nav>
+        <div class="psy-body" id="psyBody">
+            <p class="psy-loading">LOADING ARCHIVE…</p>
+        </div>
 
         <p class="talk-foot">讨论不等于治疗。如果困扰持续影响生活，找专业的人。</p>
     </section>
@@ -188,10 +262,153 @@
     var hint = document.getElementById('cafeHint');
     if(!panel) return;
 
+    var metaEl = document.getElementById('psyMeta');
+    var bodyEl = document.getElementById('psyBody');
+    var tabbar = document.getElementById('psyTabs');
+    var archive = null;
+    var activeTab = 'book';
+    var loading = false;
+
+    var STATUS = {
+        working: ['进行中', 'is-working'],
+        settled: ['已成形', 'is-settled'],
+        open: ['待验证', 'is-open']
+    };
+
+    function esc(s){
+        return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+        });
+    }
+
+    function statusTag(status){
+        var s = STATUS[status] || STATUS.working;
+        return '<span class="psy-status ' + s[1] + '">' + s[0] + '</span>';
+    }
+
+    function renderMeta(){
+        var m = archive.meta;
+        metaEl.innerHTML =
+            '<span class="psy-chip"><b>' + m.logs + '</b>篇日志</span>' +
+            '<span class="psy-chip"><b>' + m.notes + '</b>篇笔记</span>' +
+            '<span class="psy-chip"><b>' + m.volumes + ' · ' + m.chapters + '</b>方向 · 章</span>' +
+            '<span class="psy-chip"><b>' + m.bookVolumes + ' · ' + m.bookChapters + '</b>卷 · 章</span>' +
+            '<span class="psy-chip">更新 <b>' + esc(m.updated) + '</b></span>';
+    }
+
+    function renderBook(){
+        return archive.book.volumes.map(function(v){
+            var chapters = v.chapters.map(function(c){
+                var quotes = c.verbatim.map(function(q){
+                    return '<blockquote class="psy-quote">' + esc(q.text) +
+                        '<cite>' + esc(q.date) + ' · ' + esc(q.title) + '</cite></blockquote>';
+                }).join('');
+                var evolution = c.evolution.map(function(e){
+                    return '<div class="psy-time"><b>' + esc(e.date) + '</b><span>' + esc(e.text) + '</span></div>';
+                }).join('');
+                return '<details class="psy-ch">' +
+                    '<summary>' + statusTag(c.status) + esc(c.title) +
+                        '<em>' + esc(c.span || '') + '</em></summary>' +
+                    '<div class="psy-ch-body">' +
+                        (c.question ? '<p class="psy-q">' + esc(c.question) + '</p>' : '') +
+                        (quotes ? '<div class="psy-block"><h4>原文 · VERBATIM</h4>' + quotes + '</div>' : '') +
+                        (evolution ? '<div class="psy-block"><h4>认知演变 · EVOLUTION</h4>' + evolution + '</div>' : '') +
+                        (c.answer ? '<div class="psy-block"><h4>当前答案 · ANSWER</h4><p>' + esc(c.answer) + '</p></div>' : '') +
+                        (c.risk ? '<div class="psy-block"><h4>风险 · RISK</h4><p>' + esc(c.risk) + '</p></div>' : '') +
+                        (c.unresolved ? '<div class="psy-block"><h4>未解 · UNRESOLVED</h4><p>' + esc(c.unresolved) + '</p></div>' : '') +
+                    '</div></details>';
+            }).join('');
+            return '<section class="psy-vol">' +
+                '<h3><span>' + esc(v.roman) + '</span>' + esc(v.name) +
+                    '<small>' + esc(v.sub || '') + (v.range ? ' · ' + esc(v.range) : '') + '</small></h3>' +
+                chapters + '</section>';
+        }).join('');
+    }
+
+    function renderCorpus(){
+        return archive.corpus.volumes.map(function(v){
+            var chapters = v.chapters.map(function(c){
+                var points = (c.points || []).map(function(p){
+                    return '<li>' + esc(p) + '</li>';
+                }).join('');
+                var meta = c.stats ? (c.stats.logs + ' 篇 · ' + c.stats.first + ' → ' + c.stats.last) : '';
+                return '<details class="psy-ch">' +
+                    '<summary>' + esc(c.title) + '<em>' + esc(meta) + '</em></summary>' +
+                    '<div class="psy-ch-body">' +
+                        '<div class="psy-block"><h4>章节总结 · SUMMARY</h4><p>' + esc(c.summary) + '</p></div>' +
+                        (points ? '<div class="psy-block"><h4>要点 · POINTS</h4><ul class="psy-points">' + points + '</ul></div>' : '') +
+                    '</div></details>';
+            }).join('');
+            return '<section class="psy-vol">' +
+                '<h3><span>方向</span>' + esc(v.name) +
+                    (v.sub ? '<small>' + esc(v.sub) + '</small>' : '') + '</h3>' +
+                chapters + '</section>';
+        }).join('');
+    }
+
+    function renderLayers(){
+        return archive.layers.map(function(l){
+            var rules = (l.rules || []).map(function(r){ return '<li>' + esc(r) + '</li>'; }).join('');
+            return '<div class="psy-layer">' +
+                '<h4><span class="psy-id">' + esc(l.id) + '</span>' + esc(l.name) + '</h4>' +
+                '<p>' + esc(l.desc) + '</p>' +
+                '<p class="psy-src" style="margin-top:6px;color:#8f7a62;font-size:.74rem;font-family:\'Courier New\',monospace;">SRC · ' + esc(l.source) + '</p>' +
+                (rules ? '<ul>' + rules + '</ul>' : '') +
+                '</div>';
+        }).join('');
+    }
+
+    function renderDomains(){
+        return '<div class="psy-domains">' + archive.domains.map(function(d){
+            var topics = (d.topics || []).map(function(t){ return '<span>' + esc(t) + '</span>'; }).join('');
+            return '<div class="psy-domain">' +
+                '<h4>' + esc(d.name) + '<b>' + d.count + ' 篇</b></h4>' +
+                '<p>' + esc(d.desc) + '</p>' +
+                '<div class="psy-topic-chips">' + topics + '</div>' +
+                '</div>';
+        }).join('') + '</div>';
+    }
+
+    function render(){
+        if(!archive) return;
+        if(activeTab === 'corpus') bodyEl.innerHTML = renderCorpus();
+        else if(activeTab === 'layers') bodyEl.innerHTML = renderLayers();
+        else if(activeTab === 'domains') bodyEl.innerHTML = renderDomains();
+        else bodyEl.innerHTML = renderBook();
+    }
+
+    function loadArchive(){
+        if(archive || loading) return;
+        loading = true;
+        fetch('assets/psyche.json', { cache: 'no-cache' })
+            .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .then(function(json){
+                archive = json;
+                loading = false;
+                renderMeta();
+                render();
+            })
+            .catch(function(){
+                loading = false;
+                bodyEl.innerHTML = '<p class="psy-loading">档案读取失败 · 请通过本地服务打开本站</p>';
+            });
+    }
+
+    tabbar.addEventListener('click', function(e){
+        var btn = e.target.closest('button[data-tab]');
+        if(!btn) return;
+        activeTab = btn.dataset.tab;
+        Array.prototype.forEach.call(tabbar.querySelectorAll('button'), function(b){
+            b.classList.toggle('on', b === btn);
+        });
+        render();
+    });
+
     function openPanel(){
         panel.classList.add('open');
         panel.setAttribute('aria-hidden','false');
         if(hint) hint.style.opacity = '0';
+        loadArchive();
     }
     function closePanel(){
         panel.classList.remove('open');

@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="zh">
+<head><meta charset="UTF-8"><title>日神与酒神 · ① 日神 · 光明庭院（0–600）</title></head>
+<body>
+<script src="../vendor/webgl3d-pipeline/webgl3d_pipeline.js"></script>
+<script src="../../共享资源/roam.js"></script>
+<script src="common.js"></script>
+<script>
+'use strict';
+/* ============================================================================
+   ① 日神 · 光明庭院（源帧 0–600 · 20s）
+   白大理石庭院 + 八柱神庙（楣梁刻 ΓΝΩΘΙ ΣΑΥΤΟΝ）+ 侧廊七柱 + 六座雕像与其基座
+   + 一方水池 + 四只陶瓮 + 祭坛 + 六株丝柏 + 一条白衣行列。
+   日神 = 梦 = 造型 = 边界 → 本场纪律：**一切都有清楚的边**（雕像有底座、柱影扫过地面）。
+   ========================================================================== */
+const { srnd, TAU, clamp, lerp, smoothstep, subA, seq } = DION;
+function plane1(app, GL3D) { return app.createMesh(GL3D.Geometry.plane(1, 1)); }
+/* 挤出的三角柱（山花） */
+function triPrism(w, h, d) {
+  const x = w / 2, z = d / 2;
+  const positions = [
+    -x, 0, z, x, 0, z, 0, h, z,
+    x, 0, -z, -x, 0, -z, 0, h, -z,
+    -x, 0, -z, -x, 0, z, 0, h, z, -x, 0, -z, 0, h, z, 0, h, -z,
+    x, 0, z, x, 0, -z, 0, h, -z, x, 0, z, 0, h, -z, 0, h, z,
+    -x, 0, z, x, 0, z, x, 0, -z, -x, 0, z, x, 0, -z, -x, 0, -z,
+  ];
+  return { positions: positions, indices: Array.from({ length: positions.length / 3 }, (_, i) => i), uvs: new Array(positions.length / 3 * 2).fill(0) };
+}
+
+DION.boot({
+  range: [0, 600],
+  clearColor: [0.60, 0.70, 0.82, 1],
+  near: 0.25, far: 260,
+
+  /* 机位：三段式（落定 → 驻留 → 离开） */
+  camk: [
+    { f: 0, eye: [-0.40, 2.45, -11.00], tgt: [0.00, 2.30, 14.0], focal: 1200 },
+    { f: 70, eye: [-0.35, 2.28, -2.00], tgt: [0.00, 2.20, 14.0], focal: 1200 },
+    { f: 200, eye: [-0.20, 2.00, 4.20], tgt: [-0.60, 1.72, 14.0], focal: 1250 },
+    { f: 400, eye: [-4.60, 1.66, 7.60], tgt: [-5.20, 1.48, 13.5], focal: 1250 },
+    { f: 470, eye: [-6.60, 1.78, 6.60], tgt: [-4.60, 2.40, 11.5], focal: 1200 },
+    { f: 560, eye: [-6.90, 1.70, 9.60], tgt: [-1.40, 3.10, 18.0], focal: 1180 },
+    { f: 600, eye: [-6.20, 1.66, 12.60], tgt: [0.60, 2.30, 24.0], focal: 1150 },
+  ],
+  /* 正午白光：**太阳在镜头这一侧、略偏左**（所以神庙正面是亮的、影带朝远处扫） */
+  light: [
+    { f: 0, amb: [0.44, 0.46, 0.52], col: [0.95, 0.92, 0.81], dir: [-0.38, -1.50, 0.52] },
+    { f: 300, amb: [0.46, 0.48, 0.53], col: [0.97, 0.94, 0.83], dir: [-0.30, -1.56, 0.44] },
+    { f: 600, amb: [0.44, 0.46, 0.52], col: [0.95, 0.91, 0.79], dir: [-0.46, -1.48, 0.56] },
+  ],
+  post: {
+    exp: [[0, 0.82], [40, 1.02], [600, 1.03]],
+    con: [[0, 1.03], [600, 1.02]],
+    sat: [[0, 0.80], [120, 0.95], [600, 0.95]],
+    vig: [[0, 0.34], [200, 0.24], [600, 0.22]],
+    grain: [[0, 0.024], [600, 0.018]],
+    chr: [[0, 0.0004], [600, 0.0004]],
+  },
+  kicker: { act: 0, from: 0, to: 600, main: '01 / 03 · 日神', sub: 'APOLLO · 光明庭院 · 梦与边界' },
+  caps: [
+    { s: 28, e: 98, t: '希腊人早就把这件事看透了：活着，其实很苦。', kw: '活着，其实很苦', kc: 'rust', a: [0.00, 6.60, 29.4], lx: 960, ly: 214, size: 46, align: 'c' },
+    { s: 104, e: 174, t: '可他们活得比谁都热烈——尼采想知道为什么。', kw: '为什么', kc: 'brass', a: [-3.00, 1.20, 15.5], lx: 960, ly: 214, size: 46, align: 'c' },
+    { s: 182, e: 252, t: '他给出的第一个答案，叫日神。', kw: '日神', kc: 'brass', a: [7.00, 11.00, 46.0], lx: 960, ly: 214, size: 46, align: 'c' },
+    { s: 258, e: 328, t: '「日神」就是梦：梦里，一切都有清楚的样子。', kw: '梦', kc: 'brass', a: [0.00, 1.96, 10.0], lx: 960, ly: 214, size: 46, align: 'c' },
+    { s: 336, e: 406, t: '日神给你的一样东西，是边界。', kw: '边界', kc: 'brass', a: [-5.00, 1.05, 10.0], lx: 960, ly: 880, size: 46, align: 'c' },
+    { s: 412, e: 482, t: '于是你是「一个」人：有名字、有轮廓、有自己的底座。', kw: '「一个」人', kc: 'brass', a: [-5.00, 1.96, 10.0], lx: 960, ly: 880, size: 46, align: 'c' },
+    { s: 488, e: 558, t: '站在这片光里，世界干净、稳当、看得懂。', kw: '看得懂', kc: 'brass', a: [0.00, 7.16, 29.0], lx: 960, ly: 214, size: 46, align: 'c' },
+  ],
+  roam: {
+    clamp: c => { c.x = DION.clamp(c.x, -14.0, 14.0); c.y = DION.clamp(c.y, 0.55, 9.0); c.z = DION.clamp(c.z, -8.0, 33.0); },
+    hud: '光明庭院 32 × 44 m · 八柱神庙 · 侧廊七柱 · 六座雕像 · 一方水池',
+  },
+
+  build: function (app, T, GL3D) {
+    const items = [], DYN = {};
+    const M_ = app.createMaterial, M = (p, r, s) => GL3D.Mat4.trs(p || [0, 0, 0], r || [0, 0, 0], s || [1, 1, 1]);
+    const I = () => GL3D.Mat4.identity();
+    const tex = c => app.createTexture(c);
+    const boxAt = (w, h, d, x, y, z, rot) => T.boxAt(GL3D, w, h, d, x, y, z, rot);
+
+    /* ---- 天幕（跟着相机当 skybox）/ 白日 / 云 / 远山 ---- */
+    DYN.sky = { name: 'sky', mesh: plane1(app, GL3D), material: M_({ texture: tex(T.makeSky([[0, '#3E6FA8'], [0.42, '#8FB6D8'], [0.78, '#D6E2EC'], [1, '#F2EFE4']])), unlit: true, alphaMode: 'mask', alphaCutoff: 0.02, doubleSided: true }), billboard: true, position: [0, 8, 150], scale: [352, 198, 1] };
+    items.push(DYN.sky);
+
+    const glowTex = tex(T.makeGlow('rgba(255,250,232,1)', 'rgba(255,226,170,0.42)', 256));
+    DYN.sun = { name: 'sun', mesh: plane1(app, GL3D), material: M_({ texture: glowTex, alphaMode: 'blend', unlit: true, depthWrite: false }), billboard: true, position: [7.0, 11.0, 46.0], scale: [5.4, 5.4, 1] };
+    DYN.sunHalo = { name: 'sunHalo', mesh: plane1(app, GL3D), material: M_({ texture: glowTex, alphaMode: 'blend', unlit: true, depthWrite: false, color: [1, 1, 1, 0.55] }), billboard: true, position: [7.0, 11.0, 46.0], scale: [24, 24, 1] };
+    items.push(DYN.sunHalo, DYN.sun);
+
+    const cloudTex = tex(T.mk(512, 256, (g, w, h) => {
+      g.clearRect(0, 0, w, h);
+      for (let i = 0; i < 26; i++) {
+        const x = 40 + srnd(i * 3.1) * (w - 80), y = 62 + srnd(i * 7.7) * (h - 110), r = 26 + srnd(i * 5.5) * 62;
+        const rg = g.createRadialGradient(x, y, 2, x, y, r);
+        rg.addColorStop(0, 'rgba(255,255,255,0.85)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = rg; g.beginPath(); g.ellipse(x, y, r, r * 0.62, 0, 0, TAU); g.fill();
+      }
+    }));
+    for (let i = 0; i < 3; i++) {
+      items.push({
+        name: 'cloud' + i, mesh: plane1(app, GL3D),
+        material: M_({ texture: cloudTex, alphaMode: 'blend', unlit: true, depthWrite: false, color: [1, 1, 1, 0.60] }),
+        billboard: true, position: [-26 + i * 26, 15.5 + i * 2.4, 62 - i * 6], scale: [44, 22, 1],
+      });
+    }
+    const hillTex = tex(T.mk(512, 200, (g, w, h) => {
+      g.clearRect(0, 0, w, h);
+      g.fillStyle = 'rgba(126,140,150,0.55)';
+      g.beginPath(); g.moveTo(0, h);
+      for (let x = 0; x <= w; x += 16) g.lineTo(x, h - 46 - 26 * Math.sin(x * 0.011) - 16 * srnd(x * 0.13));
+      g.lineTo(w, h); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(104,120,132,0.44)';
+      g.beginPath(); g.moveTo(0, h);
+      for (let x = 0; x <= w; x += 16) g.lineTo(x, h - 20 - 14 * Math.sin(x * 0.017 + 2) - 12 * srnd(x * 0.31));
+      g.lineTo(w, h); g.closePath(); g.fill();
+    }));
+    items.push({ name: 'hills', mesh: plane1(app, GL3D), material: M_({ texture: hillTex, alphaMode: 'blend', unlit: true, depthWrite: false }), billboard: true, position: [0, 3.4, 76], scale: [150, 26, 1] });
+
+    /* ---- 铺石地面 ---- */
+    items.push({ name: 'ground', mesh: app.createMesh(GL3D.Geometry.ground(32, 44)), material: M_({ color: [0.66, 0.64, 0.58, 1], texture: tex(T.makePaving('#B9B2A2', 'rgba(120,114,102,0.55)', 26, 34)) }), model: M([0, 0, 14]) });
+
+    /* ---- 水池 + 池沿 ---- */
+    items.push({ name: 'pool', mesh: app.createMesh(GL3D.Geometry.plane(3.6, 17)), material: M_({ texture: tex(T.makeWater('#7FA6C8', '#4E6E8E')), unlit: true }), model: M([7.4, 0.07, 14.0], [-Math.PI / 2, 0, 0]) });
+    items.push({
+      name: 'poolCurb', mesh: T.mergeParts(app, GL3D, [
+        boxAt(0.36, 0.22, 17.4, 5.5, 0.11, 14.0), boxAt(0.36, 0.22, 17.4, 9.3, 0.11, 14.0),
+        boxAt(4.2, 0.22, 0.36, 7.4, 0.11, 5.2), boxAt(4.2, 0.22, 0.36, 7.4, 0.11, 22.8),
+      ]), material: M_({ color: [0.74, 0.72, 0.66, 1] }), model: I(),
+    });
+
+    /* ---- 柱子：神庙八根（站在台基上）+ 侧廊七根（站在地面上） ---- */
+    const cols = [];
+    const colAt = (x, z, b) => {
+      cols.push(boxAt(0.74, 0.20, 0.74, x, b + 0.10, z));
+      cols.push(boxAt(0.82, 0.16, 0.82, x, b + 0.28, z));
+      cols.push(T.cylAt(GL3D, 0.27, 5.60, x, b + 3.16, z, 14));
+      cols.push(boxAt(0.72, 0.34, 0.72, x, b + 6.13, z));
+    };
+    for (let i = 0; i < 8; i++) colAt(-6.3 + i * 1.8, 29.6, 0.20);
+    for (let i = 0; i < 7; i++) colAt(-9.2, 4.0 + i * 4.0, 0);
+    items.push({ name: 'columns', mesh: T.mergeParts(app, GL3D, cols), material: M_({ color: [0.72, 0.70, 0.64, 1] }), model: I() });
+
+    /* ---- 神庙：台基 / 台阶 / 楣梁 / 檐部 / 山花 / 内墙 ---- */
+    items.push({
+      name: 'temple', mesh: T.mergeParts(app, GL3D, [
+        boxAt(15.4, 0.20, 6.6, 0, 0.10, 27.4),
+        boxAt(15.0, 0.20, 0.7, 0, 0.10, 23.85),
+        boxAt(15.0, 0.12, 0.7, 0, 0.06, 23.35),
+        boxAt(15.6, 0.46, 1.00, 0, 6.73, 29.4),
+        boxAt(15.6, 0.40, 0.90, 0, 7.16, 29.4),
+        boxAt(16.4, 0.38, 1.20, 0, 7.55, 29.4),
+        boxAt(15.4, 7.00, 0.50, 0, 3.50, 31.0),
+      ]), material: M_({ color: [0.70, 0.68, 0.62, 1] }), model: I(),
+    });
+    items.push({ name: 'pediment', mesh: T.mergeParts(app, GL3D, [{ geo: triPrism(16.4, 2.30, 1.10), m: M([0, 7.74, 29.4]) }]), material: M_({ color: [0.68, 0.66, 0.60, 1] }), model: I() });
+
+    /* 楣梁刻字：ΓΝΩΘΙ ΣΑΥΤΟΝ（认识你自己） */
+    items.push({
+      name: 'insc', mesh: app.createMesh(GL3D.Geometry.plane(7.4, 0.90)),
+      material: M_({
+        texture: tex(T.mk(1024, 128, (g, w, h) => {
+          g.clearRect(0, 0, w, h);
+          g.font = '700 82px Georgia,serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(58,54,46,0.88)';
+          g.fillText('ΓΝΩΘΙ ΣΑΥΤΟΝ', w / 2, h * 0.70);
+          g.font = '600 30px "Microsoft YaHei",sans-serif'; g.fillStyle = 'rgba(70,66,58,0.78)';
+          g.fillText('认 识 你 自 己', w / 2, h * 0.28);
+        })), alphaMode: 'mask', alphaCutoff: 0.05, unlit: true, doubleSided: true,
+      }), model: M([0, 7.16, 28.95], [0, Math.PI, 0]),
+    });
+
+    /* 侧廊楣梁 */
+    items.push({ name: 'sideEntab', mesh: T.mergeParts(app, GL3D, [boxAt(1.00, 0.46, 27.4, -9.2, 6.53, 16.0), boxAt(1.24, 0.36, 27.8, -9.2, 6.94, 16.0)]), material: M_({ color: [0.70, 0.68, 0.62, 1] }), model: I() });
+
+    /* ---- 门洞（起手镜头在门外） ---- */
+    items.push({
+      name: 'gate', mesh: T.mergeParts(app, GL3D, [
+        boxAt(1.10, 5.30, 1.10, -4.10, 2.65, -1.10), boxAt(1.10, 5.30, 1.10, 4.10, 2.65, -1.10),
+        boxAt(9.30, 0.90, 1.20, 0, 5.60, -1.10), boxAt(10.4, 0.34, 1.70, 0, 6.22, -1.10),
+      ]), material: M_({ color: [0.60, 0.58, 0.54, 1] }), model: I(),
+    });
+
+    /* ---- 六座基座 + 六座大理石雕像 ---- */
+    const STAT = [[-5.0, 10.0, 0], [0.0, 10.0, 2], [5.0, 10.0, 4], [-7.5, 16.0, 1], [-2.5, 16.0, 3], [2.5, 16.0, 5]];
+    const plinths = [];
+    for (const s of STAT) { plinths.push(boxAt(1.30, 1.00, 1.30, s[0], 0.50, s[1])); plinths.push(boxAt(1.52, 0.10, 1.52, s[0], 1.05, s[1])); }
+    items.push({ name: 'plinths', mesh: T.mergeParts(app, GL3D, plinths), material: M_({ color: [0.66, 0.64, 0.58, 1] }), model: I() });
+
+    const marblePal = {
+      body: '#CEC7B6', coat: '#D9D3C4', coatTop: '#F4EFE2', coatBot: '#A79F8C',
+      fold: 'rgba(112,106,94,0.62)', rim: '#FFFFFF', rimA: 0.52, flare: 0.026, skirt: 0.345,
+      legW: 0.070, armW: 0.060, shade: 'rgba(112,106,94,1)', shadeA: 0.34,
+    };
+    DYN.statues = [];
+    STAT.forEach((s, i) => {
+      const t = tex(T.mk(T.FIG_W, T.FIG_H, (g, w, h) => T.paintFigure(g, w, h, 'statue', s[2], marblePal)));
+      const it = { name: 'statue' + i, mesh: plane1(app, GL3D), material: M_({ texture: t, alphaMode: 'mask', alphaCutoff: 0.10, doubleSided: true, unlit: true }), billboard: true, position: [s[0], 1.88, s[1]], scale: [1.08, 1.66, 1] };
+      items.push(it); DYN.statues.push(it);
+    });
+
+    /* ---- 四只陶瓮 / 祭坛 ---- */
+    const urns = [];
+    for (const u of [[-11.0, 5.5], [-11.0, 27.0], [11.0, 4.5], [11.0, 26.0]]) {
+      urns.push(T.cylAt(GL3D, 0.34, 0.90, u[0], 0.45, u[1], 12));
+      urns.push(T.cylAt(GL3D, 0.46, 0.26, u[0], 0.99, u[1], 12));
+      urns.push(boxAt(0.88, 0.14, 0.88, u[0], 0.07, u[1]));
+    }
+    items.push({ name: 'urns', mesh: T.mergeParts(app, GL3D, urns), material: M_({ color: [0.52, 0.40, 0.30, 1] }), model: I() });
+    items.push({
+      name: 'altar', mesh: T.mergeParts(app, GL3D, [
+        boxAt(2.40, 0.90, 1.30, 0, 0.45, 20.5), boxAt(2.90, 0.18, 1.60, 0, 0.99, 20.5), boxAt(0.94, 0.34, 0.94, 0, 1.22, 20.5),
+      ]), material: M_({ color: [0.70, 0.68, 0.62, 1] }), model: I(),
+    });
+
+    /* ---- 六株丝柏 ---- */
+    const cyTex = tex(T.makeCypress('#33503A', '#1E3222'));
+    for (let i = 0; i < 6; i++) {
+      const x = (i % 2 ? 1 : -1) * (12.6 + srnd(i * 3.3) * 1.4), z = 5.0 + i * 4.4;
+      items.push({ name: 'cyp' + i, mesh: plane1(app, GL3D), material: M_({ texture: cyTex, alphaMode: 'mask', alphaCutoff: 0.12, doubleSided: true, unlit: true }), billboard: true, position: [x, 4.5, z], scale: [2.8, 9.0, 1] });
+    }
+
+    /* ---- 影子（地面 decals：侧廊七柱 + 六座雕像 + 瓮坛落地影），随太阳方位缓慢扫过 ---- */
+    DYN.shadowMat = M_({ color: [0.10, 0.11, 0.15, 0.28], alphaMode: 'blend', unlit: true, depthWrite: false, doubleSided: true });
+    const shMesh = plane1(app, GL3D);
+    DYN.slabs = [];
+    for (let i = 0; i < 7; i++) { const it = { name: 'colShadow' + i, mesh: shMesh, material: DYN.shadowMat, model: I(), base: [-9.2, 4.0 + i * 4.0] }; items.push(it); DYN.slabs.push(it); }
+    const darkGlow = tex(T.makeGlow('rgba(24,28,36,0.95)', 'rgba(24,28,36,0.30)', 128));
+    DYN.stShadowMat = M_({ texture: darkGlow, alphaMode: 'blend', unlit: true, depthWrite: false, color: [1, 1, 1, 0.5] });
+    DYN.stSh = [];
+    for (const s of STAT) { const it = { name: 'stShadow' + s[2], mesh: shMesh, material: DYN.stShadowMat, model: I(), base: [s[0], s[1]] }; items.push(it); DYN.stSh.push(it); }
+    DYN.contact = [];
+    for (const p of [[-11.0, 5.5], [-11.0, 27.0], [11.0, 4.5], [11.0, 26.0], [0, 20.5]]) {
+      const it = { name: 'contact', mesh: shMesh, material: DYN.stShadowMat, model: GL3D.Mat4.trs([p[0] + 0.35, 0.016, p[1] + 0.5], [-Math.PI / 2, 0, 0], [1.5, 1.1, 1]) };
+      items.push(it); DYN.contact.push(it);
+    }
+
+    /* ---- 天上的鸟（五个小剪影，慢慢横移） ---- */
+    const birdTex = tex(T.mk(128, 64, (g, w, h) => {
+      g.clearRect(0, 0, w, h);
+      g.strokeStyle = 'rgba(48,52,58,0.85)'; g.lineWidth = 7; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(12, 40); g.quadraticCurveTo(40, 12, 64, 34); g.quadraticCurveTo(88, 12, 116, 40); g.stroke();
+    }));
+    DYN.birds = [];
+    for (let i = 0; i < 5; i++) {
+      const it = { name: 'bird' + i, mesh: plane1(app, GL3D), material: M_({ texture: birdTex, alphaMode: 'mask', alphaCutoff: 0.3, unlit: true }), billboard: true, position: [-8 + i * 3.4, 17 + srnd(i * 5.1) * 4, 34 + i * 2.2], scale: [1.5, 0.75, 1], x0: -8 + i * 3.4, sp: 0.006 + srnd(i * 3.3) * 0.004 };
+      items.push(it); DYN.birds.push(it);
+    }
+
+    /* ---- 白衣行列（5 人 · 秩序 · 走在院子正中 z=13.2，不压基座） ---- */
+    const robePal = {
+      body: '#DED9C8', coat: '#E9E4D5', coatTop: '#FFFDF4', coatBot: '#BEB8A5',
+      fold: 'rgba(110,106,96,0.50)', rim: '#EAF2FF', rimA: 0.46, flare: 0.055, skirt: 0.300,
+      legW: 0.058, armW: 0.046, shade: 'rgba(86,92,104,1)', shadeA: 0.30,
+    };
+    DYN.walkTex = [];
+    for (let i = 0; i < 12; i++) DYN.walkTex.push(tex(T.mk(T.FIG_W, T.FIG_H, (g, w, h) => T.paintFigure(g, w, h, 'walk', i, robePal))));
+    DYN.proc = [];
+    for (let i = 0; i < 5; i++) {
+      const it = { name: 'proc' + i, mesh: plane1(app, GL3D), material: M_({ texture: DYN.walkTex[0], alphaMode: 'blend', depthWrite: true, unlit: true }), billboard: true, position: [-9 + i * 2, 0.88, 15.5], scale: [1.18, 1.76, 1] };
+      items.push(it); DYN.proc.push(it);
+    }
+
+    return { items, DYN };
+  },
+
+  update: function (f, ctx) {
+    const { DYN } = ctx, T = DION, M4 = window.GL3D.Mat4;
+    /* 天幕跟着相机（当 skybox）；白日与云在世界坐标上不动 */
+    const cam = ctx.CAM, f3 = T.fwdOf(cam.yaw, cam.pitch), D = 150;
+    DYN.sky.position = [cam.x + f3[0] * D, cam.y + f3[1] * D, cam.z + f3[2] * D];
+    DYN.sun.material.color = [1, 1, 1, 0.96 + 0.04 * Math.sin(f * 0.021)];
+    DYN.sunHalo.material.color = [1, 1, 1, 0.34 + 0.07 * Math.sin(f * 0.017)];
+
+    /* 影子：太阳方位转动 → 影带扫过地面（短影 ≈ 2.9 m，符合正午高日） */
+    const az = T.seq(f, [[0, 2.44], [600, 2.62]]);
+    const L = 2.9, sx = -Math.sin(az), sz = -Math.cos(az);
+    for (const s of DYN.slabs) s.model = M4.trs([s.base[0] + sx * L / 2, 0.022, s.base[1] + sz * L / 2], [-Math.PI / 2, az, 0], [0.66, L, 1]);
+    for (const s of DYN.stSh) s.model = M4.trs([s.base[0] + sx * 0.9, 0.020, s.base[1] + sz * 0.9], [-Math.PI / 2, az, 0], [2.1, 1.05, 1]);
+
+    /* 白衣行列：五人等距、同一速度，走进/走出画面 */
+    DYN.proc.forEach((p, i) => {
+      const t0 = 96 + i * 34;
+      const u = T.clamp((f - t0) / 430, 0, 1);
+      const phase = ((Math.floor((f - t0) / 6) + i * 3) % 12 + 12) % 12;
+      p.material.texture = DYN.walkTex[phase];
+      p.position = [T.lerp(-8.0, 8.0, u), 0.88, 13.2 + i * 0.3];
+      p.material.color = [1, 1, 1, T.subA(f, t0, t0 + 24, 560, 604)];
+    });
+    /* 鸟：慢慢横移（飞出画外就换边，纯函数） */
+    DYN.birds.forEach((b, i) => {
+      const x = ((b.x0 + f * b.sp * 40 + 26) % 52) - 26;
+      b.position = [x, 17 + srnd(i * 5.1) * 4, 34 + i * 2.2];
+    });
+  },
+});
+</script>
+</body>
+</html>
