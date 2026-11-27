@@ -15,10 +15,18 @@
         { id: 'wupo', marquee: 'SPIRIT TALES', neon: 0xffca3a, neon2: 0xff8a1f, body: 0xf2c200 },
         { id: 'finch', marquee: 'FINCH ROOM', neon: 0xff7bd5, neon2: 0xffb86b, body: 0xd81e8c },
         { id: 'robot', marquee: 'ROBOT EXPRESS', neon: 0x7dff8a, neon2: 0x22e6ff, body: 0x18b46a },
-        { id: 'universal', marquee: 'RENDER LAB', neon: 0xff4fd8, neon2: 0x5b8cff, body: 0x00a6c8 }
+        { id: 'universal', marquee: 'RENDER LAB', neon: 0xff4fd8, neon2: 0x5b8cff, body: 0x00a6c8 },
+        {
+            id: 'hz10m',
+            marquee: 'HANGZHOU 10M',
+            neon: 0xb56bff,
+            neon2: 0x22e6ff,
+            body: 0x2f3fd6,
+            external: 'https://aaronswartz0217.github.io/-/draw-game/index.html'
+        }
     ];
     PROJECTS.forEach(function (p, i) {
-        var a = i * Math.PI * 2 / 5;
+        var a = i * Math.PI * 2 / PROJECTS.length;
         p.angle = a;
         p.x = Math.sin(a) * RING_R;
         p.z = Math.cos(a) * RING_R;
@@ -1065,6 +1073,8 @@
 
     /* ---------- 机柜 ---------- */
     var groups = [];
+    var cabinetHits = [];
+    var machineHits = [];
     var screenTextures = [];
 
     function addEdges(mesh, color, opacity) {
@@ -1376,11 +1386,129 @@
         g.add(glow);
         g.userData.glow = glow;
 
+        var hitBox = new THREE.Mesh(
+            new THREE.BoxGeometry(1.1, 1.5, 0.5),
+            new THREE.MeshBasicMaterial({ visible: false })
+        );
+        hitBox.position.set(0, 1.15, 0.15);
+        hitBox.userData.gameId = p.id;
+        g.add(hitBox);
+        cabinetHits.push(hitBox);
+
         scene.add(g);
         groups.push(g);
     }
 
     PROJECTS.forEach(buildCabinet);
+
+    /* ---------- 卡册小柜 ---------- */
+    var albumHits = [];
+
+    function makeAlbumFaceTexture() {
+        var cv = document.createElement('canvas');
+        cv.width = 512;
+        cv.height = 384;
+        var c = cv.getContext('2d');
+        c.fillStyle = '#080614';
+        c.fillRect(0, 0, 512, 384);
+        c.strokeStyle = 'rgba(181,107,255,.9)';
+        c.lineWidth = 6;
+        c.strokeRect(8, 8, 496, 368);
+
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.shadowColor = '#b56bff';
+        c.shadowBlur = 20;
+        c.fillStyle = '#ffffff';
+        c.font = 'bold 34px "Press Start 2P","Courier New",monospace';
+        c.fillText('CARD ALBUM', 256, 54);
+        c.shadowBlur = 0;
+
+        var pal = ['#f2f5ff', '#b56bff', '#ffcf4a'];
+        for (var i = 0; i < 3; i++) {
+            var x = 62 + i * 130;
+            var y = i === 1 ? 104 : 120;
+            c.save();
+            c.shadowColor = pal[i];
+            c.shadowBlur = 26;
+            c.fillStyle = '#0c0a1c';
+            c.strokeStyle = pal[i];
+            c.lineWidth = 5;
+            c.beginPath();
+            c.rect(x, y, 100, 142);
+            c.fill();
+            c.stroke();
+            c.restore();
+            c.fillStyle = pal[i];
+            c.font = 'bold 26px "Courier New",monospace';
+            c.fillText('★', x + 50, y + 72);
+        }
+
+        c.fillStyle = 'rgba(255,255,255,.72)';
+        c.font = 'bold 20px "Courier New",monospace';
+        c.fillText('CLICK TO OPEN', 256, 318);
+
+        var tex = new THREE.CanvasTexture(cv);
+        if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+        return tex;
+    }
+
+    var albumCabinet = new THREE.Group();
+    albumCabinet.position.set(-3.6, 0, 2.6);
+    albumCabinet.rotation.y = 0.54;
+    albumCabinet.userData.album = true;
+    var albumHover = 1;
+
+    var albumBody = new THREE.Mesh(
+        new THREE.BoxGeometry(1.18, 1.42, 0.56),
+        new THREE.MeshStandardMaterial({
+            color: 0x241a4d,
+            emissive: 0x1a0f3a,
+            emissiveIntensity: 0.45,
+            roughness: 0.45,
+            metalness: 0.25
+        })
+    );
+    albumBody.position.y = 0.78;
+    albumCabinet.add(albumBody);
+    addEdges(albumBody, 0xffffff, 0.9);
+
+    var albumPlinth = new THREE.Mesh(
+        new THREE.BoxGeometry(1.3, 0.12, 0.64),
+        new THREE.MeshStandardMaterial({ color: 0x0d0a1e, roughness: 0.6, metalness: 0.3 })
+    );
+    albumPlinth.position.y = 0.06;
+    albumCabinet.add(albumPlinth);
+    addEdges(albumPlinth, 0xffffff, 0.55);
+
+    var albumSign = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.94, 0.235),
+        new THREE.MeshBasicMaterial({ map: makeMachineSign('CARD ALBUM', '#b56bff') })
+    );
+    albumSign.position.set(0, 1.34, 0.288);
+    albumCabinet.add(albumSign);
+
+    var albumFace = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.96, 0.72),
+        new THREE.MeshBasicMaterial({ map: makeAlbumFaceTexture() })
+    );
+    albumFace.position.set(0, 0.76, 0.289);
+    albumCabinet.add(albumFace);
+
+    var albumLight = new THREE.PointLight(0xb56bff, 1.25, 3.2);
+    albumLight.position.set(0, 1.2, 0.7);
+    albumCabinet.add(albumLight);
+
+    var albumHit = new THREE.Mesh(
+        new THREE.BoxGeometry(1.0, 1.5, 0.72),
+        new THREE.MeshBasicMaterial({ visible: false })
+    );
+    albumHit.position.set(0, 0.8, 0.1);
+    albumHit.userData.album = true;
+    albumCabinet.add(albumHit);
+    albumHits.push(albumHit);
+
+    scene.add(albumCabinet);
 
     /* ---------- 抓娃娃机 & 扭蛋机 ---------- */
     var machineGroups = [];
@@ -1421,7 +1549,7 @@
 
     /* 抓娃娃机 */
     var clawMachine = new THREE.Group();
-    clawMachine.position.set(-10.15, 0, 0.8);
+    clawMachine.position.set(-10.15, 0, 7.5);
     clawMachine.rotation.y = Math.PI / 2;
     clawMachine.userData.machineType = 'claw';
 
@@ -1566,6 +1694,15 @@
     clawHead.add(clawPrize);
     clawMachine.add(clawHead);
 
+    var clawHit = new THREE.Mesh(
+        new THREE.BoxGeometry(1.1, 1.75, 0.85),
+        new THREE.MeshBasicMaterial({ visible: false })
+    );
+    clawHit.position.set(0, 1.05, 0.1);
+    clawHit.userData.machineType = 'claw';
+    clawMachine.add(clawHit);
+    machineHits.push(clawHit);
+
     var clawLight = new THREE.PointLight(0xff4fd8, 1.5, 5);
     clawLight.position.set(0, 1.6, 1.1);
     clawMachine.add(clawLight);
@@ -1574,7 +1711,7 @@
 
     /* 扭蛋机 */
     var gachaMachine = new THREE.Group();
-    gachaMachine.position.set(10.15, 0, 0.8);
+    gachaMachine.position.set(10.15, 0, 7.5);
     gachaMachine.rotation.y = -Math.PI / 2;
     gachaMachine.userData.machineType = 'gacha';
 
@@ -1741,6 +1878,15 @@
     gachaMachine.add(gachaScreen.mesh);
     paintAttractScreen(gachaScreen, 1);
 
+    var gachaHit = new THREE.Mesh(
+        new THREE.BoxGeometry(0.85, 1.6, 0.75),
+        new THREE.MeshBasicMaterial({ visible: false })
+    );
+    gachaHit.position.set(0, 0.9, 0.05);
+    gachaHit.userData.machineType = 'gacha';
+    gachaMachine.add(gachaHit);
+    machineHits.push(gachaHit);
+
     scene.add(gachaMachine);
     machineGroups.push(gachaMachine);
 
@@ -1824,7 +1970,10 @@
         if (window.Arcade && window.Arcade.coinSound) window.Arcade.coinSound();
         dropCoin(ev.clientX, ev.clientY);
 
-        var pick = PROJECTS[Math.floor(Math.random() * PROJECTS.length)];
+        var isResume = Math.random() < 0.1;
+        var pick = isResume
+            ? { id: 'resume', marquee: 'RESUME', neon: 0xffcf4a }
+            : PROJECTS[Math.floor(Math.random() * PROJECTS.length)];
         if (type === 'claw') startClawDraw();
         else startGachaDraw();
 
@@ -1836,6 +1985,7 @@
                     id: pick.id,
                     marquee: pick.marquee,
                     neon: pick.neon,
+                    rarity: isResume ? 'gold' : null,
                     source: type
                 }
             }));
@@ -1866,13 +2016,12 @@
     function pickInteractive(x, y) {
         pointer.set((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
         raycaster.setFromCamera(pointer, camera);
-        var hits = raycaster.intersectObjects(groups.concat(machineGroups), true);
-        for (var i = 0; i < hits.length; i++) {
-            var o = hits[i].object;
-            while (o && !o.userData.gameId && !o.userData.machineType) o = o.parent;
-            if (o && o.userData.gameId) return { kind: 'game', id: o.userData.gameId };
-            if (o && o.userData.machineType) return { kind: 'machine', id: o.userData.machineType };
-        }
+        var hits = raycaster.intersectObjects(cabinetHits.concat(machineHits, albumHits), false);
+        if (!hits.length) return null;
+        var o = hits[0].object;
+        if (o.userData.album) return { kind: 'album' };
+        if (o.userData.gameId) return { kind: 'game', id: o.userData.gameId };
+        if (o.userData.machineType) return { kind: 'machine', id: o.userData.machineType };
         return null;
     }
 
@@ -2058,7 +2207,7 @@
         raycaster.setFromCamera(pointer, camera);
         var hit = raycaster.intersectObject(doorHit, false)[0];
         if (!hit) return false;
-        var blockers = raycaster.intersectObjects(groups.concat(machineGroups), true);
+        var blockers = raycaster.intersectObjects(cabinetHits.concat(machineHits, albumHits), false);
         return !blockers.length || blockers[0].distance > hit.distance + 0.05;
     }
 
@@ -2093,6 +2242,13 @@
             if (PROJECTS[i].id === id) { meta = PROJECTS[i]; break; }
         }
         if (!meta) return;
+
+        if (meta.external) {
+            if (window.Arcade && window.Arcade.coinSound) window.Arcade.coinSound();
+            dropCoin(ev.clientX, ev.clientY);
+            window.open(meta.external, '_blank', 'noopener');
+            return;
+        }
 
         busy = true;
         seated = true;
@@ -2173,6 +2329,10 @@
         renderer.domElement.style.cursor = (hit || onDoor) ? 'pointer' : 'grab';
         setHover(id);
         setMachineHover(mid);
+        var albumOn = !!(hit && hit.kind === 'album');
+        albumHover += ((albumOn ? 1.06 : 1) - albumHover) * 0.35;
+        albumCabinet.scale.setScalar(albumHover);
+        albumLight.intensity = albumOn ? 2.0 : 1.25;
     });
 
     renderer.domElement.addEventListener('pointerup', function (e) {
@@ -2192,6 +2352,8 @@
         } else if (hit && hit.kind === 'machine') {
             setMachineHover(null);
             startMachineDraw(hit.id, e);
+        } else if (hit && hit.kind === 'album') {
+            document.dispatchEvent(new CustomEvent('arcade:album'));
         } else if (pickDoor(e.clientX, e.clientY)) {
             setDoor(true);
         }

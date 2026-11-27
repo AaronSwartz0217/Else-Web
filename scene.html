@@ -1361,6 +1361,77 @@ body::after{
     .prize-card{width:min(250px,64vw);}
     .prize-kicker{font-size:.42rem;}
 }
+/* ===== 卡册 ===== */
+.album-overlay{
+    position:fixed;inset:0;z-index:140;display:flex;align-items:center;justify-content:center;
+    padding:20px 16px;opacity:0;pointer-events:none;transition:opacity .28s ease;
+}
+.album-overlay.open{opacity:1;pointer-events:auto;}
+.album-backdrop{
+    position:absolute;inset:0;
+    background:radial-gradient(circle at 50% 32%,rgba(58,30,96,.78),rgba(2,1,8,.96) 70%);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+}
+.album-panel{
+    position:relative;width:min(1060px,94vw);max-height:86vh;overflow-y:auto;
+    scrollbar-width:none;-ms-overflow-style:none;
+    padding:20px 20px 22px;border-radius:18px;
+    border:2px solid rgba(255,255,255,.72);
+    background:linear-gradient(180deg,#171034,#0a0618 72%);
+    box-shadow:0 0 0 1px rgba(181,107,255,.5),0 0 46px rgba(181,107,255,.32),
+        0 32px 80px rgba(0,0,0,.8);
+}
+.album-panel::-webkit-scrollbar{width:0;height:0;display:none;}
+.album-head{
+    display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;
+    gap:10px;margin-bottom:16px;
+}
+.album-title{
+    font-family:var(--pixel);font-size:.82rem;letter-spacing:.12em;color:#fff;
+    text-shadow:0 0 14px #b56bff,0 0 32px rgba(181,107,255,.6);
+}
+.album-progress{
+    font-family:var(--pixel);font-size:.5rem;letter-spacing:.08em;color:#9c93c2;
+}
+.album-progress #albumCount{color:#ffca3a;}
+.album-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px;
+}
+.album-slot{
+    position:relative;display:block;aspect-ratio:3 / 4;border-radius:10px;overflow:hidden;
+    border:2px solid rgba(255,255,255,.16);background:#0a0614;text-decoration:none;
+    transition:transform .2s ease,box-shadow .2s ease;
+}
+.album-slot img{width:100%;height:100%;object-fit:cover;display:block;}
+.album-slot .lock{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:8px;padding:10px;text-align:center;
+    background:
+        radial-gradient(circle at 50% 36%,rgba(255,255,255,.05),transparent 62%),
+        repeating-linear-gradient(135deg,#0b0818 0 12px,#080512 12px 24px);
+}
+.album-slot .lock b{
+    font-family:var(--pixel);font-size:.42rem;line-height:1.7;color:#6f6889;word-break:break-word;
+}
+.album-slot .lock em{
+    font-family:var(--pixel);font-size:.3rem;letter-spacing:.1em;font-style:normal;color:#494361;
+}
+.album-slot .tag{
+    position:absolute;left:6px;top:6px;z-index:2;padding:3px 6px;border-radius:4px;
+    font-family:var(--pixel);font-size:.28rem;letter-spacing:.08em;
+    background:rgba(0,0,0,.66);color:var(--slot,#fff);
+}
+.album-slot.rarity-white{--slot:#f2f5ff;border-color:rgba(242,245,255,.8);box-shadow:0 0 12px rgba(242,245,255,.32);}
+.album-slot.rarity-purple{--slot:#b56bff;border-color:rgba(181,107,255,.92);box-shadow:0 0 22px rgba(181,107,255,.5);}
+.album-slot.rarity-gold{--slot:#ffcf4a;border-color:rgba(255,207,74,.95);box-shadow:0 0 28px rgba(255,207,74,.55);}
+.album-slot.got:hover{transform:translateY(-4px);}
+.album-slot.missing{filter:saturate(.35);}
+.album-close{display:block;margin:18px auto 0;}
+@media (max-width:640px){
+    .album-grid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px;}
+    .album-title{font-size:.66rem;}
+    .album-panel{padding:16px 14px 18px;}
+}
 </style>
 </head>
 <body>
@@ -1688,6 +1759,18 @@ body::after{
         <p class="prize-hint" id="prizeHint">CLICK CARD TO ENTER</p>
     </div>
     <button class="prize-btn" id="prizeClose" type="button">CLOSE</button>
+</div>
+
+<div class="album-overlay" id="albumPanel" aria-hidden="true">
+    <div class="album-backdrop" data-album-close></div>
+    <div class="album-panel" role="dialog" aria-label="Card album">
+        <div class="album-head">
+            <p class="album-title">CARD ALBUM</p>
+            <p class="album-progress">COLLECTED <span id="albumCount"></span></p>
+        </div>
+        <div class="album-grid" id="albumGrid"></div>
+        <button class="prize-btn album-close" id="albumClose" type="button">CLOSE</button>
+    </div>
 </div>
 
 <script>
@@ -3156,7 +3239,7 @@ body::after{
 })();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="arcade3d.js?v=8"></script>
+<script src="arcade3d.js?v=11"></script>
 <script>
 (function(){
     'use strict';
@@ -3207,7 +3290,35 @@ body::after{
         },
         finch: { marquee: 'FINCH ROOM', url: 'https://www.taptap.cn/app/716586?os=android' },
         robot: { marquee: 'ROBOT EXPRESS', url: 'https://pan.baidu.com/s/15u2_A0HJg8D-MaUmgcH3LQ' },
-        universal: { marquee: 'RENDER LAB', url: 'https://github.com/AaronSwartz0217/Universal-Hall' }
+        universal: {
+            marquee: 'RENDER LAB',
+            url: 'https://github.com/AaronSwartz0217/Universal-Hall',
+            variants: {
+                white: [
+                    'assets/cards/universal-globe.jpg',
+                    'assets/cards/universal-globe-pixel.jpg'
+                ]
+            }
+        },
+        hz10m: {
+            marquee: 'HANGZHOU 10M',
+            url: 'https://aaronswartz0217.github.io/-/draw-game/index.html',
+            variants: {
+                white: [
+                    'assets/cards/hz10m-white-city.jpg',
+                    'assets/cards/hz10m-white-blueprint.jpg'
+                ],
+                purple: [
+                    'assets/cards/hz10m-purple-night.jpg',
+                    'assets/cards/hz10m-purple-neon.jpg'
+                ]
+            }
+        },
+        resume: {
+            marquee: 'RESUME',
+            url: 'downloads/resume-v2.pdf',
+            variants: { gold: ['assets/cards/resume.jpg'] }
+        }
     };
 
     var RARITY = {
@@ -3221,6 +3332,19 @@ body::after{
         if(r < 0.6) return 'white';
         if(r < 0.9) return 'purple';
         return 'gold';
+    }
+
+    /* 卡册收藏记录：保存在本地浏览器 */
+    var ALBUM_STORE_KEY = 'else_card_album_v1';
+    function readAlbum(){
+        try{
+            var raw = window.localStorage.getItem(ALBUM_STORE_KEY);
+            var data = raw ? JSON.parse(raw) : null;
+            return data && typeof data === 'object' ? data : {};
+        }catch(err){ return {}; }
+    }
+    function writeAlbum(data){
+        try{ window.localStorage.setItem(ALBUM_STORE_KEY, JSON.stringify(data)); }catch(err){}
     }
 
     function hexColor(n){
@@ -3260,6 +3384,21 @@ body::after{
         var d = detail || {};
         var meta = CARD_INFO[d.id] || {};
         var rarity = RARITY[d.rarity] ? d.rarity : rollRarity();
+
+        /* 该卡面没有对应品质时降级：金 → 紫 → 白 */
+        var pool = [];
+        if(meta.variants){
+            var tryOrder = [rarity, 'purple', 'white', 'gold'];
+            for(var ti = 0; ti < tryOrder.length && !pool.length; ti++){
+                var rq = tryOrder[ti];
+                if(meta.variants[rq] && meta.variants[rq].length){
+                    rarity = rq;
+                    pool = meta.variants[rq];
+                }
+            }
+        }else if(meta.image){
+            pool = [meta.image];
+        }
         var rar = RARITY[rarity];
         var name = meta.marquee || d.marquee || '???';
         var source = d.source === 'claw' ? 'CLAW MACHINE' :
@@ -3278,6 +3417,13 @@ body::after{
             pool = [meta.image];
         }
         var src = pool.length ? pool[Math.floor(Math.random() * pool.length)] : '';
+
+        if(d.id){
+            var store = readAlbum();
+            var key = src ? (d.id + '|' + rarity + '|' + src) : (d.id + '|card');
+            store[key] = { id: d.id, rarity: rarity, src: src || '', ts: Date.now() };
+            writeAlbum(store);
+        }
 
         prizeCard.style.width = '';
         prizeCard.style.height = '';
@@ -3338,9 +3484,93 @@ body::after{
         });
     }
 
+    /* ---------- 卡册 ---------- */
+    var albumPanel = document.getElementById('albumPanel');
+    var albumGrid = document.getElementById('albumGrid');
+    var albumCount = document.getElementById('albumCount');
+
+    function buildAlbumSlots(){
+        var slots = [];
+        Object.keys(CARD_INFO).forEach(function(id){
+            var meta = CARD_INFO[id];
+            if(meta.variants){
+                Object.keys(meta.variants).forEach(function(r){
+                    (meta.variants[r] || []).forEach(function(src){
+                        slots.push({
+                            id: id,
+                            rarity: r,
+                            src: src,
+                            name: meta.marquee || id,
+                            url: meta.url || '',
+                            key: id + '|' + r + '|' + src
+                        });
+                    });
+                });
+            }else{
+                slots.push({
+                    id: id,
+                    rarity: null,
+                    src: '',
+                    name: meta.marquee || id,
+                    url: meta.url || '',
+                    key: id + '|card'
+                });
+            }
+        });
+        return slots;
+    }
+
+    function renderAlbum(){
+        if(!albumGrid) return;
+        var store = readAlbum();
+        var slots = buildAlbumSlots();
+        var got = 0;
+        albumGrid.innerHTML = slots.map(function(slot){
+            var rec = store[slot.key];
+            var rarity = rec && rec.rarity ? rec.rarity : slot.rarity;
+            var rar = RARITY[rarity];
+            var cls = 'album-slot ' + (rec ? 'got' : 'missing') + (rar ? ' rarity-' + rarity : '');
+            if(rec){
+                got++;
+                var inner = slot.src
+                    ? '<img src="' + slot.src + '" alt="' + slot.name + '" loading="lazy">'
+                    : '<span class="lock"><b>' + slot.name + '</b><em>CARD ART PENDING</em></span>';
+                inner += '<span class="tag">' + (rar ? rar.label : 'CARD') + '</span>';
+                if(slot.url){
+                    return '<a class="' + cls + '" href="' + slot.url + '" target="_blank" rel="noopener">' + inner + '</a>';
+                }
+                return '<span class="' + cls + '">' + inner + '</span>';
+            }
+            return '<span class="' + cls + '">' +
+                '<span class="lock"><b>' + slot.name + '</b><em>NOT COLLECTED</em></span>' +
+                '</span>';
+        }).join('');
+        if(albumCount) albumCount.innerHTML = '<b>' + got + '</b> / ' + slots.length;
+    }
+
+    function openAlbum(){
+        if(!albumPanel) return;
+        renderAlbum();
+        albumPanel.classList.add('open');
+        albumPanel.setAttribute('aria-hidden','false');
+    }
+    function closeAlbum(){
+        if(!albumPanel || !albumPanel.classList.contains('open')) return;
+        albumPanel.classList.remove('open');
+        albumPanel.setAttribute('aria-hidden','true');
+    }
+
+    if(albumPanel){
+        document.addEventListener('arcade:album', openAlbum);
+        document.getElementById('albumClose').addEventListener('click', closeAlbum);
+        albumPanel.querySelector('[data-album-close]').addEventListener('click', closeAlbum);
+    }
+
     document.addEventListener('keydown', function(e){
         if(e.key !== 'Escape') return;
-        if(prize && prize.classList.contains('open')){
+        if(albumPanel && albumPanel.classList.contains('open')){
+            closeAlbum();
+        } else if(prize && prize.classList.contains('open')){
             closePrize();
         } else if(city.classList.contains('open')){
             closeCity();
