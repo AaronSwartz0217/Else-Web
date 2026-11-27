@@ -1250,6 +1250,63 @@ body::after{
     margin-top:14px;padding-top:12px;border-top:1px dashed rgba(241,223,191,.2);
     color:#8f7a62;font-size:.76rem;line-height:1.7;text-align:center;
 }
+/* ===== 盲盒抽奖 ===== */
+.prize-overlay{
+    position:fixed;inset:0;z-index:130;display:grid;place-items:center;padding:18px;
+    opacity:0;pointer-events:none;transition:opacity .28s ease;
+}
+.prize-overlay.open{opacity:1;pointer-events:auto;}
+.prize-backdrop{
+    position:absolute;inset:0;
+    background:radial-gradient(circle at 50% 42%,rgba(60,30,90,.7),rgba(2,1,8,.95) 68%);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+}
+.prize-card{
+    position:relative;width:min(460px,100%);padding:30px 24px 24px;text-align:center;
+    border-radius:22px;border:2px solid rgba(255,255,255,.94);
+    background:linear-gradient(180deg,#181033,#070411);
+    box-shadow:0 0 46px var(--prize,#22e6ff),0 30px 80px rgba(0,0,0,.85);
+}
+.prize-kicker{
+    font-family:var(--pixel);font-size:.46rem;letter-spacing:.16em;
+    color:var(--prize,#22e6ff);margin-bottom:6px;
+}
+.prize-capsule{
+    width:96px;height:96px;margin:20px auto;border-radius:50%;
+    background:linear-gradient(180deg,var(--prize,#22e6ff) 0 50%,#ffffff 50% 100%);
+    border:3px solid #fff;box-shadow:0 0 34px var(--prize,#22e6ff);
+    position:relative;animation:prizeFloat 3s ease-in-out infinite;
+}
+.prize-capsule::after{
+    content:'';position:absolute;left:22px;top:16px;width:22px;height:16px;
+    border-radius:50%;background:rgba(255,255,255,.85);transform:rotate(-24deg);filter:blur(1px);
+}
+@keyframes prizeFloat{0%,100%{transform:translateY(0) rotate(-3deg);}50%{transform:translateY(-10px) rotate(3deg);}}
+.prize-card h2{
+    font-family:var(--pixel);font-size:1.5rem;line-height:1.35;color:#fff;
+    text-shadow:0 0 22px var(--prize,#22e6ff);word-break:break-word;margin:4px 0 8px;
+}
+.prize-sub{
+    font-family:var(--pixel);font-size:.44rem;letter-spacing:.12em;
+    color:#a99ed0;margin-bottom:22px;
+}
+.prize-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.prize-btn{
+    font-family:var(--pixel);font-size:.55rem;letter-spacing:.08em;
+    padding:12px 20px;border-radius:999px;border:2px solid rgba(255,255,255,.5);
+    background:transparent;color:#fff;cursor:pointer;transition:all .2s ease;
+}
+.prize-btn:hover{border-color:#fff;box-shadow:0 0 18px rgba(255,255,255,.35);}
+.prize-btn.primary{
+    background:var(--prize,#22e6ff);border-color:#fff;color:#08040f;
+    box-shadow:0 0 24px var(--prize,#22e6ff);
+}
+.prize-btn.primary:hover{filter:brightness(1.12);}
+@media (max-width:640px){
+    .prize-card{padding:24px 18px 20px;}
+    .prize-capsule{width:78px;height:78px;margin:16px auto;}
+    .prize-card h2{font-size:1.2rem;}
+}
 </style>
 </head>
 <body>
@@ -1554,6 +1611,20 @@ body::after{
         </details>
 
         <p class="cafe-foot">讨论不等于治疗。如果困扰持续影响生活，找专业的人。</p>
+    </section>
+</div>
+
+<div class="prize-overlay" id="prizePanel" aria-hidden="true">
+    <div class="prize-backdrop" data-prize-close></div>
+    <section class="prize-card" role="dialog" aria-modal="true" aria-labelledby="prizeTitle">
+        <p class="prize-kicker" id="prizeKicker">CLAW MACHINE · PRIZE</p>
+        <div class="prize-capsule" aria-hidden="true"></div>
+        <h2 id="prizeTitle">???</h2>
+        <p class="prize-sub">A RANDOM CABINET HAS BEEN DRAWN</p>
+        <div class="prize-actions">
+            <button class="prize-btn primary" id="prizeOpen" type="button">OPEN PROJECT</button>
+            <button class="prize-btn" id="prizeClose" type="button">KEEP IT</button>
+        </div>
     </section>
 </div>
 
@@ -3016,7 +3087,7 @@ body::after{
 })();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="arcade3d.js"></script>
+<script src="arcade3d.js?v=7"></script>
 <script>
 (function(){
     'use strict';
@@ -3048,9 +3119,42 @@ body::after{
         });
     });
 
+    var prize = document.getElementById('prizePanel');
+    var prizeId = null;
+    function closePrize(){
+        if(!prize || !prize.classList.contains('open')) return;
+        prize.classList.remove('open');
+        prize.setAttribute('aria-hidden','true');
+    }
+    if(prize){
+        document.addEventListener('arcade:prize', function(e){
+            var d = e.detail || {};
+            prizeId = d.id || null;
+            var neon = typeof d.neon === 'number' ? d.neon : 0xffffff;
+            prize.style.setProperty('--prize', '#' + ('000000' + (neon & 0xffffff).toString(16)).slice(-6));
+            var title = document.getElementById('prizeTitle');
+            var kicker = document.getElementById('prizeKicker');
+            if(title) title.textContent = d.marquee || '???';
+            if(kicker) kicker.textContent = (d.source === 'claw' ? 'CLAW MACHINE' : 'CAPSULE MACHINE') + ' · PRIZE';
+            prize.classList.add('open');
+            prize.setAttribute('aria-hidden','false');
+        });
+        document.getElementById('prizeClose').addEventListener('click', closePrize);
+        prize.querySelector('[data-prize-close]').addEventListener('click', closePrize);
+        document.getElementById('prizeOpen').addEventListener('click', function(){
+            var id = prizeId;
+            closePrize();
+            if(id && window.Arcade && window.Arcade.startGame) window.Arcade.startGame(id);
+        });
+    }
+
     document.addEventListener('keydown', function(e){
         if(e.key !== 'Escape') return;
-        if(city.classList.contains('open')) closeCity();
+        if(prize && prize.classList.contains('open')){
+            closePrize();
+        } else if(city.classList.contains('open')){
+            closeCity();
+        }
     }, true);
 })();
 </script>

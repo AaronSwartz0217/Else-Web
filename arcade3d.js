@@ -1382,6 +1382,446 @@
 
     PROJECTS.forEach(buildCabinet);
 
+    /* ---------- 抓娃娃机 & 扭蛋机 ---------- */
+    var machineGroups = [];
+    var clawAnim = null;
+    var gachaAnim = null;
+
+    function makeMachineSign(text, accent) {
+        var cv = document.createElement('canvas');
+        cv.width = 512;
+        cv.height = 128;
+        var c = cv.getContext('2d');
+        c.fillStyle = '#0a0814';
+        c.fillRect(0, 0, 512, 128);
+        c.strokeStyle = '#ffffff';
+        c.lineWidth = 8;
+        c.strokeRect(6, 6, 500, 116);
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.shadowColor = accent;
+        c.shadowBlur = 22;
+        c.fillStyle = '#ffffff';
+        c.font = 'bold 52px "Courier New",monospace';
+        c.fillText(text, 256, 68);
+        var tex = new THREE.CanvasTexture(cv);
+        if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+        return tex;
+    }
+
+    var machineWhite = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.4, metalness: 0.25 });
+    var glassMatM = new THREE.MeshPhongMaterial({
+        color: 0xbfefff,
+        transparent: true,
+        opacity: 0.16,
+        shininess: 90,
+        side: THREE.DoubleSide,
+        depthWrite: false
+    });
+
+    /* 抓娃娃机 */
+    var clawMachine = new THREE.Group();
+    clawMachine.position.set(-5.4, 0, 10.35);
+    clawMachine.rotation.y = Math.PI - 0.48;
+    clawMachine.userData.machineType = 'claw';
+
+    var clawBodyMat = new THREE.MeshStandardMaterial({
+        color: 0xff2f8e,
+        emissive: 0x7a0038,
+        emissiveIntensity: 0.45,
+        roughness: 0.42,
+        metalness: 0.2
+    });
+    var clawBase = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.9, 1.0), clawBodyMat);
+    clawBase.position.y = 0.45;
+    clawMachine.add(clawBase);
+    addEdges(clawBase, 0xffffff, 0.95);
+
+    var clawTop = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.18, 1.1), machineWhite);
+    clawTop.position.y = 2.02;
+    clawMachine.add(clawTop);
+    addEdges(clawTop, 0xffffff, 0.9);
+
+    var clawDeck = new THREE.Mesh(new THREE.BoxGeometry(1.32, 0.12, 1.02), machineWhite);
+    clawDeck.position.y = 0.9;
+    clawMachine.add(clawDeck);
+
+    var clawGlass = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.02, 0.92), glassMatM);
+    clawGlass.position.y = 1.47;
+    clawMachine.add(clawGlass);
+    var clawGlassEdges = new THREE.LineSegments(
+        new THREE.EdgesGeometry(new THREE.BoxGeometry(1.2, 1.02, 0.92)),
+        new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 })
+    );
+    clawGlassEdges.position.copy(clawGlass.position);
+    clawMachine.add(clawGlassEdges);
+
+    var clawBack = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.16, 0.98),
+        new THREE.MeshStandardMaterial({ color: 0x140a1e, roughness: 0.9 })
+    );
+    clawBack.position.set(0, 1.47, -0.45);
+    clawMachine.add(clawBack);
+
+    var clawSign = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.15, 0.28),
+        new THREE.MeshBasicMaterial({ map: makeMachineSign('CLAW MACHINE', '#ff4fd8'), transparent: true })
+    );
+    clawSign.position.set(0, 2.02, 0.556);
+    clawMachine.add(clawSign);
+
+    var plushColors = [0xff4fd8, 0x22e6ff, 0xffca3a, 0x7dff8a, 0xff8a3d, 0xb28cff];
+    for (var pl = 0; pl < 12; pl++) {
+        var plush = new THREE.Mesh(
+            new THREE.SphereGeometry(0.1, 10, 8),
+            new THREE.MeshStandardMaterial({
+                color: plushColors[pl % plushColors.length],
+                roughness: 0.75,
+                emissive: plushColors[pl % plushColors.length],
+                emissiveIntensity: 0.18
+            })
+        );
+        plush.position.set(
+            (Math.random() - 0.5) * 0.8,
+            1.0 + Math.random() * 0.05,
+            (Math.random() - 0.5) * 0.5
+        );
+        plush.scale.y = 0.8;
+        clawMachine.add(plush);
+    }
+
+    var clawChute = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.3, 0.2),
+        new THREE.MeshBasicMaterial({ color: 0x05030a })
+    );
+    clawChute.position.set(0.3, 0.52, 0.503);
+    clawMachine.add(clawChute);
+    var chuteRim = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.26, 0.02), machineWhite);
+    chuteRim.position.set(0.3, 0.52, 0.49);
+    clawMachine.add(chuteRim);
+
+    var clawPanel = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.1, 0.26), machineWhite);
+    clawPanel.position.set(-0.28, 0.95, 0.58);
+    clawPanel.rotation.x = -0.38;
+    clawMachine.add(clawPanel);
+    var clawStick = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.018, 0.018, 0.2, 8),
+        new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.7, roughness: 0.3 })
+    );
+    clawStick.position.set(-0.4, 1.08, 0.6);
+    clawStick.rotation.z = 0.25;
+    clawMachine.add(clawStick);
+    var clawBall = new THREE.Mesh(
+        new THREE.SphereGeometry(0.055, 12, 10),
+        new THREE.MeshStandardMaterial({ color: 0xff2020, emissive: 0x8a0000, emissiveIntensity: 0.6, roughness: 0.3 })
+    );
+    clawBall.position.set(-0.43, 1.18, 0.6);
+    clawMachine.add(clawBall);
+    var clawButton = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05, 0.05, 0.03, 14),
+        new THREE.MeshStandardMaterial({ color: 0xffca3a, emissive: 0x6a4a00, emissiveIntensity: 0.5 })
+    );
+    clawButton.position.set(-0.1, 1.02, 0.62);
+    clawMachine.add(clawButton);
+
+    var clawRail = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.06, 0.08), machineWhite);
+    clawRail.position.set(0, 1.92, 0);
+    clawMachine.add(clawRail);
+    var clawCarriage = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.12, 0.16), clawBodyMat);
+    clawCarriage.position.set(0, 1.86, 0);
+    clawMachine.add(clawCarriage);
+    var clawCable = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.012, 0.012, 0.5, 6),
+        new THREE.MeshStandardMaterial({ color: 0xcfcfcf, metalness: 0.8, roughness: 0.3 })
+    );
+    clawCable.position.set(0, 1.55, 0);
+    clawMachine.add(clawCable);
+
+    var clawHead = new THREE.Group();
+    clawHead.position.set(0, 1.3, 0);
+    var clawHub = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.09, 0.07, 0.1, 12),
+        new THREE.MeshStandardMaterial({ color: 0xd8dde6, metalness: 0.85, roughness: 0.25 })
+    );
+    clawHead.add(clawHub);
+    var clawProngs = new THREE.Group();
+    for (var cp = 0; cp < 3; cp++) {
+        var prong = new THREE.Mesh(
+            new THREE.BoxGeometry(0.035, 0.24, 0.035),
+            new THREE.MeshStandardMaterial({ color: 0xd8dde6, metalness: 0.85, roughness: 0.25 })
+        );
+        var pa = (cp / 3) * Math.PI * 2;
+        prong.position.set(Math.cos(pa) * 0.09, -0.14, Math.sin(pa) * 0.09);
+        prong.rotation.z = Math.cos(pa) * 0.4;
+        prong.rotation.x = -Math.sin(pa) * 0.4;
+        clawProngs.add(prong);
+    }
+    clawHead.add(clawProngs);
+    var clawPrize = new THREE.Mesh(
+        new THREE.SphereGeometry(0.11, 12, 10),
+        new THREE.MeshStandardMaterial({ color: 0xffca3a, emissive: 0x6a4a00, emissiveIntensity: 0.45, roughness: 0.6 })
+    );
+    clawPrize.position.set(0, -0.3, 0);
+    clawPrize.visible = false;
+    clawHead.add(clawPrize);
+    clawMachine.add(clawHead);
+
+    var clawLight = new THREE.PointLight(0xff4fd8, 1.5, 5);
+    clawLight.position.set(0, 1.6, 1.1);
+    clawMachine.add(clawLight);
+    scene.add(clawMachine);
+    machineGroups.push(clawMachine);
+
+    /* 扭蛋机 */
+    var gachaMachine = new THREE.Group();
+    gachaMachine.position.set(5.4, 0, 10.35);
+    gachaMachine.rotation.y = Math.PI + 0.48;
+    gachaMachine.userData.machineType = 'gacha';
+
+    var gachaBody = new THREE.Mesh(
+        new THREE.BoxGeometry(0.9, 1.05, 0.8),
+        new THREE.MeshStandardMaterial({
+            color: 0xffb703,
+            emissive: 0x6a4200,
+            emissiveIntensity: 0.35,
+            roughness: 0.4,
+            metalness: 0.25
+        })
+    );
+    gachaBody.position.y = 0.53;
+    gachaMachine.add(gachaBody);
+    addEdges(gachaBody, 0xffffff, 0.95);
+
+    var gachaTrim = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.12, 0.86), machineWhite);
+    gachaTrim.position.y = 1.08;
+    gachaMachine.add(gachaTrim);
+
+    var gachaDome = new THREE.Mesh(
+        new THREE.SphereGeometry(0.42, 22, 16),
+        new THREE.MeshPhongMaterial({
+            color: 0xbfefff,
+            transparent: true,
+            opacity: 0.22,
+            shininess: 100,
+            side: THREE.DoubleSide,
+            depthWrite: false
+        })
+    );
+    gachaDome.position.y = 1.43;
+    gachaDome.scale.y = 1.1;
+    gachaMachine.add(gachaDome);
+
+    var capsuleColors = [0xff4fd8, 0x22e6ff, 0xffca3a, 0x7dff8a, 0xff8a3d, 0xb28cff, 0xffffff];
+    for (var gc = 0; gc < 14; gc++) {
+        var capsule = new THREE.Mesh(
+            new THREE.SphereGeometry(0.075, 10, 8),
+            new THREE.MeshStandardMaterial({
+                color: capsuleColors[gc % capsuleColors.length],
+                roughness: 0.35,
+                emissive: capsuleColors[gc % capsuleColors.length],
+                emissiveIntensity: 0.16
+            })
+        );
+        var ga = Math.random() * Math.PI * 2;
+        var gr = Math.random() * 0.28;
+        capsule.position.set(Math.cos(ga) * gr, 1.22 + Math.random() * 0.3, Math.sin(ga) * gr);
+        gachaMachine.add(capsule);
+    }
+
+    var gachaCap = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.2, 0.24, 0.14, 18),
+        machineWhite
+    );
+    gachaCap.position.y = 1.88;
+    gachaMachine.add(gachaCap);
+
+    var gachaSign = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.72, 0.18),
+        new THREE.MeshBasicMaterial({ map: makeMachineSign('CAPSULE', '#22e6ff'), transparent: true })
+    );
+    gachaSign.position.set(0, 0.88, 0.406);
+    gachaMachine.add(gachaSign);
+
+    var gachaTray = new THREE.Mesh(
+        new THREE.BoxGeometry(0.46, 0.2, 0.24),
+        new THREE.MeshStandardMaterial({ color: 0x1a1018, roughness: 0.7 })
+    );
+    gachaTray.position.set(0, 0.36, 0.38);
+    gachaMachine.add(gachaTray);
+    var trayLip = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.04, 0.28), machineWhite);
+    trayLip.position.set(0, 0.27, 0.39);
+    gachaMachine.add(trayLip);
+
+    var crankGroup = new THREE.Group();
+    crankGroup.position.set(0.26, 0.76, 0.42);
+    var crankDisc = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.13, 0.13, 0.05, 18),
+        new THREE.MeshStandardMaterial({ color: 0x222630, metalness: 0.7, roughness: 0.3 })
+    );
+    crankDisc.rotation.x = Math.PI / 2;
+    crankGroup.add(crankDisc);
+    var crankKnob = new THREE.Mesh(
+        new THREE.BoxGeometry(0.06, 0.14, 0.06),
+        new THREE.MeshStandardMaterial({ color: 0xff2020, roughness: 0.4 })
+    );
+    crankKnob.position.set(0, 0.1, 0.05);
+    crankGroup.add(crankKnob);
+    gachaMachine.add(crankGroup);
+
+    var gachaSlot = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, 0.03, 0.03),
+        new THREE.MeshBasicMaterial({ color: 0x111111 })
+    );
+    gachaSlot.position.set(-0.22, 0.82, 0.42);
+    gachaMachine.add(gachaSlot);
+
+    var gachaLight = new THREE.PointLight(0x22e6ff, 1.4, 5);
+    gachaLight.position.set(0, 1.5, 1.0);
+    gachaMachine.add(gachaLight);
+
+    var gachaCapsule = new THREE.Mesh(
+        new THREE.SphereGeometry(0.09, 12, 10),
+        new THREE.MeshStandardMaterial({ color: 0xffca3a, emissive: 0x6a4a00, emissiveIntensity: 0.4, roughness: 0.35 })
+    );
+    gachaCapsule.visible = false;
+    gachaMachine.add(gachaCapsule);
+
+    scene.add(gachaMachine);
+    machineGroups.push(gachaMachine);
+
+    function startClawDraw() {
+        clawAnim = {
+            start: performance.now(),
+            duration: 2300,
+            carriage: clawCarriage,
+            head: clawHead,
+            cable: clawCable,
+            prongs: clawProngs,
+            prize: clawPrize
+        };
+        clawPrize.visible = false;
+        clawProngs.scale.set(1, 1, 1);
+    }
+
+    function updateClaw(now) {
+        if (!clawAnim) return;
+        var t = (now - clawAnim.start) / 1000;
+        var move = Math.min(1, Math.max(0, t / 0.5));
+        var x = 0.3 * move;
+        clawAnim.carriage.position.x = x;
+        clawAnim.head.position.x = x;
+
+        var y = 1.3;
+        if (t > 0.5 && t < 1.0) y = 1.3 - 0.32 * ((t - 0.5) / 0.5);
+        else if (t >= 1.0 && t < 1.5) y = 0.98;
+        else if (t >= 1.5) y = 0.98 + 0.32 * Math.min(1, (t - 1.5) / 0.5);
+        clawAnim.head.position.y = y;
+
+        var len = Math.max(0.08, 1.86 - y);
+        clawAnim.cable.scale.y = len / 0.5;
+        clawAnim.cable.position.y = y + len / 2;
+
+        if (t >= 1.05 && t < 1.45) {
+            clawAnim.prongs.scale.set(0.62, 1, 0.62);
+        } else if (t >= 1.45) {
+            clawAnim.prongs.scale.set(1, 1, 1);
+        }
+        clawAnim.prize.visible = t >= 1.15 && t < 2.05;
+    }
+
+    function startGachaDraw() {
+        gachaAnim = {
+            start: performance.now(),
+            wheel: crankGroup,
+            capsule: gachaCapsule
+        };
+        gachaCapsule.visible = true;
+        gachaCapsule.position.set(0, 1.2, 0.05);
+    }
+
+    function updateGacha(now) {
+        if (!gachaAnim) return;
+        var t = (now - gachaAnim.start) / 1000;
+        gachaAnim.wheel.rotation.z = Math.min(Math.PI * 2.2, t * 9);
+        if (t > 0.55 && t < 1.35) {
+            var k = (t - 0.55) / 0.8;
+            gachaAnim.capsule.position.set(0.05 * k, 1.2 - 0.82 * k, 0.05 + 0.33 * k);
+        }
+        if (t >= 1.5) gachaAnim.capsule.visible = false;
+    }
+
+    function resetMachineAnim() {
+        clawAnim = null;
+        gachaAnim = null;
+        clawPrize.visible = false;
+        clawProngs.scale.set(1, 1, 1);
+        clawCarriage.position.x = 0;
+        clawHead.position.set(0, 1.3, 0);
+        clawCable.scale.y = 1;
+        clawCable.position.y = 1.55;
+        crankGroup.rotation.z = 0;
+        gachaCapsule.visible = false;
+    }
+
+    function startMachineDraw(type, ev) {
+        if (busy || seated || clawAnim || gachaAnim) return;
+        busy = true;
+        if (window.Arcade && window.Arcade.coinSound) window.Arcade.coinSound();
+        dropCoin(ev.clientX, ev.clientY);
+
+        var pick = PROJECTS[Math.floor(Math.random() * PROJECTS.length)];
+        if (type === 'claw') startClawDraw();
+        else startGachaDraw();
+
+        setTimeout(function () {
+            resetMachineAnim();
+            busy = false;
+            document.dispatchEvent(new CustomEvent('arcade:prize', {
+                detail: {
+                    id: pick.id,
+                    marquee: pick.marquee,
+                    neon: pick.neon,
+                    source: type
+                }
+            }));
+        }, type === 'claw' ? 2350 : 1750);
+    }
+
+    function pickMachine(x, y) {
+        pointer.set((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+        raycaster.setFromCamera(pointer, camera);
+        var hits = raycaster.intersectObjects(machineGroups, true);
+        for (var i = 0; i < hits.length; i++) {
+            var o = hits[i].object;
+            while (o && !o.userData.machineType) o = o.parent;
+            if (o) return o.userData.machineType;
+        }
+        return null;
+    }
+
+    var hoveredMachine = null;
+    function setMachineHover(type) {
+        if (hoveredMachine === type) return;
+        hoveredMachine = type;
+        machineGroups.forEach(function (g) {
+            g.scale.setScalar(g.userData.machineType === type ? 1.035 : 1);
+        });
+    }
+
+    function pickInteractive(x, y) {
+        pointer.set((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+        raycaster.setFromCamera(pointer, camera);
+        var hits = raycaster.intersectObjects(groups.concat(machineGroups), true);
+        for (var i = 0; i < hits.length; i++) {
+            var o = hits[i].object;
+            while (o && !o.userData.gameId && !o.userData.machineType) o = o.parent;
+            if (o && o.userData.gameId) return { kind: 'game', id: o.userData.gameId };
+            if (o && o.userData.machineType) return { kind: 'machine', id: o.userData.machineType };
+        }
+        return null;
+    }
+
+
     /* 背景装饰机柜，增加纵深 */
     function makeDistantScreenTexture(neon) {
         var cv = document.createElement('canvas');
@@ -1475,7 +1915,7 @@
     var orbit = {
         target: new THREE.Vector3(0, 1.15, 0),
         radius: aspect0 < 0.8 ? 11.2 : (aspect0 < 1.3 ? 9.8 : 8.6),
-        azimuth: 0.3,
+        azimuth: 0,
         polar: 1.17,
         minRadius: 5.4,
         maxRadius: 11.4,
@@ -1561,7 +2001,10 @@
         if (doorOpen || doorBusy || seated || busy) return false;
         pointer.set((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
         raycaster.setFromCamera(pointer, camera);
-        return raycaster.intersectObject(doorHit, false).length > 0;
+        var hit = raycaster.intersectObject(doorHit, false)[0];
+        if (!hit) return false;
+        var blockers = raycaster.intersectObjects(groups.concat(machineGroups), true);
+        return !blockers.length || blockers[0].distance > hit.distance + 0.05;
     }
 
     document.addEventListener('arcade:mapclose', function () {
@@ -1668,10 +2111,13 @@
             return;
         }
         if (busy || seated) return;
-        var id = pickGame(e.clientX, e.clientY);
-        var onDoor = !id && pickDoor(e.clientX, e.clientY);
-        renderer.domElement.style.cursor = (id || onDoor) ? 'pointer' : 'grab';
+        var hit = pickInteractive(e.clientX, e.clientY);
+        var id = hit && hit.kind === 'game' ? hit.id : null;
+        var mid = hit && hit.kind === 'machine' ? hit.id : null;
+        var onDoor = !hit && pickDoor(e.clientX, e.clientY);
+        renderer.domElement.style.cursor = (hit || onDoor) ? 'pointer' : 'grab';
         setHover(id);
+        setMachineHover(mid);
     });
 
     renderer.domElement.addEventListener('pointerup', function (e) {
@@ -1683,10 +2129,14 @@
             try { renderer.domElement.releasePointerCapture(e.pointerId); } catch (err) {}
         }
         if (!wasClick || seated || busy) return;
-        var id = pickGame(e.clientX, e.clientY);
-        if (id) {
+        var hit = pickInteractive(e.clientX, e.clientY);
+        if (hit && hit.kind === 'game') {
             setHover(null);
-            enterCabinet(id, e);
+            setMachineHover(null);
+            enterCabinet(hit.id, e);
+        } else if (hit && hit.kind === 'machine') {
+            setMachineHover(null);
+            startMachineDraw(hit.id, e);
         } else if (pickDoor(e.clientX, e.clientY)) {
             setDoor(true);
         }
@@ -1731,6 +2181,8 @@
         for (var i = 0; i < screenTextures.length; i++) {
             screenTextures[i].tex.needsUpdate = true;
         }
+        updateClaw(now);
+        updateGacha(now);
         renderer.render(scene, camera);
     }
     requestAnimationFrame(tick);
