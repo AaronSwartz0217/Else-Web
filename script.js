@@ -415,11 +415,10 @@ function animate() {
         introText.rotation.x = Math.cos(Date.now() * 0.0005) * 0.05;
     }
     
-    // 导航到game页面
+    // 导航到街机厅
     console.log('Camera position z:', camera.position.z);
     if (camera.position.z <= -85) {
-        console.log('Navigating to game.html');
-        window.location.href = 'game.html';
+        window.location.href = 'scene.html';
     }
     
     renderer.render(scene, camera);

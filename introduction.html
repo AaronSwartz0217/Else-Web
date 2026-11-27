@@ -640,6 +640,37 @@
             color: #fff;
             border-color: #6b8cce;
         }
+
+        .arcade-btn {
+            background: linear-gradient(100deg, #22e6ff 0%, #7b5cff 32%, #ff4fd8 66%, #ffca3a 100%);
+            background-size: 220% 100%;
+            border: 2px solid #ffffff;
+            color: #070812;
+            font-weight: 700;
+            letter-spacing: 2px;
+            box-shadow:
+                0 0 18px rgba(255, 79, 216, 0.55),
+                0 0 36px rgba(34, 230, 255, 0.35),
+                inset 0 0 12px rgba(255, 255, 255, 0.4);
+            animation: arcadeShift 4s linear infinite;
+        }
+
+        .arcade-btn:hover {
+            background-position: 100% 0;
+            color: #ffffff;
+            border-color: #ffffff;
+            text-shadow: 0 0 10px #ffffff;
+            transform: translateY(-2px);
+            box-shadow:
+                0 0 24px rgba(255, 79, 216, 0.85),
+                0 0 48px rgba(34, 230, 255, 0.55),
+                inset 0 0 16px rgba(255, 255, 255, 0.55);
+        }
+
+        @keyframes arcadeShift {
+            0% { background-position: 0 0; }
+            100% { background-position: 220% 0; }
+        }
         
         footer {
             text-align: center;
@@ -1901,7 +1932,7 @@
                 </div>
             </div>
             <p style="margin-top: 20px;">如果您对我的作品感兴趣，或者有任何合作机会，欢迎随时联系我。</p>
-            <a href="scene.html" class="back-to-game">返回3D展示</a>
+            <a href="scene.html" class="back-to-game arcade-btn">电玩城</a>
             <button type="button" class="back-to-game" style="margin-left: 20px;" onclick="showImage('qr-contact.jpg', '微信二维码', '请扫描二维码交流')">学习笔记</button>
             <a href="#portfolio-slides" class="back-to-game" style="margin-left: 20px;">作品详情</a>
         </section>
@@ -1940,7 +1971,7 @@
         </div>
     </footer>
     
-    <div id="toast" style="position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #4a6fa5; color: white; padding: 14px 28px; border-radius: 30px; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; font-size: 1rem;">邮箱已复制到剪贴板</div>
+    <div id="toast" style="position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #4a6fa5; color: white; padding: 14px 28px; border-radius: 30px; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; font-size: 1rem;">网站链接已复制 · 欢迎分享</div>
     
     <!-- Lightbox 图片查看 -->
     <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
@@ -2066,12 +2097,12 @@
         
         let copied = false;
         
-        function copyEmail() {
+        function copySiteLink() {
             if (copied) return;
             
-            const email = '2971762643@qq.com';
+            const siteUrl = 'https://aaronswartz0217.github.io/Else-Web/';
             
-            navigator.clipboard.writeText(email).then(function() {
+            navigator.clipboard.writeText(siteUrl).then(function() {
                 const toast = document.getElementById('toast');
                 toast.style.opacity = '1';
                 copied = true;
@@ -2084,8 +2115,8 @@
         }
         
         document.addEventListener('DOMContentLoaded', function() {
-            document.body.addEventListener('click', copyEmail);
-            document.body.addEventListener('touchstart', copyEmail);
+            document.body.addEventListener('click', copySiteLink);
+            document.body.addEventListener('touchstart', copySiteLink);
         });
     </script>
 
@@ -2206,7 +2237,7 @@
             });
         })();
 
-        /* 下载卡片：阻止冒泡，避免触发全局复制邮箱 */
+        /* 下载卡片：阻止冒泡，避免触发全局复制网站链接 */
         document.querySelectorAll('.download-card').forEach(function (card) {
             card.addEventListener('click', function (e) { e.stopPropagation(); });
             card.addEventListener('touchstart', function (e) { e.stopPropagation(); }, { passive: true });
