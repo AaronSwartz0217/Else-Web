@@ -126,6 +126,24 @@
     .psy-tabs button:hover{border-color:var(--amber);color:#fff;}
     .psy-tabs button.on{background:var(--amber);border-color:var(--amber);color:#24150e;font-weight:700;}
     .psy-body{min-height:220px;}
+    .psy-private{position:relative;min-height:240px;}
+    .psy-private.is-locked .psy-vol{
+        filter:blur(7px);opacity:.4;pointer-events:none;user-select:none;
+    }
+    .psy-lock{
+        position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;
+        align-items:center;justify-content:center;gap:10px;padding:26px;text-align:center;
+        background:radial-gradient(circle at 50% 42%,rgba(18,10,8,.78),rgba(18,10,8,.97));
+        border:1px dashed rgba(241,223,191,.38);border-radius:12px;
+    }
+    .psy-lock .lock-k{
+        font-family:"Courier New",monospace;font-size:.6rem;letter-spacing:.22em;color:#b99a74;
+    }
+    .psy-lock b{
+        font-family:Georgia,"Songti SC","Noto Serif SC",serif;
+        font-size:1.05rem;color:#ffe6c2;font-weight:600;
+    }
+    .psy-lock p{color:#b99a74;font-size:.82rem;line-height:1.8;max-width:340px;}
     .psy-loading{padding:44px 0;text-align:center;color:#8f7a62;font-family:"Courier New",monospace;font-size:.76rem;letter-spacing:.12em;}
     .psy-vol{margin-bottom:18px;}
     .psy-vol > h3{
@@ -369,9 +387,25 @@
         }).join('') + '</div>';
     }
 
+    function renderCorpusLocked(){
+        bodyEl.innerHTML = '<div class="psy-private is-locked" id="psyPrivate">' +
+            renderCorpus() +
+            '<div class="psy-lock" id="psyLock">' +
+                '<span class="lock-k">PRIVATE · 仅私下阅读</span>' +
+                '<b>这一页先收起来</b>' +
+                '<p>篇章里是较私人的整理内容。切走或关掉会重新合上。</p>' +
+            '</div></div>';
+        var wrap = document.getElementById('psyPrivate');
+        var lock = document.getElementById('psyLock');
+        if(lock) lock.addEventListener('click', function(){
+            wrap.classList.remove('is-locked');
+            lock.remove();
+        });
+    }
+
     function render(){
         if(!archive) return;
-        if(activeTab === 'corpus') bodyEl.innerHTML = renderCorpus();
+        if(activeTab === 'corpus') renderCorpusLocked();
         else if(activeTab === 'layers') bodyEl.innerHTML = renderLayers();
         else if(activeTab === 'domains') bodyEl.innerHTML = renderDomains();
         else bodyEl.innerHTML = renderBook();
@@ -409,6 +443,7 @@
         panel.setAttribute('aria-hidden','false');
         if(hint) hint.style.opacity = '0';
         loadArchive();
+        if(archive) render();
     }
     function closePanel(){
         panel.classList.remove('open');
