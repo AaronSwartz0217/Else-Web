@@ -1677,6 +1677,37 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
     .npc-text{font-size:.92rem;min-height:84px;line-height:1.75;}
     .npc-name{font-size:.4rem;padding:5px 10px;}
 }
+/* 手机竖屏：提示横屏 */
+.rotate-hint{
+    position:fixed;inset:0;z-index:96;display:none;flex-direction:column;
+    align-items:center;justify-content:center;gap:20px;padding:28px;text-align:center;
+    background:radial-gradient(ellipse at 50% 30%,rgba(123,92,255,.28),transparent 62%),#07020f;
+}
+.rotate-phone{
+    width:74px;height:128px;border:3px solid #fff;border-radius:14px;position:relative;
+    box-shadow:0 0 22px rgba(34,230,255,.55);animation:rotatePhone 2.6s ease-in-out infinite;
+}
+.rotate-phone::before{
+    content:'';position:absolute;left:50%;bottom:7px;transform:translateX(-50%);
+    width:26px;height:3px;border-radius:2px;background:rgba(255,255,255,.75);
+}
+.rotate-title{font-family:var(--pixel);font-size:.72rem;letter-spacing:.12em;color:#fff;text-shadow:0 0 14px rgba(255,79,216,.85);}
+.rotate-sub{font-size:.9rem;color:var(--muted);max-width:320px;line-height:1.7;}
+.rotate-btn{
+    padding:12px 22px;border-radius:8px;border:1px solid #22e6ff;
+    background:rgba(34,230,255,.12);color:#fff;cursor:pointer;
+    font-family:var(--pixel);font-size:.5rem;letter-spacing:.1em;
+    box-shadow:0 0 18px rgba(34,230,255,.35);
+}
+.rotate-skip{font-size:.78rem;color:rgba(255,255,255,.45);text-decoration:underline;background:none;border:0;cursor:pointer;}
+@keyframes rotatePhone{
+    0%,28%{transform:rotate(0deg);}
+    58%,100%{transform:rotate(-90deg);}
+}
+@media (orientation:portrait) and (max-width:900px) and (pointer:coarse){
+    .rotate-hint{display:flex;}
+    body.portrait-ok .rotate-hint{display:none;}
+}
 </style>
 </head>
 <body>
@@ -2838,6 +2869,14 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
         <p class="prize-hint ten-hint">ALL 10 CAPSULES OPENED</p>
     </div>
     <button class="prize-btn" id="tenClose" type="button">CLOSE</button>
+</div>
+
+<div class="rotate-hint" id="rotateHint">
+    <div class="rotate-phone" aria-hidden="true"></div>
+    <p class="rotate-title">ROTATE TO LANDSCAPE</p>
+    <p class="rotate-sub">街机厅为横屏设计，旋转手机获得完整视野。</p>
+    <button class="rotate-btn" id="rotateGo" type="button">进入横屏</button>
+    <button class="rotate-skip" id="rotateSkip" type="button">继续竖屏浏览</button>
 </div>
 
 <div class="npc-overlay" id="npcPanel" aria-hidden="true">
@@ -5394,6 +5433,38 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
     if(tenPanel){
         document.getElementById('tenClose').addEventListener('click', closeTen);
         tenPanel.querySelector('[data-ten-close]').addEventListener('click', closeTen);
+    }
+
+    /* 手机横屏引导 */
+    var rotateGo = document.getElementById('rotateGo');
+    var rotateSkip = document.getElementById('rotateSkip');
+    function lockLandscape(){
+        if(screen.orientation && screen.orientation.lock){
+            try { screen.orientation.lock('landscape').catch(function(){}); } catch(err){}
+        }
+    }
+    if(rotateGo){
+        rotateGo.addEventListener('click', function(){
+            var el = document.documentElement;
+            var req = el.requestFullscreen || el.webkitRequestFullscreen;
+            if(req){
+                try {
+                    var p = req.call(el);
+                    if(p && p.then){
+                        p.then(lockLandscape).catch(function(){});
+                    } else {
+                        lockLandscape();
+                    }
+                } catch(err){}
+            } else {
+                lockLandscape();
+            }
+        });
+    }
+    if(rotateSkip){
+        rotateSkip.addEventListener('click', function(){
+            document.body.classList.add('portrait-ok');
+        });
     }
 
     /* 看板娘对话 */
