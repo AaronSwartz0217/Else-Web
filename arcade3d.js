@@ -1985,6 +1985,42 @@
         });
     }
 
+    /* 门口右侧的立牌角色（始终朝向玩家） */
+    var npcBoard = null;
+    var npcHit = null;
+    var npcGlow = null;
+    (function buildNpc() {
+        var tex = new THREE.TextureLoader().load('assets/character/deepseek-front.png');
+        if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+        var h = 1.45, w = h * 0.867;
+
+        var board = new THREE.Mesh(
+            new THREE.PlaneGeometry(w, h),
+            new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.06, depthWrite: false })
+        );
+        board.position.set(2.55, h / 2 + 0.03, 10.75);
+        scene.add(board);
+        npcBoard = board;
+
+        var halo = new THREE.Mesh(
+            new THREE.CircleGeometry(0.6, 40),
+            new THREE.MeshBasicMaterial({ color: 0x4f7dff, transparent: true, opacity: 0.15, depthWrite: false })
+        );
+        halo.rotation.x = -Math.PI / 2;
+        halo.position.set(2.55, 0.02, 10.75);
+        scene.add(halo);
+        npcGlow = halo;
+
+        npcHit = new THREE.Mesh(
+            new THREE.PlaneGeometry(w * 1.12, h * 1.08),
+            new THREE.MeshBasicMaterial({ visible: false })
+        );
+        npcHit.position.copy(board.position);
+        npcHit.userData.npc = 'deepseek';
+        scene.add(npcHit);
+        machineHits.push(npcHit);
+    })();
+
     function pickInteractive(x, y) {
         pointer.set((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
         raycaster.setFromCamera(pointer, camera);
@@ -1992,6 +2028,7 @@
         if (!hits.length) return null;
         var o = hits[0].object;
         if (o.userData.album) return { kind: 'album' };
+        if (o.userData.npc) return { kind: 'npc', id: o.userData.npc };
         if (o.userData.gameId) return { kind: 'game', id: o.userData.gameId };
         if (o.userData.machineType) return { kind: 'machine', id: o.userData.machineType };
         return null;
@@ -2330,6 +2367,8 @@
             }
         } else if (hit && hit.kind === 'album') {
             document.dispatchEvent(new CustomEvent('arcade:album'));
+        } else if (hit && hit.kind === 'npc') {
+            document.dispatchEvent(new CustomEvent('arcade:npc'));
         } else if (pickDoor(e.clientX, e.clientY)) {
             setDoor(true);
         }
@@ -2369,6 +2408,14 @@
             }
         } else {
             camera.lookAt(lookAt);
+        }
+
+        if (npcBoard) {
+            npcBoard.quaternion.copy(camera.quaternion);
+            npcHit.quaternion.copy(camera.quaternion);
+            npcBoard.position.y = 0.755 + Math.sin(now * 0.0016) * 0.02;
+            npcHit.position.y = npcBoard.position.y;
+            if (npcGlow) npcGlow.material.opacity = 0.12 + Math.sin(now * 0.002) * 0.05;
         }
 
         for (var i = 0; i < screenTextures.length; i++) {

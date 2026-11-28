@@ -1625,6 +1625,58 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
     .album-title{font-size:.66rem;}
     .album-panel{padding:16px 14px 18px;}
 }
+/* 看板娘对话 */
+.npc-overlay{
+    position:fixed;inset:0;z-index:78;display:flex;align-items:flex-end;justify-content:center;
+    padding:0 5vw 6vh;opacity:0;pointer-events:none;transition:opacity .22s ease;
+}
+.npc-overlay.open{opacity:1;pointer-events:auto;}
+.npc-box{
+    width:min(980px,96vw);padding:24px 30px 18px;border-radius:20px 20px 8px 8px;
+    border:2px solid rgba(255,255,255,.82);
+    display:flex;align-items:flex-end;gap:22px;
+    background:
+        radial-gradient(circle at 10% 0%,rgba(79,125,255,.28),transparent 62%),
+        linear-gradient(180deg,#141033,#090616 78%);
+    box-shadow:0 0 0 2px rgba(79,125,255,.55),0 0 42px -6px rgba(79,125,255,.75),0 24px 60px rgba(0,0,0,.7);
+    cursor:pointer;transform:translateY(18px);
+    transition:transform .26s cubic-bezier(.2,.9,.3,1.2);
+}
+.npc-overlay.open .npc-box{transform:translateY(0);}
+.npc-portrait{flex:0 0 190px;margin-bottom:-18px;pointer-events:none;}
+.npc-portrait img{
+    width:100%;display:block;
+    filter:drop-shadow(0 12px 20px rgba(0,0,0,.6)) drop-shadow(0 0 18px rgba(79,125,255,.35));
+}
+.npc-body{flex:1 1 auto;min-width:0;}
+.npc-name{
+    display:inline-block;margin-bottom:14px;padding:6px 14px;border-radius:6px;
+    border:1px solid rgba(255,255,255,.75);
+    background:linear-gradient(180deg,rgba(79,125,255,.5),rgba(20,16,51,.85));
+    font-family:var(--pixel);font-size:.46rem;letter-spacing:.12em;color:#fff;
+    text-shadow:0 0 10px rgba(123,92,255,.9);
+}
+.npc-text{
+    min-height:96px;font-size:1.12rem;line-height:1.9;color:#eef1ff;letter-spacing:.02em;
+}
+.npc-foot{display:flex;align-items:center;justify-content:space-between;margin-top:12px;}
+.npc-dots{display:flex;gap:6px;}
+.npc-dots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.22);transition:background .2s,box-shadow .2s;}
+.npc-dots i.on{background:#7b5cff;box-shadow:0 0 10px rgba(123,92,255,.9);}
+.npc-next{
+    padding:8px 16px;border-radius:6px;border:1px solid rgba(255,255,255,.45);
+    background:rgba(255,255,255,.06);color:#cfd6ff;cursor:pointer;
+    font-family:var(--pixel);font-size:.42rem;letter-spacing:.1em;
+    transition:all .18s ease;
+}
+.npc-next:hover{color:#fff;border-color:#4f7dff;box-shadow:0 0 16px rgba(79,125,255,.55);}
+@media (max-width:640px){
+    .npc-overlay{padding:0 10px 3vh;}
+    .npc-box{padding:16px 16px 12px;gap:12px;align-items:flex-start;}
+    .npc-portrait{flex:0 0 104px;margin-bottom:-10px;}
+    .npc-text{font-size:.92rem;min-height:84px;line-height:1.75;}
+    .npc-name{font-size:.4rem;padding:5px 10px;}
+}
 </style>
 </head>
 <body>
@@ -2786,6 +2838,22 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
         <p class="prize-hint ten-hint">ALL 10 CAPSULES OPENED</p>
     </div>
     <button class="prize-btn" id="tenClose" type="button">CLOSE</button>
+</div>
+
+<div class="npc-overlay" id="npcPanel" aria-hidden="true">
+    <div class="npc-box" id="npcBox" role="dialog" aria-label="DeepSeek 看板娘">
+        <div class="npc-portrait" aria-hidden="true">
+            <img src="assets/character/deepseek-front.png" alt="">
+        </div>
+        <div class="npc-body">
+            <div class="npc-name">DEEPSEEK · 看板娘</div>
+            <p class="npc-text" id="npcText"></p>
+            <div class="npc-foot">
+                <span class="npc-dots" id="npcDots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></span>
+                <button class="npc-next" id="npcNext" type="button">继续 ▸</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -4756,7 +4824,7 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
 })();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="arcade3d.js?v=15"></script>
+<script src="arcade3d.js?v=16"></script>
 <script>
 (function(){
     'use strict';
@@ -5328,9 +5396,61 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
         tenPanel.querySelector('[data-ten-close]').addEventListener('click', closeTen);
     }
 
+    /* 看板娘对话 */
+    var npcPanel = document.getElementById('npcPanel');
+    var npcTextEl = document.getElementById('npcText');
+    var npcDots = document.getElementById('npcDots');
+    var npcNextBtn = document.getElementById('npcNext');
+    var npcLines = [
+        '！！！(⊙﹏⊙)，摸鱼被你发现了......',
+        '那就让我介绍一下这里吧。',
+        '这是一个街机厅，你可以在街机厅里面，通过玩游戏来了解很多作者的项目，并且以卡片的形式搜集它们。',
+        '玩累了也可以出门通通风去其他地方哦！'
+    ];
+    var npcIndex = 0;
+    function renderNpcLine(){
+        if(!npcPanel) return;
+        npcTextEl.textContent = npcLines[npcIndex];
+        Array.prototype.forEach.call(npcDots.children, function(dot, i){
+            dot.classList.toggle('on', i <= npcIndex);
+        });
+        npcNextBtn.textContent = npcIndex >= npcLines.length - 1 ? '关闭 ×' : '继续 ▸';
+    }
+    function openNpc(){
+        if(!npcPanel) return;
+        npcIndex = 0;
+        renderNpcLine();
+        npcPanel.classList.add('open');
+        npcPanel.setAttribute('aria-hidden', 'false');
+        if(window.Arcade && window.Arcade.beep) window.Arcade.beep(660, 0.07, 'square', 0.04);
+    }
+    function closeNpc(){
+        if(!npcPanel) return;
+        npcPanel.classList.remove('open');
+        npcPanel.setAttribute('aria-hidden', 'true');
+    }
+    function nextNpc(){
+        if(npcIndex >= npcLines.length - 1){ closeNpc(); return; }
+        npcIndex++;
+        renderNpcLine();
+        if(window.Arcade && window.Arcade.beep) window.Arcade.beep(520 + npcIndex * 60, 0.05, 'square', 0.03);
+    }
+    if(npcPanel){
+        document.addEventListener('arcade:npc', openNpc);
+        document.getElementById('npcBox').addEventListener('click', function(e){
+            e.stopPropagation();
+            nextNpc();
+        });
+        npcPanel.addEventListener('click', function(e){
+            if(e.target === npcPanel) closeNpc();
+        });
+    }
+
     document.addEventListener('keydown', function(e){
         if(e.key !== 'Escape') return;
-        if(tenPanel && tenPanel.classList.contains('open')){
+        if(npcPanel && npcPanel.classList.contains('open')){
+            closeNpc();
+        } else if(tenPanel && tenPanel.classList.contains('open')){
             closeTen();
         } else if(albumPanel && albumPanel.classList.contains('open')){
             closeAlbum();
