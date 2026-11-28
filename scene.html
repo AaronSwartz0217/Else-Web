@@ -1442,6 +1442,28 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
 .album-slot .lock em{
     font-family:var(--pixel);font-size:.3rem;letter-spacing:.1em;font-style:normal;color:#494361;
 }
+.album-slot .textcard{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:26px;padding:12px;text-align:center;
+    background:
+        radial-gradient(circle at 50% 30%,rgba(242,245,255,.16),transparent 62%),
+        repeating-linear-gradient(135deg,#0d0a1c 0 14px,#090614 14px 28px);
+    border:1px solid rgba(242,245,255,.5);
+}
+.album-slot .textcard::before,
+.album-slot .textcard::after{
+    content:'';position:absolute;left:14%;right:14%;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(242,245,255,.65),transparent);
+}
+.album-slot .textcard::before{top:16%;}
+.album-slot .textcard::after{bottom:22%;}
+.album-slot .textcard b{
+    font-family:var(--pixel);font-size:.44rem;line-height:1.8;color:#fff;
+    text-shadow:0 0 16px rgba(242,245,255,.8);word-break:break-word;
+}
+.album-slot .textcard em{
+    font-family:var(--pixel);font-size:.28rem;letter-spacing:.18em;font-style:normal;color:#cfd6ee;
+}
 .album-slot .tag{
     position:absolute;left:6px;top:6px;z-index:2;padding:3px 6px;border-radius:4px;
     font-family:var(--pixel);font-size:.28rem;letter-spacing:.08em;
@@ -1491,77 +1513,112 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
 }
 
 .ten-overlay{
-    position:fixed;inset:0;z-index:125;display:flex;align-items:center;justify-content:center;
-    padding:22px 16px;opacity:0;pointer-events:none;transition:opacity .3s ease;
+    position:fixed;inset:0;z-index:128;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:12px;padding:20px 16px;
+    opacity:0;pointer-events:none;transition:opacity .3s ease;overflow:hidden;
 }
 .ten-overlay.open{opacity:1;pointer-events:auto;}
 .ten-backdrop{
     position:absolute;inset:0;
-    background:radial-gradient(circle at 50% 34%,rgba(92,60,12,.72),rgba(3,2,6,.96) 70%);
+    background:radial-gradient(circle at 50% 40%,rgba(96,62,10,.82),rgba(2,1,5,.97) 68%);
     -webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);
 }
-.ten-panel{
-    position:relative;width:min(920px,100%);max-height:calc(100vh - 40px);overflow:auto;
-    padding:22px 22px 18px;border-radius:18px;
-    border:2px solid rgba(255,207,74,.75);
-    background:linear-gradient(180deg,#1a1206,#0a0603);
-    box-shadow:0 0 70px rgba(255,207,74,.28),0 30px 80px rgba(0,0,0,.8);
-    text-align:center;
+.ten-backdrop::after{
+    content:'';position:absolute;inset:0;opacity:.08;
+    background-image:radial-gradient(circle,rgba(255,224,138,.95) 1px,transparent 1.7px);
+    background-size:112px 92px;
 }
-.ten-panel::-webkit-scrollbar{width:0;height:0;}
-.ten-kicker{
-    font-family:var(--pixel);font-size:.46rem;letter-spacing:.2em;color:#ffcf4a;
-    text-shadow:0 0 12px rgba(255,207,74,.8);
+.ten-overlay.open .ten-backdrop::after{animation:tenTwinkle 2.6s ease-in-out infinite alternate;}
+@keyframes tenTwinkle{from{opacity:.06;transform:translateY(0);}to{opacity:.22;transform:translateY(-14px);}}
+.ten-rays{
+    position:absolute;left:50%;top:50%;width:150vmax;height:150vmax;
+    transform:translate(-50%,-50%);pointer-events:none;opacity:0;
+    background:conic-gradient(from 0deg,
+        rgba(255,207,74,0) 0 6%,rgba(255,207,74,.55) 8%,rgba(255,207,74,0) 10% 18%,
+        rgba(255,207,74,.35) 20%,rgba(255,207,74,0) 22% 34%,rgba(255,207,74,.5) 36%,
+        rgba(255,207,74,0) 38% 52%,rgba(255,207,74,.3) 54%,rgba(255,207,74,0) 56% 72%,
+        rgba(255,207,74,.45) 74%,rgba(255,207,74,0) 76%);
+    -webkit-mask-image:radial-gradient(circle,#000 0 20%,transparent 62%);
+    mask-image:radial-gradient(circle,#000 0 20%,transparent 62%);
 }
-.ten-panel h2{
-    margin:10px 0 18px;font-family:var(--pixel);font-size:1.1rem;color:#ffe9a8;
-    text-shadow:0 0 18px rgba(255,207,74,.8);
+.ten-overlay.open .ten-rays{opacity:.3;animation:tenRays 18s linear infinite;}
+@keyframes tenRays{to{transform:translate(-50%,-50%) rotate(360deg);}}
+.ten-kicker{position:relative;z-index:2;color:#ffcf4a!important;}
+.ten-stage{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:12px;perspective:1100px;}
+.ten-burst{
+    position:absolute;left:50%;top:30%;transform:translate(-50%,-50%);
+    font-family:var(--pixel);font-size:clamp(2rem,7vw,4.4rem);color:#ffe9a8;
+    text-shadow:0 0 26px #ffcf4a,0 0 80px rgba(255,207,74,.75);
+    opacity:0;pointer-events:none;white-space:nowrap;
 }
-.ten-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;}
+.ten-overlay.open .ten-burst{animation:tenBurst 1.5s ease .1s both;}
+@keyframes tenBurst{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(-14deg);}
+    32%{opacity:1;transform:translate(-50%,-50%) scale(1.12) rotate(3deg);}
+    68%{opacity:.92;transform:translate(-50%,-50%) scale(1);}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(1.55);}
+}
+.ten-grid{
+    --ten-w:clamp(88px,15vw,166px);
+    position:relative;display:grid;grid-template-columns:repeat(5,var(--ten-w));
+    gap:clamp(6px,1vw,14px);
+}
+.ten-item{position:relative;display:flex;flex-direction:column;align-items:center;gap:7px;transform-style:preserve-3d;}
+.ten-tilt{position:relative;width:100%;transform-style:preserve-3d;transition:transform .18s ease;will-change:transform;}
+.ten-halo{
+    position:absolute;left:50%;top:40%;width:150%;aspect-ratio:1;z-index:0;
+    transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;
+    background:radial-gradient(circle,var(--prize,#fff),transparent 66%);
+    filter:blur(18px);opacity:0;
+}
+.ten-grid.dealt .ten-halo{animation:tenHalo 1.7s ease .75s both;}@keyframes tenHalo{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.55);}
+    45%{opacity:.8;}
+    100%{opacity:.42;}
+}
 .ten-card{
-    position:relative;aspect-ratio:3/4;border-radius:8px;overflow:hidden;
-    border:2px solid rgba(255,255,255,.4);background:#0a0614;
-    animation:tenIn .5s cubic-bezier(.2,.85,.3,1) both;
-    box-shadow:0 0 18px rgba(0,0,0,.6);
+    position:relative;z-index:1;width:100%;aspect-ratio:2/3;border-radius:10px;overflow:hidden;
+    border:var(--edge,2px) solid var(--prize,#fff);background:#05030c;
+    box-shadow:0 0 var(--glow,24px) var(--prize,#fff),
+        0 0 calc(var(--glow,24px) * 1.6) var(--prize,#fff),
+        0 14px 34px rgba(0,0,0,.85);
+    opacity:0;
 }
-.ten-card img{width:100%;height:100%;object-fit:cover;display:block;}
-.ten-card .ten-name{
-    position:absolute;left:0;right:0;bottom:0;padding:6px 4px 5px;
-    font-family:var(--pixel);font-size:.34rem;line-height:1.5;color:#fff;
-    background:linear-gradient(to top,rgba(0,0,0,.9),rgba(0,0,0,.15));
-    text-align:center;
+.ten-grid.dealt .ten-card{animation:tenCardIn .95s cubic-bezier(.16,.9,.24,1) .35s both;}
+@keyframes tenCardIn{
+    0%{opacity:0;transform:rotateY(-100deg) translateY(18px) scale(.82);filter:brightness(2.6) blur(4px);}
+    58%{opacity:1;filter:brightness(1.4);}
+    100%{opacity:1;transform:none;filter:none;}
 }
-.ten-card .ten-rar{
-    position:absolute;left:5px;top:5px;padding:3px 5px;border-radius:3px;
-    font-family:var(--pixel);font-size:.26rem;letter-spacing:.08em;
-    background:rgba(0,0,0,.72);color:var(--slot,#fff);
+.ten-card .prize-face{border-radius:8px;}
+.ten-card .prize-face img{opacity:1;filter:none;transform:none;}
+.ten-grid.dealt .ten-card .prize-shine{animation:cardShine 1.15s ease 1s both;}
+.ten-name{
+    font-family:var(--pixel);font-size:.3rem;line-height:1.55;color:#fff;
+    text-align:center;max-width:100%;word-break:break-word;
+    opacity:0;
 }
-.ten-card .ten-lock{
-    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    padding:8px;font-family:var(--pixel);font-size:.36rem;line-height:1.7;color:#8f86b8;
-    background:repeating-linear-gradient(135deg,#0b0818 0 10px,#080512 10px 20px);
+.ten-rar{
+    position:absolute;left:-2px;top:-2px;z-index:3;padding:3px 5px;border-radius:4px;
+    font-family:var(--pixel);font-size:.22rem;letter-spacing:.06em;
+    background:rgba(0,0,0,.82);color:var(--prize,#fff);
+    opacity:0;
 }
-.ten-card.rarity-white{--slot:#f2f5ff;border-color:rgba(242,245,255,.85);box-shadow:0 0 14px rgba(242,245,255,.35);}
-.ten-card.rarity-purple{--slot:#b56bff;border-color:rgba(181,107,255,.92);box-shadow:0 0 24px rgba(181,107,255,.55);}
-.ten-card.rarity-gold{--slot:#ffcf4a;border-color:rgba(255,207,74,.95);box-shadow:0 0 30px rgba(255,207,74,.6);}
-@keyframes tenIn{
-    from{opacity:0;transform:rotateY(85deg) translateY(14px) scale(.86);}
-    to{opacity:1;transform:none;}
-}
-.ten-close{
-    margin-top:18px;padding:11px 26px;border-radius:8px;cursor:pointer;
-    border:2px solid #ffcf4a;background:rgba(255,207,74,.1);color:#ffe08a;
-    font-family:var(--pixel);font-size:.55rem;letter-spacing:.1em;transition:.2s ease;
-}
-.ten-close:hover{background:#ffcf4a;color:#24150e;}
+.ten-grid.dealt .ten-name,
+.ten-grid.dealt .ten-rar,
+.ten-overlay.open .ten-hint{animation:tenMeta .55s ease 1s both;}
+.ten-overlay.open .prize-btn{animation:tenMeta .55s ease 1.15s both;}
+@keyframes tenMeta{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+.ten-hint{position:relative;z-index:2;font-family:var(--pixel);font-size:.4rem;letter-spacing:.1em;color:#e6d6a8;text-align:center;opacity:0;}
+.ten-overlay .prize-btn{margin-top:2px;}
 @media (max-width:720px){
-    .ten-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;}
-    .ten-panel{padding:14px 10px 12px;}
-    .ten-panel h2{font-size:.85rem;margin:8px 0 12px;}
-    .ten-kicker{font-size:.36rem;}
-    .ten-card .ten-name{font-size:.24rem;padding:4px 2px 3px;}
-    .ten-card .ten-rar{font-size:.2rem;left:3px;top:3px;padding:2px 3px;}
-    .ten-close{margin-top:12px;padding:9px 20px;font-size:.46rem;}
+    .ten-overlay{gap:8px;padding:14px 8px;}
+    .ten-grid{--ten-w:calc((100vw - 26px - 20px) / 5);gap:5px;}
+    .ten-name{font-size:.19rem;line-height:1.4;}
+    .ten-rar{font-size:.16rem;padding:2px 3px;}
+    .ten-kicker{font-size:.34rem!important;}
+    .ten-burst{font-size:2rem;}
+    .ten-hint{font-size:.3rem;}
 }
 @media (max-width:640px){
     .album-grid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px;}
@@ -2721,12 +2778,14 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
 
 <div class="ten-overlay" id="tenPanel" aria-hidden="true">
     <div class="ten-backdrop" data-ten-close></div>
-    <div class="ten-panel" role="dialog" aria-modal="true" aria-label="Ten pull results">
-        <p class="ten-kicker">CAPSULE MACHINE · 10 PULL</p>
-        <h2>十连开蛋</h2>
+    <div class="ten-rays" aria-hidden="true"></div>
+    <p class="prize-kicker ten-kicker">CAPSULE MACHINE · 10 PULL</p>
+    <div class="ten-stage" role="dialog" aria-modal="true" aria-label="Ten pull results">
+        <div class="ten-burst" aria-hidden="true">×10</div>
         <div class="ten-grid" id="tenGrid"></div>
-        <button class="ten-close" id="tenClose" type="button">CLOSE</button>
+        <p class="prize-hint ten-hint">ALL 10 CAPSULES OPENED</p>
     </div>
+    <button class="prize-btn" id="tenClose" type="button">CLOSE</button>
 </div>
 
 <script>
@@ -3611,12 +3670,12 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
     var MACHINE_PALETTE = ['#ff7bd5', '#6be3ff', '#ffca3a', '#8affc1', '#b56bff', '#ff8a8a'];
 
     function rollMachinePrize(type){
-        if(Math.random() < 0.01) return { id: 'resume', rarity: 'gold', source: type };
-        if(Math.random() < 0.01) return { id: 'ember', rarity: 'gold', source: type };
-        if(Math.random() < 0.01) return { id: 'contact', rarity: 'gold', source: type };
+        if(window.Arcade && typeof window.Arcade.drawCard === 'function'){
+            return window.Arcade.drawCard(type);
+        }
         return {
             id: MACHINE_PROJECTS[Math.floor(Math.random() * MACHINE_PROJECTS.length)],
-            rarity: null,
+            rarity: Math.random() < 0.6 ? 'white' : (Math.random() < 0.75 ? 'purple' : 'gold'),
             source: type
         };
     }
@@ -4041,7 +4100,7 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
         claw: {
             title: '抓娃娃机 · Claw Machine',
             tags: ['CLAW', 'PROJECT CARD', '60FPS'],
-            desc: '左右移动爪子，对准想要的娃娃下爪，再送进出货口。抓到什么就抽到对应的项目卡，另有极小概率掉出简历金卡、隐藏金卡与联系方式彩蛋卡。',
+            desc: '左右移动爪子，对准想要的娃娃下爪，再送进出货口。概率按品质：白 60% / 紫 30% / 金 10%，先摇品质再在该品质的卡里等概率抽；白池含项目卡、4 张艺术卡与 6 张项目文字卡，金池含简历、Ember Chick 和联系方式彩蛋。',
             links: [],
             hint: '← → 移动爪子 · 空格 / 点击下爪 · 抓空可以再来',
             dpad: true,
@@ -4052,7 +4111,7 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
         gacha: {
             title: '扭蛋机 · Capsule Machine',
             tags: ['GACHA', 'PROJECT CARD', '60FPS'],
-            desc: '转动机柄三圈，胶囊滚出来。打开后随机得到项目卡，同样包含 1% 简历金卡、1% 隐藏金卡与 1% 联系方式彩蛋。单抽满 5 次后，左侧金色十连轮盘永久解锁。',
+            desc: '转动机柄三圈，胶囊滚出来。同样按白 60% / 紫 30% / 金 10% 先摇品质再抽卡；十连也走同一卡池。单抽满 5 次后，左侧金色十连轮盘永久解锁。',
             links: [],
             hint: '空格 / 点击 转动机柄 · 连转三圈出蛋',
             noInfo: true,
@@ -4653,7 +4712,8 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
         startGame: startGame,
         closeModal: closeModal,
         coinSound: coinSound,
-        rollMachinePrize: rollMachinePrize
+        rollMachinePrize: rollMachinePrize,
+        beep: beep
     };
 })();
 </script>
@@ -4732,6 +4792,32 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
             hint: 'SCAN TO CONNECT · WECHAT',
             variants: { gold: ['assets/cards/contact-qr.jpg'] }
         },
+        magician: {
+            marquee: 'THE MAGICIAN',
+            hint: 'ART CARD · NO LINK',
+            variants: { white: ['assets/cards/magician.jpg'] }
+        },
+        bluetide: {
+            marquee: 'BLUE TIDE',
+            hint: 'ART CARD · NO LINK',
+            variants: { white: ['assets/cards/blue-tide.jpg'] }
+        },
+        moonrise: {
+            marquee: 'MOONRISE',
+            hint: 'ART CARD · NO LINK',
+            variants: { white: ['assets/cards/moonrise.jpg'] }
+        },
+        starfield: {
+            marquee: 'STARFIELD',
+            hint: 'ART CARD · NO LINK',
+            variants: { white: ['assets/cards/starfield.jpg'] }
+        },
+        hpwy_text: { marquee: 'PHANTOM SOUL', hint: 'TEXT CARD · NO LINK', text: true },
+        wupo_text: { marquee: 'SPIRIT TALES', hint: 'TEXT CARD · NO LINK', text: true },
+        finch_text: { marquee: 'FINCH ROOM', hint: 'TEXT CARD · NO LINK', text: true },
+        robot_text: { marquee: 'ROBOT EXPRESS', hint: 'TEXT CARD · NO LINK', text: true },
+        universal_text: { marquee: 'RENDER LAB', hint: 'TEXT CARD · NO LINK', text: true },
+        hz10m_text: { marquee: 'HANGZHOU 10M', hint: 'TEXT CARD · NO LINK', text: true },
         robot: {
             marquee: 'ROBOT EXPRESS',
             url: 'https://pan.baidu.com/s/15u2_A0HJg8D-MaUmgcH3LQ',
@@ -4786,6 +4872,19 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
         if(r < 0.9) return 'purple';
         return 'gold';
     }
+
+    /* 先摇品质（白 60% / 紫 30% / 金 10%），再在该品质的所有卡中等概率抽取 */
+    function drawCard(type){
+        var rarity = rollRarity();
+        var ids = Object.keys(CARD_INFO).filter(function(id){
+            var meta = CARD_INFO[id];
+            if(meta.text) return rarity === 'white';
+            return !!(meta.variants && meta.variants[rarity] && meta.variants[rarity].length);
+        });
+        var id = ids.length ? ids[Math.floor(Math.random() * ids.length)] : 'hpwy';
+        return { id: id, rarity: rarity, source: type };
+    }
+    if(window.Arcade) window.Arcade.drawCard = drawCard;
 
     /* 卡册收藏记录：保存在本地浏览器 */
     var ALBUM_STORE_KEY = 'else_card_album_v1';
@@ -4854,6 +4953,7 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
     function resolveCard(id, rarity, opts){
         opts = opts || {};
         var meta = CARD_INFO[id] || {};
+        var isText = !!meta.text;
         var rr = RARITY[rarity] ? rarity : 'white';
         var pool = [];
         if(meta.variants){
@@ -4871,7 +4971,7 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
         var src = opts.src || (pool.length ? pool[Math.floor(Math.random() * pool.length)] : '');
         if(opts.record && id){
             var store = readAlbum();
-            var key = src ? (id + '|' + rr + '|' + src) : (id + '|card');
+            var key = isText ? (id + '|text') : (src ? (id + '|' + rr + '|' + src) : (id + '|card'));
             store[key] = { id: id, rarity: rr, src: src, ts: Date.now() };
             writeAlbum(store);
         }
@@ -4984,11 +5084,12 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
             }else{
                 slots.push({
                     id: id,
-                    rarity: null,
+                    rarity: meta.text ? 'white' : null,
                     src: '',
                     name: meta.marquee || id,
                     url: meta.url || '',
-                    key: id + '|card'
+                    text: !!meta.text,
+                    key: meta.text ? (id + '|text') : (id + '|card')
                 });
             }
         });
@@ -5007,9 +5108,14 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
             var cls = 'album-slot ' + (rec ? 'got' : 'missing') + (rar ? ' rarity-' + rarity : '');
             if(rec){
                 got++;
-                var inner = slot.src
-                    ? '<img src="' + slot.src + '" alt="' + slot.name + '" loading="lazy">'
-                    : '<span class="lock"><b>' + slot.name + '</b><em>CARD ART PENDING</em></span>';
+                var inner;
+                if(slot.text){
+                    inner = '<span class="textcard"><b>' + slot.name + '</b><em>TEXT CARD</em></span>';
+                }else if(slot.src){
+                    inner = '<img src="' + slot.src + '" alt="' + slot.name + '" loading="lazy">';
+                }else{
+                    inner = '<span class="lock"><b>' + slot.name + '</b><em>CARD ART PENDING</em></span>';
+                }
                 inner += '<span class="tag">' + (rar ? rar.label : 'CARD') + '</span>';
                 return '<button type="button" class="' + cls + '"' +
                     ' data-album-id="' + slot.id + '"' +
@@ -5087,27 +5193,75 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
 
         var html = '';
         for(var i = 0; i < 10; i++){
-            var roll = window.Arcade.rollMachinePrize('gacha');
+            var roll = window.Arcade.drawCard('gacha');
             var card = resolveCard(roll.id, roll.rarity || rollRarity(), { record: true });
-            html += '<div class="ten-card rarity-' + card.rarity + '">' +
-                (card.src
-                    ? '<img src="' + card.src + '" alt="">'
-                    : '<span class="ten-lock">' + card.name + '</span>') +
-                '<span class="ten-rar">' + RARITY[card.rarity].label + '</span>' +
-                '<span class="ten-name">' + card.name + '</span></div>';
+            var rar = RARITY[card.rarity];
+            var glow = card.rarity === 'gold' ? 34 : (card.rarity === 'purple' ? 24 : 16);
+            var edge = card.rarity === 'gold' ? 3 : 2;
+            html += '<div class="ten-item rarity-' + card.rarity + '"' +
+                ' style="--prize:' + hexColor(rar.color) + ';--glow:' + glow + 'px;--edge:' + edge + 'px">' +
+                '<span class="ten-halo" aria-hidden="true"></span>' +
+                '<div class="ten-tilt"><div class="ten-card">' +
+                    '<span class="prize-face">' +
+                        (card.src
+                            ? '<img src="' + card.src + '" alt="">'
+                            : '<span class="prize-fallback"><b>' + card.name + '</b><em>CARD</em></span>') +
+                    '</span>' +
+                    '<span class="prize-shine" aria-hidden="true"></span>' +
+                '</div></div>' +
+                '<span class="ten-name">' + card.name + '</span>' +
+                '<span class="ten-rar">' + rar.label + '</span>' +
+            '</div>';
         }
         tenGrid.innerHTML = html;
+        tenGrid.classList.remove('dealt');
         tenPanel.classList.add('open');
         tenPanel.setAttribute('aria-hidden','false');
-        beep(1046, 0.12, 'square', 0.05);
-        setTimeout(function(){ beep(1568, 0.18, 'square', 0.05); }, 130);
+        void tenGrid.offsetWidth;
+        requestAnimationFrame(function(){
+            requestAnimationFrame(function(){ tenGrid.classList.add('dealt'); });
+        });
+        var sfx = (window.Arcade && window.Arcade.beep) ? window.Arcade.beep : function(){};
+        sfx(196, 0.3, 'sawtooth', 0.05);
+        [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach(function(freq, idx){
+            setTimeout(function(){ sfx(freq, 0.12, 'square', 0.045); }, 520 + 90 * idx);
+        });
+        setTimeout(function(){ sfx(1568, 0.3, 'square', 0.05); }, 1050);
+        setTimeout(function(){ sfx(2093, 0.22, 'triangle', 0.04); }, 1150);
     }
 
     function closeTen(){
         if(!tenPanel) return;
         tenPanel.classList.remove('open');
         tenPanel.setAttribute('aria-hidden','true');
+        tenGrid.classList.remove('dealt');
         updateGachaWheel();
+    }
+
+    if(tenGrid){
+        tenGrid.addEventListener('pointermove', function(e){
+            var item = e.target.closest ? e.target.closest('.ten-item') : null;
+            if(!item) return;
+            var tilt = item.querySelector('.ten-tilt');
+            if(!tilt) return;
+            var r = item.getBoundingClientRect();
+            var px = (e.clientX - r.left) / r.width - 0.5;
+            var py = (e.clientY - r.top) / r.height - 0.5;
+            tilt.style.transform = 'rotateY(' + (px * 22).toFixed(2) + 'deg) rotateX(' +
+                (-py * 18).toFixed(2) + 'deg) translateZ(6px)';
+        });
+        tenGrid.addEventListener('pointerout', function(e){
+            var item = e.target.closest ? e.target.closest('.ten-item') : null;
+            if(!item) return;
+            if(e.relatedTarget && item.contains(e.relatedTarget)) return;
+            var tilt = item.querySelector('.ten-tilt');
+            if(tilt) tilt.style.transform = '';
+        });
+        tenGrid.addEventListener('pointerleave', function(){
+            Array.prototype.forEach.call(tenGrid.querySelectorAll('.ten-tilt'), function(el){
+                el.style.transform = '';
+            });
+        });
     }
 
     if(gachaWheel){
