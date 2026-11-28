@@ -3161,7 +3161,7 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
 
     /* ---------- 小游戏：物魄奇谭 ---------- */
     function createWupo(){
-        var score = 0, combo = 1, left = 22, spawnT = 0;
+        var score = 0, combo = 1, hits = 0, left = 22, spawnT = 0;
         var enemies = [], sparks = [], pulse = 0, over = false;
         var labels = ['魄', '魂', '煞'];
         var colors = ['#ffca3a', '#9b8cff', '#ff3d5e'];
@@ -3203,6 +3203,7 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
                     if(enemies[i].life <= 0){
                         enemies.splice(i, 1);
                         combo = 1;
+                        hits = 0;
                     }
                 }
                 sparks = sparks.filter(function(s){ return (s.life -= dt) > 0; });
@@ -3261,7 +3262,7 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
                 c.fillStyle = 'rgba(255,255,255,.4)';
                 c.font = '14px "PingFang SC","Microsoft YaHei",sans-serif';
                 c.textAlign = 'center';
-                c.fillText('点击 魄 / 魂 / 煞 进行连击', CW / 2, CH - 26);
+                c.fillText('点击 魄 / 魂 / 煞 · 10 连击通关', CW / 2, CH - 26);
             },
             pointer: function(x, y){
                 if(over) return;
@@ -3271,6 +3272,7 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
                         enemies.splice(i, 1);
                         score += 10 * combo;
                         combo = Math.min(9, combo + 1);
+                        hits++;
                         beep(520 + combo * 70, 0.06, 'square', 0.05);
                         for(var k = 0; k < 10; k++){
                             sparks.push({
@@ -3281,13 +3283,17 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
                                 color: combo > 4 ? '#ffe066' : '#ff8fa8'
                             });
                         }
+                        if(hits >= 10){
+                            end(true, '物魄归位！', '10 连击 · 通关');
+                        }
                         return;
                     }
                 }
                 combo = 1;
+                hits = 0;
             },
             hud: function(){
-                return ['得分 ' + score, '连击 x' + combo + ' · ' + (left > 0 ? left.toFixed(1) + 's' : '时间到')];
+                return ['得分 ' + score, '连击 ' + hits + '/10 · ' + (left > 0 ? left.toFixed(1) + 's' : '时间到')];
             }
         };
     }
@@ -3683,7 +3689,7 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
     function createClaw(){
         var clawX = CW / 2, targetX = CW / 2, clawY = 108;
         var state = 'aim';
-        var grabbed = null, dropY = 0;
+        var grabbed = null, dropY = 0, grabTight = true, carryT = 0, slipX = 0, slipY = 0;
         var misses = 0, timer = 0, t = 0;
         var keys = { left: false, right: false };
         var chuteX = 112;
@@ -3701,14 +3707,19 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
             });
         }
 
+        /* 小判定区夹稳，大判定区会滑落 */
         function nearest(){
-            var best = null, bd = 1e9;
+            var best = null, bd = 1e9, tight = false;
             prizes.forEach(function(p){
                 if(p.taken) return;
                 var d = Math.abs(p.x - clawX);
-                if(d < p.r + 24 && d < bd){ bd = d; best = p; }
+                if(d < p.r + 24 && d < bd){
+                    bd = d;
+                    best = p;
+                    tight = d <= Math.max(12, p.r * 0.46);
+                }
             });
-            return best;
+            return best ? { p: best, tight: tight } : null;
         }
         function drop(){
             if(state !== 'aim' || ended) return;
@@ -3777,13 +3788,15 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
                     clawY += 640 * dt;
                     if(clawY >= 446){
                         clawY = 446;
-                        var p = nearest();
-                        if(p){
-                            p.taken = true;
-                            grabbed = p;
+                        var hit = nearest();
+                        if(hit){
+                            hit.p.taken = true;
+                            grabbed = hit.p;
+                            grabTight = hit.tight;
+                            carryT = 0;
                             state = 'grab';
                             timer = 0;
-                            beep(880, 0.07, 'square', 0.05);
+                            beep(grabTight ? 880 : 620, 0.07, 'square', 0.05);
                         }else{
                             state = 'up';
                             beep(190, 0.14, 'sawtooth', 0.045);
@@ -3804,12 +3817,35 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
                         }
                     }
                 }else if(state === 'carry'){
+                    carryT += dt;
                     clawX += (chuteX - clawX) * Math.min(1, dt * 5);
-                    if(Math.abs(clawX - chuteX) < 6){
+                    if(!grabTight && carryT > 0.38){
+                        state = 'slip';
+                        slipX = clawX;
+                        slipY = clawY + 64;
+                        timer = 0;
+                        beep(180, 0.18, 'sawtooth', 0.05);
+                        toast('没夹稳 · 娃娃滑回堆里了');
+                    }else if(Math.abs(clawX - chuteX) < 6){
                         clawX = chuteX;
                         state = 'drop';
                         timer = 0;
                         beep(460, 0.1, 'square', 0.045);
+                    }
+                }else if(state === 'slip'){
+                    slipY += 720 * dt;
+                    if(timer > 0.9){
+                        if(grabbed){
+                            grabbed.taken = false;
+                            grabbed.x = 220 + Math.random() * (CW - 440);
+                            grabbed.y = 470 + Math.random() * 14;
+                        }
+                        grabbed = null;
+                        grabTight = true;
+                        carryT = 0;
+                        misses++;
+                        state = 'aim';
+                        timer = 0;
                     }
                 }else if(state === 'drop'){
                     dropY = Math.min(90, dropY + dt * 300);
@@ -3876,6 +3912,8 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
                 if(grabbed){
                     if(state === 'drop'){
                         drawPlush(c, grabbed, clawX, 470 + dropY, 0.86);
+                    }else if(state === 'slip'){
+                        drawPlush(c, grabbed, slipX, slipY, 0.8);
                     }else{
                         drawPlush(c, grabbed, clawX, clawY + 64, 0.8);
                     }
@@ -3884,7 +3922,7 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
                 c.fillStyle = 'rgba(255,255,255,.42)';
                 c.font = '14px "PingFang SC","Microsoft YaHei",sans-serif';
                 c.textAlign = 'center';
-                c.fillText('← → 移动爪子 · 空格 / 点击下爪 · 抓空可以再来', CW / 2, CH - 20);
+                c.fillText('← → 移动爪子 · 空格 / 点击下爪 · 夹在正中间才稳', CW / 2, CH - 20);
             },
             pointer: function(){ drop(); },
             move: function(x){ if(state === 'aim') targetX = Math.max(98, Math.min(CW - 98, x)); },
@@ -4138,7 +4176,7 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
                 { label: '查看游戏工程', href: 'https://github.com/AaronSwartz0217/UE5-SpiritTales-GAS' },
                 { label: '访问宣传网站', href: 'https://aaronswartz0217.github.io/Spirit-Tales/' }
             ],
-            hint: '鼠标 / 手指点击目标 · 22 秒内打出最高连击',
+            hint: '鼠标 / 手指点击目标 · 22 秒内打出 10 连击即通关',
             create: createWupo
         },
         finch: {
@@ -4856,6 +4894,7 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
         resume: {
             marquee: 'RESUME',
             url: 'downloads/resume-v2.pdf',
+            weight: 0.0404,
             variants: { gold: ['assets/cards/resume.jpg'] }
         }
     };
@@ -4873,16 +4912,29 @@ button.album-slot{font:inherit;padding:0;color:inherit;cursor:pointer;}
         return 'gold';
     }
 
-    /* 先摇品质（白 60% / 紫 30% / 金 10%），再在该品质的所有卡中等概率抽取 */
+    /* 先摇品质（白 60% / 紫 30% / 金 10%），再在该品质的所有卡中按权重抽取 */
     function drawCard(type){
         var rarity = rollRarity();
-        var ids = Object.keys(CARD_INFO).filter(function(id){
+        var entries = [];
+        Object.keys(CARD_INFO).forEach(function(id){
             var meta = CARD_INFO[id];
-            if(meta.text) return rarity === 'white';
-            return !!(meta.variants && meta.variants[rarity] && meta.variants[rarity].length);
+            if(meta.text){
+                if(rarity === 'white') entries.push({ id: id, w: 1 });
+                return;
+            }
+            if(meta.variants && meta.variants[rarity] && meta.variants[rarity].length){
+                entries.push({ id: id, w: meta.weight || 1 });
+            }
         });
-        var id = ids.length ? ids[Math.floor(Math.random() * ids.length)] : 'hpwy';
-        return { id: id, rarity: rarity, source: type };
+        var total = 0;
+        entries.forEach(function(e){ total += e.w; });
+        var r = Math.random() * total;
+        var picked = entries.length ? entries[entries.length - 1] : null;
+        for(var i = 0; i < entries.length; i++){
+            r -= entries[i].w;
+            if(r <= 0){ picked = entries[i]; break; }
+        }
+        return { id: picked ? picked.id : 'hpwy', rarity: rarity, source: type };
     }
     if(window.Arcade) window.Arcade.drawCard = drawCard;
 
